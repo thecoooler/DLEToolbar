@@ -22,6 +22,8 @@ final class Queries implements ConfigurableComponent
                 'Запросы с длительностью не меньше порога подсвечиваются как долгие.'),
             'fold_fast' => Parameter::boolean('Сворачивать быстрые запросы', true,
                 'Объединять соседние запросы быстрее 1 мс. Долгие запросы остаются видимыми.'),
+            'trace_sources' => Parameter::boolean('Показывать источник запросов (экспериментально)', false,
+                'Экспериментальная функция для DLE 14.0 и новее: показывает файл, строку вызова и модуль или плагин для запросов после инициализации панели. Подменяет объект базы данных DLE на время обработки страницы.'),
         ];
     }
 
@@ -50,7 +52,9 @@ final class Queries implements ConfigurableComponent
         global $db;
         /** @var \db $db */
 
-        $value = (string) $db->query_num;
+        /** @var int $queryCount */
+        $queryCount = $db->query_num;
+        $value = (string) $queryCount;
         $label = 'Количество запросов MySQL: ' . $value . '. Показать список запросов';
 
         return '<button class="control metric queries" data-component="queries" data-queries-open type="button"'
@@ -65,8 +69,10 @@ final class Queries implements ConfigurableComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var array<int, array{query: string, time: float, num: int}> $queries */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
+        /** @var int $queryCount */
+        $queryCount = $db->query_num;
 
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $format = static function (float $seconds): string {
@@ -87,7 +93,7 @@ final class Queries implements ConfigurableComponent
             // DLE writes the session hash and password hashes in plain UPDATE queries.
             /** @var string $sql */
             $sql = preg_replace("/\\b(password|hash)\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
-            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number];
+            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $query['source'] ?? '', 'source_modified' => $query['source_modified'] ?? false];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
             if ($isFast && $lastIndex !== null && $groups[$lastIndex]['fast']) {
@@ -120,7 +126,8 @@ final class Queries implements ConfigurableComponent
                     $rows .= '<div class="query-row query-row-plain query-row-fast" data-fast-row hidden>'
                         . '<span class="query-bar"></span>'
                         . '<span class="query-num">·</span>'
-                        . '<span class="query-sql">' . $escape($item['query']) . '</span>'
+                        . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
+                        . $this->renderSource($item['source'], $item['source_modified']) . '</span>'
                         . '<span class="query-time"></span>'
                         . $this->renderQueryCopyButton()
                         . '</div>';
@@ -136,7 +143,8 @@ final class Queries implements ConfigurableComponent
                 $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . '">'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
-                    . '<span class="query-sql">' . $escape($item['query']) . '</span>'
+                    . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
+                    . $this->renderSource($item['source'], $item['source_modified']) . '</span>'
                     . '<span class="query-time">' . ($this->foldFast && !$isSlow && $item['time'] < 0.001 ? '' : $format($item['time'])) . '</span>'
                     . $this->renderQueryCopyButton()
                     . '</div>';
@@ -147,7 +155,7 @@ final class Queries implements ConfigurableComponent
             // DLE before 14.0 counts queries but does not keep their list.
             $stats = '';
             $rows = '<p class="query-empty">Список SQL-запросов не показывается в DLE 13.0–13.3: эти версии его не сохраняют.'
-                . ' Всего запросов: ' . $db->query_num . '.</p>';
+                . ' Всего запросов: ' . $queryCount . '.</p>';
         } elseif ($rows === '') {
             $stats = '';
             $rows = '<p class="query-empty">SQL-запросов на этой странице нет.</p>';
@@ -170,6 +178,34 @@ final class Queries implements ConfigurableComponent
             . self::icon('close') . '</button></header>'
             . '<div class="query-list">' . $rows . '</div>'
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
+    }
+
+    private function renderSource(string $source, bool $modified): string
+    {
+        if ($source === '') return '';
+
+        // Drop the line number, then name the module or plugin by its directory or file.
+        $parts = explode('/', substr($source, 0, (int) strrpos($source, ':')));
+        $label = 'DLE';
+        if ($parts[0] === 'engine' && count($parts) >= 3) {
+            // Top-level engine directories and engine/modules files shipped with DLE 21.0.
+            $nativeDirectories = ['ajax', 'api', 'cache', 'classes', 'data', 'editor', 'inc', 'modules', 'skins'];
+            $nativeModules = ['addcomments', 'addnews', 'antibot', 'banned', 'banners', 'calendar', 'changemail',
+                'comments', 'cron', 'deletenews', 'favorites', 'feedback', 'findcomments', 'functions',
+                'lastcomments', 'links', 'lostpassword', 'main', 'newsletter', 'offline', 'pm', 'poll', 'profile',
+                'profile_innews', 'register', 'rssinform', 'search', 'show.custom', 'show.full', 'show.related',
+                'show.short', 'sitelogin', 'social', 'static', 'stats', 'tagscloud', 'topnews', 'vote'];
+            if ($parts[1] === 'modules') {
+                if (count($parts) >= 4) $label = $parts[2];
+                elseif (!in_array(basename($parts[2], '.php'), $nativeModules, true)) $label = basename($parts[2], '.php');
+            } elseif (!in_array($parts[1], $nativeDirectories, true)) {
+                $label = count($parts) >= 4 ? $parts[2] : $parts[1];
+            }
+        }
+        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return '<span class="query-source">' . $escape($source)
+            . ' · <span class="query-source-label">' . $escape($label) . '</span>'
+            . ($modified ? ' · изменён плагинами' : '') . '</span>';
     }
 
     private function renderQueryCopyButton(): string {
@@ -306,6 +342,16 @@ final class Queries implements ConfigurableComponent
                 white-space: pre-wrap;
                 overflow-wrap: anywhere;
             }
+            .query-source {
+                display: block;
+                margin-top: 3px;
+                color: #71717a;
+                font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                white-space: normal;
+            }
+            .query-source-label { color: #52525b; }
+            :host([data-theme="dark"]) .query-source { color: #a1a1aa; }
+            :host([data-theme="dark"]) .query-source-label { color: #d4d4d8; }
             .query-time {
                 padding-right: var(--query-gap);
                 color: var(--muted);
@@ -411,7 +457,7 @@ HTML;
                     copyStatus.textContent = 'Для копирования SQL-запроса откройте сайт по HTTPS.';
                     return;
                 }
-                const sql = button.closest('.query-row').querySelector('.query-sql').textContent;
+                const sql = button.closest('.query-row').querySelector('.query-text').textContent;
                 navigator.clipboard.writeText(sql).then(
                     () => { copyStatus.textContent = 'SQL-запрос скопирован.'; },
                     () => { copyStatus.textContent = 'Не удалось скопировать SQL-запрос. Проверьте разрешение браузера на доступ к буферу обмена.'; }
