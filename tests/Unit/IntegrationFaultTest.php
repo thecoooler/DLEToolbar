@@ -55,6 +55,8 @@ beforeEach(function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['xfields'] = [];
     $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
+    // Keep fault injection on the storage wrapper; TracingDbTest covers the real connection.
+    $GLOBALS['dletoolbar_native_db']->query('INSERT INTO `' . PREFIX . '_dletoolbar_settings` (setting_key, setting_value) VALUES (\'toolbar\', \'{"enabled":["time","skin"]}\')');
 });
 
 it('extracts every integration patch from the patch list', function (): void {
