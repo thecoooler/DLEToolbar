@@ -1,0 +1,93 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  static:
+    name: Static analysis (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.4', '7.4']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-dleplugin
+      - name: Analyze plugin
+        env:
+          PHP_VERSION: ${{ matrix.php-version }}
+        run: |
+          if [[ "$PHP_VERSION" == 8.4 ]]; then
+            dleplugin static
+          else
+            dleplugin static --php-version "$PHP_VERSION"
+          fi
+  test:
+    name: Pest tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-dleplugin
+      - run: dleplugin test
+  build:
+    name: Build plugin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-dleplugin
+      - run: dleplugin build --version 0.0.0-ci
+      - name: Validate plugin XML
+        run: |
+          test -f dist/DLEToolbar.xml
+          python3 -c 'import xml.etree.ElementTree as ET; ET.parse("dist/DLEToolbar.xml")'
+  browser:
+    name: Browser regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: '8.4'
+          coverage: none
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.64.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Run browser regression
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: |
+          php -S 127.0.0.1:8001 -t tests/browser > "$RUNNER_TEMP/queries-panel-php.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"; cat "$RUNNER_TEMP/queries-panel-php.log"' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:8001/queries-panel.php; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent --output /dev/null http://127.0.0.1:8001/queries-panel.php
+          node tests/browser/run.mjs

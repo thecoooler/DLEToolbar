@@ -1,0 +1,96 @@
+slug: DLEToolbar
+name: DLEToolbar
+description: 'Панель администратора на сайте: метрики страницы, SQL-запросы, сброс кэша, смена шаблона'
+mount: engine/iCooLER/DLEToolbar
+build:
+  split: false
+extras:
+  admin_section: false
+  autoloader: true
+  routes: []
+  configs: []
+di:
+  bindings: {}
+alias:
+    admin.php: engine/inc/dletoolbar.php
+files:
+  engine/init.php:
+    - after:
+        search: |
+          dle_session();
+        replace: |
+          $DLEToolbar = null;
+          try {
+            $DLEToolbar = new \iCooLER\DLEToolbar\Toolbar\DLEToolbar();
+          } catch (\Throwable $error) {
+            error_log('[DLEToolbar] bootstrap: ' . $error);
+          }
+
+    - before:
+        search: |
+          if ( isset( $banned_info['ip'] ) ) $blockip = check_ip ( $banned_info['ip'] );  else $blockip = false;
+        replace: |
+          try {
+            if ($DLEToolbar !== null) $DLEToolbar->init();
+          } catch (\Throwable $error) {
+            $DLEToolbar = null;
+            error_log('[DLEToolbar] initialization: ' . $error);
+          }
+
+  engine/modules/show.full.php:
+    - before:
+        search: |
+          $news_id = $row['id'];
+        replace: |
+          try {
+            if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+              \iCooLER\DLEToolbar\Components\Link\NewsFields::capture($row['xfields']);
+            }
+          } catch (\Throwable $error) {
+            error_log('[DLEToolbar] news fields: ' . $error);
+          }
+
+  engine/modules/main.php:
+    - before:
+        search: |
+          $tpl->set ( '{AJAX}', $ajax );
+        replace: |
+          if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+            $ajax .= $DLEToolbar->marker();
+          }
+    - before:
+        search: |
+          echo $tpl->result['main'];
+        replace: |
+          try {
+            if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+              require_once \DLEPlugins::Check(ENGINE_DIR . "/iCooLER/DLEToolbar/main.php");
+            }
+          } catch (\Throwable $error) {
+            $tpl->result['main'] = str_replace($DLEToolbar->marker(), '', $tpl->result['main']);
+            error_log('[DLEToolbar] output: ' . $error);
+          }
+mysql:
+  install: |
+    CREATE TABLE IF NOT EXISTS `{prefix}_dletoolbar_settings` (
+      `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+      `setting_key` VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,
+      `setting_value` MEDIUMTEXT NOT NULL,
+      `updated_at` DATETIME NOT NULL,
+      PRIMARY KEY (`id`),
+      UNIQUE KEY `setting_key` (`setting_key`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  upgrade: |
+    UPDATE `{prefix}_admin_sections` SET `descr` = 'Панель администратора на сайте: метрики страницы, SQL-запросы, сброс кэша, смена шаблона', `allow_groups` = '1' WHERE `name` = 'dletoolbar';
+  enable: |
+    INSERT IGNORE INTO `{prefix}_admin_sections` (`name`, `title`, `descr`, `icon`, `allow_groups`) VALUES ('dletoolbar', 'DLEToolbar', 'Панель администратора на сайте: метрики страницы, SQL-запросы, сброс кэша, смена шаблона', '', '1');
+  disable: |
+    DELETE FROM `{prefix}_admin_sections` WHERE `name` = 'dletoolbar';
+  delete: |
+    DELETE FROM `{prefix}_admin_sections` WHERE `name` = 'dletoolbar';
+php:
+  install: ''
+  upgrade: ''
+  enable: ''
+  disable: ''
+  delete: ''

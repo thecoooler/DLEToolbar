@@ -1,0 +1,374 @@
+<div id="dle-toolbar-ui-preview" lang="ru">
+  <style>
+    #dle-toolbar-ui-preview {
+      --dt-surface: light-dark(#ffffff, #1b1d23);
+      --dt-stage: light-dark(#f1f3f6, #13151a);
+      --dt-ink: light-dark(#262930, #f1f2f5);
+      --dt-muted: light-dark(#616773, #a6adba);
+      --dt-line: light-dark(#dfe3e9, #353a44);
+      --dt-hover: light-dark(#edf0f4, #292e38);
+      --dt-accent: light-dark(#285bcb, #9ab9ff);
+      --dt-accent-soft: light-dark(#eaf0ff, #27364e);
+      --dt-success: light-dark(#20714a, #8bd4af);
+      --dt-success-soft: light-dark(#eaf5ee, #223b30);
+      --dt-alert: light-dark(#9a4d0a, #efbd84);
+      --dt-alert-soft: light-dark(#fff2df, #3b3022);
+      --dt-error: light-dark(#b53939, #ffabab);
+      --dt-error-soft: light-dark(#fcecec, #422b30);
+      --dt-primary: light-dark(#292e38, #e5e9f1);
+      --dt-primary-ink: light-dark(#ffffff, #20242b);
+      color: var(--dt-ink);
+      font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    #dle-toolbar-ui-preview *, #dle-toolbar-ui-preview *::before, #dle-toolbar-ui-preview *::after { box-sizing: border-box; }
+    #dle-toolbar-ui-preview [hidden] { display: none !important; }
+    #dle-toolbar-ui-preview button, #dle-toolbar-ui-preview select { font: inherit; }
+    #dle-toolbar-ui-preview button { cursor: pointer; touch-action: manipulation; }
+    #dle-toolbar-ui-preview .dt-header { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; margin-block-end: 24px; }
+    #dle-toolbar-ui-preview .dt-header h1 { flex: 1 1 200px; margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.035em; }
+    #dle-toolbar-ui-preview .dt-options { display: flex; flex-wrap: wrap; gap: 12px; }
+    #dle-toolbar-ui-preview .dt-field { display: grid; gap: 5px; color: var(--dt-muted); font-size: 12px; }
+    #dle-toolbar-ui-preview .dt-field select { min-block-size: 36px; max-inline-size: 100%; padding: 6px 28px 6px 10px; border: 1px solid var(--dt-line); border-radius: 7px; background: var(--dt-surface); color: var(--dt-ink); }
+    #dle-toolbar-ui-preview .dt-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+    #dle-toolbar-ui-preview .dt-variant { min-inline-size: 0; --dt-radius: 12px; --dt-space: 8px; }
+    #dle-toolbar-ui-preview .dt-variant-heading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-block-end: 12px; }
+    #dle-toolbar-ui-preview .dt-letter { color: var(--dt-muted); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #dle-toolbar-ui-preview h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+    #dle-toolbar-ui-preview .dt-recommend { margin-inline-start: auto; color: var(--dt-accent); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-stage { display: flex; flex-direction: column; gap: 12px; min-block-size: 300px; padding: 16px; border: 1px solid var(--dt-line); border-radius: 16px; background: var(--dt-stage); }
+    #dle-toolbar-ui-preview .dt-stage-label { display: flex; justify-content: space-between; gap: 8px; margin-block-end: auto; padding-block-end: 56px; color: var(--dt-muted); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-dock { padding: var(--dt-space); border: 1px solid var(--dt-line); border-radius: var(--dt-radius); background: var(--dt-surface); box-shadow: 0 5px 16px light-dark(rgb(35 43 59 / 7%), rgb(0 0 0 / 20%)); }
+    #dle-toolbar-ui-preview .dt-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 34px; padding: 6px 9px; border: 1px solid transparent; border-radius: 7px; background: var(--dt-hover); color: var(--dt-ink); text-decoration: none; white-space: nowrap; }
+    #dle-toolbar-ui-preview .dt-control:hover { background: var(--dt-accent-soft); }
+    #dle-toolbar-ui-preview .dt-control[aria-expanded="true"] { background: var(--dt-accent-soft); color: var(--dt-accent); border-color: var(--dt-accent); }
+    #dle-toolbar-ui-preview .dt-primary { background: var(--dt-primary); color: var(--dt-primary-ink); }
+    #dle-toolbar-ui-preview .dt-primary:hover { background: var(--dt-primary); opacity: .85; }
+    #dle-toolbar-ui-preview .dt-icon { display: inline-flex; flex: 0 0 auto; inline-size: 15px; block-size: 15px; }
+    #dle-toolbar-ui-preview i.dt-icon:empty { display: none; }
+    #dle-toolbar-ui-preview .dt-num { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: -.035em; }
+    #dle-toolbar-ui-preview .dt-unit { color: var(--dt-muted); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-http { color: var(--dt-success); }
+    #dle-toolbar-ui-preview [data-state="error"] .dt-http { color: var(--dt-error); }
+    #dle-toolbar-ui-preview .dt-top-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+    #dle-toolbar-ui-preview .dt-mark { min-inline-size: 34px; padding-inline: 7px; font-size: 11px; font-weight: 700; }
+    #dle-toolbar-ui-preview .dt-status { display: inline-flex; gap: 5px; align-items: center; min-block-size: 34px; padding-inline: 8px; border-radius: 7px; background: var(--dt-success-soft); }
+    #dle-toolbar-ui-preview [data-state="error"] .dt-status { background: var(--dt-error-soft); }
+    #dle-toolbar-ui-preview .dt-timing { display: inline-flex; gap: 4px; align-items: baseline; padding-inline: 3px; }
+    #dle-toolbar-ui-preview .dt-top-row .dt-query-button { margin-inline-start: auto; }
+    #dle-toolbar-ui-preview .dt-bottom-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--dt-space); margin-block-start: 12px; }
+    #dle-toolbar-ui-preview .dt-template { display: inline-flex; align-items: center; flex: 1 1 auto; gap: 5px; min-inline-size: 0; }
+    #dle-toolbar-ui-preview .dt-template select { min-inline-size: 0; max-inline-size: 140px; min-block-size: 34px; border: 1px solid var(--dt-line); border-radius: 7px; padding: 5px 6px; background: var(--dt-surface); color: var(--dt-ink); }
+    #dle-toolbar-ui-preview .dt-template-label { color: var(--dt-muted); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    #dle-toolbar-ui-preview .dt-metric { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-inline-size: 0; padding: 6px; }
+    #dle-toolbar-ui-preview .dt-metric-label { color: var(--dt-muted); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-metric-value { font-size: 17px; font-weight: 550; white-space: nowrap; }
+    #dle-toolbar-ui-preview .dt-metric-button { inline-size: 100%; border: 1px solid var(--dt-line); border-radius: 8px; background: var(--dt-surface); color: var(--dt-ink); text-align: start; }
+    #dle-toolbar-ui-preview .dt-metric-button:hover, #dle-toolbar-ui-preview .dt-metric-button[aria-expanded="true"] { background: var(--dt-accent-soft); border-color: var(--dt-accent); }
+    #dle-toolbar-ui-preview .dt-labelled-actions { display: flex; flex-wrap: wrap; gap: var(--dt-space); margin-block-start: 16px; }
+    #dle-toolbar-ui-preview .dt-labelled-actions .dt-template { flex: 1 1 110px; }
+    #dle-toolbar-ui-preview .dt-labelled-actions [data-cache] { flex: 1 1 auto; }
+    #dle-toolbar-ui-preview .dt-diagnostic-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-block-end: 12px; }
+    #dle-toolbar-ui-preview .dt-diagnostic-title { font-size: 12px; font-weight: 600; }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-metrics { padding-block: 10px; border-block-start: 1px solid var(--dt-line); }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-metric { padding-inline: 1px; }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-metric-value { font-size: 15px; }
+    #dle-toolbar-ui-preview .dt-slow-note { display: flex; align-items: center; gap: 6px; margin-block: 2px 12px; padding: 7px 9px; border-radius: 6px; background: var(--dt-alert-soft); color: var(--dt-alert); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-bottom-row { gap: 5px; margin-block-start: 0; }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-template { flex: 0 1 auto; }
+    #dle-toolbar-ui-preview .dt-diagnostic .dt-template select { max-inline-size: 100px; }
+    #dle-toolbar-ui-preview .dt-panel { min-inline-size: 0; padding: 12px; border: 1px solid var(--dt-line); border-radius: var(--dt-radius); background: var(--dt-surface); }
+    #dle-toolbar-ui-preview .dt-panel-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-block-end: 10px; }
+    #dle-toolbar-ui-preview .dt-panel-header h3 { margin: 0; flex: 1 1 auto; font-size: 13px; font-weight: 600; }
+    #dle-toolbar-ui-preview .dt-close { min-block-size: 28px; padding: 3px 7px; font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-panel-stats { margin-block: 0 10px; color: var(--dt-muted); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-sql-entry { min-inline-size: 0; border-block-start: 1px solid var(--dt-line); }
+    #dle-toolbar-ui-preview .dt-sql-entry > summary { display: grid; grid-template-columns: 22px minmax(0, 1fr) 43px; align-items: center; gap: 5px; min-block-size: 36px; padding: 8px 2px; cursor: pointer; list-style: none; font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #dle-toolbar-ui-preview summary::-webkit-details-marker { display: none; }
+    #dle-toolbar-ui-preview .dt-sql-entry > summary:hover { background: var(--dt-hover); }
+    #dle-toolbar-ui-preview .dt-sql-entry > summary .dt-query-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #dle-toolbar-ui-preview .dt-query-number, #dle-toolbar-ui-preview .dt-query-time { color: var(--dt-muted); font-variant-numeric: tabular-nums; }
+    #dle-toolbar-ui-preview .dt-query-time { text-align: end; }
+    #dle-toolbar-ui-preview .dt-sql-entry[data-slow="true"] > summary { color: var(--dt-error); background: var(--dt-error-soft); }
+    #dle-toolbar-ui-preview .dt-sql-entry[data-slow="true"] .dt-query-time { color: var(--dt-error); }
+    #dle-toolbar-ui-preview .dt-sql-detail { padding: 8px; margin-block-end: 8px; background: var(--dt-stage); border-radius: 7px; }
+    #dle-toolbar-ui-preview .dt-sql-detail pre { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--dt-ink); font: 11px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; user-select: text; }
+    #dle-toolbar-ui-preview .dt-copy { min-block-size: 28px; padding: 3px 8px; border-color: var(--dt-line); background: var(--dt-surface); font-size: 11px; }
+    #dle-toolbar-ui-preview .dt-fast-group > summary { padding-block: 9px; color: var(--dt-muted); font-size: 11px; cursor: pointer; }
+    #dle-toolbar-ui-preview .dt-feedback { padding: 8px 10px; border-radius: 7px; background: var(--dt-accent-soft); color: var(--dt-accent); font-size: 12px; }
+    #dle-toolbar-ui-preview .dt-sr { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+    @media (max-width: 840px) {
+      #dle-toolbar-ui-preview .dt-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #dle-toolbar-ui-preview .dt-stage { min-block-size: 280px; }
+    }
+    @media (max-width: 570px) {
+      #dle-toolbar-ui-preview .dt-comparison { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+      #dle-toolbar-ui-preview .dt-stage { min-block-size: 225px; }
+      #dle-toolbar-ui-preview .dt-header { align-items: flex-start; }
+      #dle-toolbar-ui-preview .dt-options { inline-size: 100%; }
+      #dle-toolbar-ui-preview .dt-field { flex: 1 1 125px; }
+    }
+    @media (pointer: coarse) {
+      #dle-toolbar-ui-preview .dt-control, #dle-toolbar-ui-preview select, #dle-toolbar-ui-preview .dt-sql-entry > summary, #dle-toolbar-ui-preview .dt-fast-group > summary { min-block-size: 44px; }
+      #dle-toolbar-ui-preview select { font-size: 16px; }
+    }
+  </style>
+
+  <header class="dt-header">
+    <h1>Варианты DLEToolbar</h1>
+    <div class="dt-options">
+      <label class="dt-field">Тема
+        <select data-appearance>
+          <option value="system">Как в системе</option>
+          <option value="light">Светлая</option>
+          <option value="dark">Тёмная</option>
+        </select>
+      </label>
+      <label class="dt-field">Состояние страницы
+        <select data-scenario>
+          <option value="normal">Обычная</option>
+          <option value="slow">Медленная</option>
+          <option value="error">Ошибка сервера</option>
+          <option value="empty">Без SQL-запросов</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <div class="dt-comparison">
+    <section class="dt-variant" data-variant="compact" aria-label="Компактный тулбар">
+      <header class="dt-variant-heading"><span class="dt-letter">A</span><h2>Компактный</h2><span class="dt-recommend">Рекомендую</span></header>
+      <div class="dt-stage">
+        <div class="dt-stage-label"><span>На странице сайта</span><span>Две группы</span></div>
+        <section class="dt-panel" id="dt-sql-compact" aria-label="SQL-запросы компактного варианта" hidden>
+          <header class="dt-panel-header"><h3>Запросы страницы</h3><button class="dt-control dt-close" data-close type="button">Закрыть</button></header>
+          <p class="dt-panel-stats" data-query-stats>14 запросов</p><div data-query-list></div>
+        </section>
+        <div class="dt-dock" aria-label="Управление сайтом">
+          <div class="dt-top-row">
+            <button class="dt-control dt-primary dt-mark" data-admin type="button" aria-label="Панель управления">DLE</button>
+            <span class="dt-status"><span class="dt-unit">HTTP</span><span class="dt-num dt-http" data-response>200</span></span>
+            <span class="dt-timing" aria-label="Время генерации страницы"><span class="dt-num" data-time>163</span><span class="dt-unit">мс</span></span>
+            <button class="dt-control dt-query-button" data-queries type="button" aria-expanded="false" aria-controls="dt-sql-compact"><span class="dt-num" data-count>14</span><span class="dt-unit">SQL</span></button>
+          </div>
+          <div class="dt-bottom-row">
+            <label class="dt-template"><span class="dt-template-label">Шаблон</span><select data-skin aria-label="Шаблон компактного варианта"><option>Studio</option><option>Default</option><option>Minimal</option></select></label>
+            <button class="dt-control" data-cache type="button" aria-label="Обновить страницу со сбросом кэша"><i class="dt-icon" data-lucide="rotate-cw" aria-hidden="true"></i><span>Сбросить кэш</span></button>
+          </div>
+        </div>
+        <div class="dt-feedback" data-feedback role="status" hidden></div>
+      </div>
+    </section>
+
+    <section class="dt-variant" data-variant="labelled" aria-label="Тулбар с подписями">
+      <header class="dt-variant-heading"><span class="dt-letter">B</span><h2>С подписями</h2></header>
+      <div class="dt-stage">
+        <div class="dt-stage-label"><span>На странице сайта</span><span>Ясные действия</span></div>
+        <section class="dt-panel" id="dt-sql-labelled" aria-label="SQL-запросы варианта с подписями" hidden>
+          <header class="dt-panel-header"><h3>Запросы страницы</h3><button class="dt-control dt-close" data-close type="button">Закрыть</button></header>
+          <p class="dt-panel-stats" data-query-stats>14 запросов</p><div data-query-list></div>
+        </section>
+        <div class="dt-dock" aria-label="Управление сайтом">
+          <div class="dt-metrics">
+            <div class="dt-metric"><span class="dt-metric-label">HTTP-ответ</span><span class="dt-metric-value dt-num dt-http" data-response>200</span></div>
+            <div class="dt-metric"><span class="dt-metric-label">Генерация</span><span class="dt-metric-value"><span class="dt-num" data-time>163</span> <span class="dt-unit">мс</span></span></div>
+            <button class="dt-metric dt-metric-button" data-queries type="button" aria-expanded="false" aria-controls="dt-sql-labelled"><span class="dt-metric-label">Запросы SQL</span><span class="dt-metric-value dt-num" data-count>14</span></button>
+          </div>
+          <div class="dt-labelled-actions">
+            <button class="dt-control dt-primary" data-admin type="button"><i class="dt-icon" data-lucide="sliders-horizontal" aria-hidden="true"></i>Админка</button>
+            <label class="dt-template"><span class="dt-sr">Шаблон</span><select data-skin aria-label="Шаблон варианта с подписями"><option>Studio</option><option>Default</option><option>Minimal</option></select></label>
+            <button class="dt-control" data-cache type="button"><i class="dt-icon" data-lucide="rotate-cw" aria-hidden="true"></i><span>Сбросить кэш</span></button>
+          </div>
+        </div>
+        <div class="dt-feedback" data-feedback role="status" hidden></div>
+      </div>
+    </section>
+
+    <section class="dt-variant" data-variant="diagnostic" aria-label="Тулбар для диагностики">
+      <header class="dt-variant-heading"><span class="dt-letter">C</span><h2>Диагностика</h2></header>
+      <div class="dt-stage">
+        <div class="dt-stage-label"><span>На странице сайта</span><span>Акцент на SQL</span></div>
+        <section class="dt-panel" id="dt-sql-diagnostic" aria-label="SQL-запросы диагностического варианта" hidden>
+          <header class="dt-panel-header"><h3>Запросы страницы</h3><button class="dt-control dt-close" data-close type="button">Закрыть</button></header>
+          <p class="dt-panel-stats" data-query-stats>14 запросов</p><div data-query-list></div>
+        </section>
+        <div class="dt-dock dt-diagnostic" aria-label="Управление сайтом">
+          <header class="dt-diagnostic-header"><span class="dt-diagnostic-title">DLEToolbar</span><button class="dt-control" data-queries type="button" aria-expanded="false" aria-controls="dt-sql-diagnostic"><i class="dt-icon" data-lucide="database" aria-hidden="true"></i><span class="dt-num" data-count>14</span> SQL</button></header>
+          <div class="dt-metrics">
+            <div class="dt-metric"><span class="dt-metric-label">HTTP</span><span class="dt-metric-value dt-num dt-http" data-response>200</span></div>
+            <div class="dt-metric"><span class="dt-metric-label">Страница</span><span class="dt-metric-value"><span class="dt-num" data-time>163</span> <span class="dt-unit">мс</span></span></div>
+            <div class="dt-metric"><span class="dt-metric-label">MySQL</span><span class="dt-metric-value"><span class="dt-num" data-db-time>38</span> <span class="dt-unit">мс</span></span></div>
+          </div>
+          <div class="dt-slow-note" data-slow-note><i class="dt-icon" data-lucide="triangle-alert" aria-hidden="true"></i><span data-slow-label>1 запрос дольше 20 мс</span></div>
+          <div class="dt-bottom-row">
+            <button class="dt-control" data-admin type="button">Админка</button>
+            <label class="dt-template"><span class="dt-sr">Шаблон</span><select data-skin aria-label="Шаблон диагностического варианта"><option>Studio</option><option>Default</option><option>Minimal</option></select></label>
+            <button class="dt-control" data-cache type="button" aria-label="Обновить страницу со сбросом кэша"><i class="dt-icon" data-lucide="rotate-cw" aria-hidden="true"></i><span>Кэш</span></button>
+          </div>
+        </div>
+        <div class="dt-feedback" data-feedback role="status" hidden></div>
+      </div>
+    </section>
+  </div>
+  <div class="dt-sr" data-announcement aria-live="polite"></div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('dle-toolbar-ui-preview');
+  const variants = [...root.querySelectorAll('[data-variant]')];
+  const announcement = root.querySelector('[data-announcement]');
+  const scenarios = {
+    normal: { response: 200, time: 163, count: 14 },
+    slow: { response: 200, time: 1840, count: 52 },
+    error: { response: 500, time: 8250, count: 120 },
+    empty: { response: 200, time: 8, count: 0 }
+  };
+  const theme = root.querySelector('[data-appearance]');
+  const scenario = root.querySelector('[data-scenario]');
+  const applyTheme = () => {
+    root.style.colorScheme = theme.value === 'system' ? 'inherit' : theme.value;
+  };
+  const queryWord = (n) => n % 10 === 1 && n % 100 !== 11 ? 'запрос' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'запроса' : 'запросов';
+  const fixtures = (count) => Array.from({ length: count }, (_, index) => {
+    const number = index + 1;
+    const time = number % 11 === 0 ? 24 : number % 5 === 0 ? 3.4 : .2 + (number % 7) * .13;
+    const sql = number % 5 === 0
+      ? 'SELECT COUNT(*)\nFROM dle_post\nWHERE approve = 1 AND category = 3;'
+      : 'SELECT p.id, p.title, p.date, u.name\nFROM dle_post AS p\nLEFT JOIN dle_users AS u ON u.user_id = p.autor_id\nWHERE p.id = ' + number + ' AND p.approve = 1\nORDER BY p.date DESC\nLIMIT 1;';
+    return { number, time, sql };
+  });
+  const makeQuery = (query) => {
+    const entry = document.createElement('details');
+    entry.className = 'dt-sql-entry';
+    entry.dataset.slow = String(query.time >= 20);
+    const summary = document.createElement('summary');
+    const number = document.createElement('span');
+    number.className = 'dt-query-number';
+    number.textContent = '#' + query.number;
+    const text = document.createElement('span');
+    text.className = 'dt-query-text';
+    text.textContent = query.sql.replaceAll('\n', ' ');
+    const time = document.createElement('span');
+    time.className = 'dt-query-time';
+    time.textContent = query.time < 1 ? '<1 мс' : Math.round(query.time) + ' мс';
+    summary.append(number, text, time);
+    const detail = document.createElement('div');
+    detail.className = 'dt-sql-detail';
+    const pre = document.createElement('pre');
+    pre.textContent = query.sql;
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'dt-control dt-copy';
+    copy.textContent = 'Копировать SQL';
+    copy.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(query.sql);
+      copy.textContent = 'Скопировано';
+      announcement.textContent = 'SQL-запрос ' + query.number + ' скопирован';
+      setTimeout(() => { copy.textContent = 'Копировать SQL'; }, 1400);
+    });
+    detail.append(pre, copy);
+    entry.append(summary, detail);
+    return entry;
+  };
+  const renderQueries = (list, queries) => {
+    list.replaceChildren();
+    if (!queries.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'SQL-запросов на этой странице нет.';
+      list.append(empty);
+      return;
+    }
+    let index = 0;
+    while (index < queries.length) {
+      let end = index;
+      while (end < queries.length && queries[end].time < 1) end++;
+      if (end - index > 1) {
+        const group = document.createElement('details');
+        group.className = 'dt-fast-group';
+        const summary = document.createElement('summary');
+        summary.textContent = '№' + queries[index].number + '–' + queries[end - 1].number + ': ' + (end - index) + ' быстрых (<1 мс)';
+        group.append(summary, ...queries.slice(index, end).map(makeQuery));
+        list.append(group);
+        index = end;
+      } else {
+        list.append(makeQuery(queries[index]));
+        index++;
+      }
+    }
+  };
+  const renderScenario = () => {
+    const values = scenarios[scenario.value];
+    const queries = fixtures(values.count);
+    const slow = queries.filter((query) => query.time >= 20).length;
+    const total = Math.round(queries.reduce((sum, query) => sum + query.time, 0));
+    variants.forEach((variant) => {
+      variant.dataset.state = values.response >= 400 ? 'error' : 'success';
+      variant.querySelectorAll('[data-response]').forEach((node) => { node.textContent = values.response; });
+      variant.querySelectorAll('[data-time]').forEach((node) => { node.textContent = values.time; });
+      variant.querySelectorAll('[data-count]').forEach((node) => { node.textContent = values.count; });
+      variant.querySelectorAll('[data-db-time]').forEach((node) => { node.textContent = total; });
+      variant.querySelector('[data-query-stats]').textContent = values.count + ' ' + queryWord(values.count) + ' / ' + total + ' мс' + (slow ? ' / ' + slow + ' медленных' : '');
+      variant.querySelector('[data-queries]').setAttribute('aria-label', 'Показать SQL-запросы: ' + values.count);
+      const note = variant.querySelector('[data-slow-note]');
+      if (note) {
+        note.hidden = slow === 0;
+        note.querySelector('[data-slow-label]').textContent = slow + ' ' + queryWord(slow) + ' дольше 20 мс';
+      }
+      renderQueries(variant.querySelector('[data-query-list]'), queries);
+    });
+  };
+  variants.forEach((variant) => {
+    const trigger = variant.querySelector('[data-queries]');
+    const panel = variant.querySelector('.dt-panel');
+    const setOpen = (open) => {
+      panel.hidden = !open;
+      trigger.setAttribute('aria-expanded', String(open));
+    };
+    trigger.addEventListener('click', () => setOpen(panel.hidden));
+    variant.querySelector('[data-close]').addEventListener('click', () => { setOpen(false); trigger.focus(); });
+    panel.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { setOpen(false); trigger.focus(); }
+    });
+    variant.querySelector('[data-skin]').addEventListener('change', (event) => {
+      const skin = event.target.value;
+      variants.forEach((peer) => { peer.querySelector('[data-skin]').value = skin; });
+      announcement.textContent = 'В превью выбран шаблон ' + skin;
+    });
+    const feedback = variant.querySelector('[data-feedback]');
+    let feedbackTimer;
+    const showFeedback = (text) => {
+      clearTimeout(feedbackTimer);
+      feedback.textContent = text;
+      feedback.hidden = false;
+      feedbackTimer = setTimeout(() => { feedback.hidden = true; }, 2200);
+    };
+    variant.querySelector('[data-admin]').addEventListener('click', () => showFeedback('Переход в панель управления (превью)'));
+    variant.querySelector('[data-cache]').addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      const label = button.querySelector('span');
+      const original = label.textContent;
+      label.textContent = 'Готово';
+      button.disabled = true;
+      showFeedback('Кэш очищен (превью)');
+      setTimeout(() => { label.textContent = original; button.disabled = false; }, 1400);
+    });
+    if (globalThis.Tweak) {
+      const settings = { radius: 12, spacing: 8 };
+      const tweak = new Tweak({ container: variant, onChange: () => {
+        variant.style.setProperty('--dt-radius', settings.radius + 'px');
+        variant.style.setProperty('--dt-space', settings.spacing + 'px');
+      } });
+      tweak.addSlider(settings, 'radius', { label: 'Скругление панели', min: 6, max: 20, step: 1, unit: 'px' });
+      tweak.addSlider(settings, 'spacing', { label: 'Отступы', min: 6, max: 14, step: 1, unit: 'px' });
+    }
+  });
+  theme.addEventListener('change', applyTheme);
+  scenario.addEventListener('change', () => {
+    renderScenario();
+    announcement.textContent = 'Состояние страницы: ' + scenario.selectedOptions[0].textContent;
+  });
+  applyTheme();
+  renderScenario();
+})();
+</script>

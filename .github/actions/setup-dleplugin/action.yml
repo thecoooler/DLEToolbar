@@ -1,0 +1,24 @@
+name: Setup dleplugin
+description: Download and verify the dleplugin CLI
+inputs:
+  version:
+    description: dleplugin release tag
+    required: false
+    default: v0.1.0
+runs:
+  using: composite
+  steps:
+    - name: Install dleplugin
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DLEPLUGIN_VERSION: ${{ inputs.version }}
+      run: |
+        install_dir="$(mktemp -d "$RUNNER_TEMP/dleplugin.XXXXXX")"
+        archive="dleplugin_${DLEPLUGIN_VERSION}_linux_amd64.tar.gz"
+        gh release download "$DLEPLUGIN_VERSION" --repo thecoooler/dleplugin \
+          --pattern "$archive" --pattern SHA256SUMS --dir "$install_dir"
+        cd "$install_dir"
+        sha256sum -c --ignore-missing SHA256SUMS
+        tar -xzf "$archive"
+        echo "$install_dir/dleplugin_${DLEPLUGIN_VERSION}_linux_amd64" >> "$GITHUB_PATH"
