@@ -184,13 +184,23 @@ final class Queries implements ConfigurableComponent
     {
         if ($source === '') return '';
 
-        $parts = explode('/', $source);
+        // Drop the line number, then name the module or plugin by its directory or file.
+        $parts = explode('/', substr($source, 0, (int) strrpos($source, ':')));
         $label = 'DLE';
-        if ($parts[0] === 'engine' && count($parts) >= 4) {
-            // Top-level engine directories shipped with DLE 19.0.
-            $native = ['ajax', 'api', 'cache', 'classes', 'data', 'editor', 'inc', 'modules', 'skins'];
-            if ($parts[1] === 'modules') $label = $parts[2];
-            elseif (!in_array($parts[1], $native, true)) $label = $parts[2];
+        if ($parts[0] === 'engine' && count($parts) >= 3) {
+            // Top-level engine directories and engine/modules files shipped with DLE 21.0.
+            $nativeDirectories = ['ajax', 'api', 'cache', 'classes', 'data', 'editor', 'inc', 'modules', 'skins'];
+            $nativeModules = ['addcomments', 'addnews', 'antibot', 'banned', 'banners', 'calendar', 'changemail',
+                'comments', 'cron', 'deletenews', 'favorites', 'feedback', 'findcomments', 'functions',
+                'lastcomments', 'links', 'lostpassword', 'main', 'newsletter', 'offline', 'pm', 'poll', 'profile',
+                'profile_innews', 'register', 'rssinform', 'search', 'show.custom', 'show.full', 'show.related',
+                'show.short', 'sitelogin', 'social', 'static', 'stats', 'tagscloud', 'topnews', 'vote'];
+            if ($parts[1] === 'modules') {
+                if (count($parts) >= 4) $label = $parts[2];
+                elseif (!in_array(basename($parts[2], '.php'), $nativeModules, true)) $label = basename($parts[2], '.php');
+            } elseif (!in_array($parts[1], $nativeDirectories, true)) {
+                $label = count($parts) >= 4 ? $parts[2] : $parts[1];
+            }
         }
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return '<span class="query-source">' . $escape($source)

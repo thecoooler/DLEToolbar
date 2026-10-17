@@ -96,10 +96,30 @@ it('recognizes every native engine directory without inventing plugin labels', f
         $GLOBALS['db']->query_list[] = ['query' => 'SELECT 1', 'time' => .002, 'num' => 1,
             'source' => 'engine/' . $directory . '/nested/run.php:1'];
     }
-    $GLOBALS['db']->query_list[] = ['query' => 'SELECT 2', 'time' => .002, 'num' => 2,
-        'source' => 'engine/modules/main.php:1'];
+    foreach (['engine/modules/main.php:1', 'engine/modules/show.full.php:2', 'engine/init.php:3'] as $source) {
+        $GLOBALS['db']->query_list[] = ['query' => 'SELECT 2', 'time' => .002, 'num' => 2, 'source' => $source];
+    }
     $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
-    expect(substr_count($panel, '<span class="query-source-label">DLE</span>'))->toBe(9);
+    expect(substr_count($panel, '<span class="query-source-label">DLE</span>'))->toBe(11);
+});
+
+it('labels single-file modules and plugins by their file or directory name', function (): void {
+    setupDleToolbarTestEnvironment();
+    $sources = [
+        'engine/modules/mymodule.php:5' => 'mymodule',
+        'engine/modules/my.module.php:6' => 'my.module',
+        'engine/Vendor/run.php:7' => 'Vendor',
+        'engine/Vendor/Plugin/run.php:8' => 'Plugin',
+    ];
+    foreach (array_keys($sources) as $source) {
+        $GLOBALS['db']->query_list[] = ['query' => 'SELECT 1', 'time' => .002, 'num' => 1, 'source' => $source];
+    }
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    foreach ($sources as $source => $label) {
+        expect($panel)->toContain($source . ' · <span class="query-source-label">' . $label . '</span>');
+    }
 });
