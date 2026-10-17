@@ -69,7 +69,7 @@ final class Queries implements ConfigurableComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var array<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> $queries */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
         /** @var int $queryCount */
         $queryCount = $db->query_num;

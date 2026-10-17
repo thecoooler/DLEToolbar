@@ -4,7 +4,7 @@ namespace iCooLER\DLEToolbar\Toolbar;
 
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\PopupLifecycle;
-use iCooLER\DLEToolbar\Components\Queries\TracingDb;
+use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 
 class DLEToolbar {
     private ComponentRegistry $components;
@@ -39,7 +39,7 @@ class DLEToolbar {
         if (version_compare($config['version_id'], '14.0', '>=')
             && in_array('queries', $preferences->visibleItems(), true)
             && $preferences->componentParameters('queries')['trace_sources']) {
-            TracingDb::install();
+            QueryLog::install();
         }
 
         $this->components->initialize();
