@@ -35,8 +35,10 @@ class DLEToolbar {
 
         global $config;
         /** @var array{version_id: string} $config */
+        $preferences = ToolbarPreferences::load();
         if (version_compare($config['version_id'], '14.0', '>=')
-            && in_array('queries', ToolbarPreferences::load()->visibleItems(), true)) {
+            && in_array('queries', $preferences->visibleItems(), true)
+            && $preferences->componentParameters('queries')['trace_sources']) {
             TracingDb::install();
         }
 

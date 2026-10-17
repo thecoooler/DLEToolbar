@@ -521,7 +521,6 @@ it('clears the connected DLE fast cache even when caching is disabled for the re
 });
 
 it('handles cache reset cookies only for administrators with the login hash', function (): void {
-    ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => []]])->save();
     $toolbar = new DLEToolbar();
     $cachedFile = ENGINE_DIR . '/cache/coverage-cookie-cache-fixture.tmp';
     $previousCookie = $_COOKIE['dle_toolbar_clear_cache'] ?? null;

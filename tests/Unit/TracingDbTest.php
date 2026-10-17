@@ -86,7 +86,7 @@ it('maps a plugin cache call site back to its original file', function (): void 
     }
 });
 
-it('installs tracing only for an allowed visible SQL panel on DLE 14 or newer', function (): void {
+it('installs tracing only for an allowed visible SQL panel with the experimental option on DLE 14 or newer', function (): void {
     $native = $GLOBALS['db'];
     $toolbar = new DLEToolbar();
     $GLOBALS['member_id']['user_group'] = 5;
@@ -98,7 +98,15 @@ it('installs tracing only for an allowed visible SQL panel on DLE 14 or newer', 
     $toolbar->init();
     expect($GLOBALS['db'])->toBe($native);
 
+    // Source tracing is experimental and stays off until enabled in the SQL panel settings.
     ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries']]])->save();
+    $toolbar->init();
+    expect($GLOBALS['db'])->toBe($native);
+
+    ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+        'components' => ['queries' => ['trace_sources' => true]],
+    ])->save();
     $GLOBALS['config']['version_id'] = '13.3';
     $toolbar->init();
     expect($GLOBALS['db'])->toBe($native);
