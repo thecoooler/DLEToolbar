@@ -36,6 +36,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-dleplugin
       - run: dleplugin build --version "${GITHUB_REF_NAME#v}"
+      - name: Package plugin XML
+        working-directory: dist
+        run: zip DLEToolbar.zip DLEToolbar.xml
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,5 +47,5 @@ jobs:
             echo "Release $GITHUB_REF_NAME already exists" >&2
             exit 1
           fi
-          gh release create "$GITHUB_REF_NAME" dist/DLEToolbar.xml \
+          gh release create "$GITHUB_REF_NAME" dist/DLEToolbar.xml dist/DLEToolbar.zip \
             --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
