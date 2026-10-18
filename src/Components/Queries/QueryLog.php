@@ -37,10 +37,11 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     }
 
     /**
+     * Returns by reference so callers can still change fields in place, as with the original array.
      * @param int $offset
      * @return array{query: string, time: float, num: int, source?: string, source_modified?: bool}
      */
-    public function offsetGet($offset): array
+    public function &offsetGet($offset): array
     {
         return $this->entries[$offset];
     }

@@ -63,6 +63,13 @@ it('keeps the db object and earlier entries while tracing query, super_query and
     expect(iterator_to_array($db->query_list))->toBe($logged);
 });
 
+it('lets callers change entry fields in place like the original array', function (): void {
+    $GLOBALS['db']->query_list = [['query' => 'SELECT secret', 'time' => .001, 'num' => 0]];
+    QueryLog::install();
+    $GLOBALS['db']->query_list[0]['query'] = 'SELECT redacted';
+    expect($GLOBALS['db']->query_list[0]['query'])->toBe('SELECT redacted');
+});
+
 it('reports the source line of eval-encoded files without the eval suffix', function (): void {
     QueryLog::install();
     eval("\n\$GLOBALS['db']->query('SELECT 1');");
