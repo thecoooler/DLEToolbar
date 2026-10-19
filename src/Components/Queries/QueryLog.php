@@ -83,9 +83,9 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
 
             // PHP supplies line together with file.
             /** @var array{function: string, file: string, line: int} $frame */
-            // Encoded DLE distributions run their sources through eval; its line matches the source file.
+            // Encoded DLE distributions run their sources through nested evals; the innermost line matches the source file.
             /** @var string $file */
-            $file = preg_replace("/\\(\\d+\\) : eval\\(\\)'d code$/", '', str_replace('\\', '/', $frame['file']));
+            $file = preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
             if (stripos($file, $engine . '/classes/mysql.php') === 0) continue;
 
             $modified = false;

@@ -76,7 +76,13 @@ it('reports the source line of eval-encoded files without the eval suffix', func
     expect(lastQuerySource()['source'])->toBe(testFileSource(2));
 });
 
-it('maps a plugin cache call site back to its original file', function (): void {
+it('reports the source line of files encoded with nested evals', function (): void {
+    QueryLog::install();
+    eval('eval("\n\\$GLOBALS[\'db\']->query(\'SELECT 1\');");');
+    expect(lastQuerySource()['source'])->toBe(testFileSource(2));
+});
+
+it('maps a plugin cache call site back to its original file', function (string $code): void {
     $fixture = ENGINE_DIR . '/cache/system/plugins/dletoolbar-tracing-test.php';
     $plugins = new ReflectionProperty(DLEPlugins::class, 'plugins');
     $plugins->setAccessible(true);
@@ -84,7 +90,7 @@ it('maps a plugin cache call site back to its original file', function (): void 
     $map = $before;
     $map['engine/modules/tracing-test/run.php'] = basename($fixture);
     $plugins->setValue(null, $map);
-    file_put_contents($fixture, "<?php\n\$GLOBALS['db']->super_query('SELECT 1 AS value');\n");
+    file_put_contents($fixture, "<?php\n" . $code . "\n");
     try {
         QueryLog::install();
         require $fixture;
@@ -94,7 +100,12 @@ it('maps a plugin cache call site back to its original file', function (): void 
         $plugins->setValue(null, $before);
         unlink($fixture);
     }
-});
+})->with([
+    'plain' => ["\$GLOBALS['db']->super_query('SELECT 1 AS value');"],
+    'nested evals' => [<<<'PHP'
+        eval('eval("\\n\\$GLOBALS[\'db\']->super_query(\'SELECT 1 AS value\');");');
+        PHP],
+]);
 
 it('installs tracing only for an allowed visible SQL panel with the experimental option on DLE 14 or newer', function (): void {
     $db = $GLOBALS['db'];
