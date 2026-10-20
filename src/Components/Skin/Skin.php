@@ -113,7 +113,7 @@ final class Skin implements Component
             }
             .skin-option[aria-checked="true"] .skin-option-check { opacity: 1; }
             .skin-option-check svg { width: 16px; height: 16px; }
-            .skin-default-label { display: block; color: var(--muted); font-size: 10px; font-weight: 400; }
+            .skin-option-meta { display: block; color: var(--muted); font-size: 10px; font-weight: 400; }
             @media (max-width: 480px) {
                 .skin-menu { min-width: min(260px, calc(100vw - 20px)); max-width: calc(100vw - 20px); }
             }
@@ -210,16 +210,22 @@ JS];
             : self::templateFolders();
 
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $nameCounts = array_count_values(array_column($skins, 'name'));
         $options = '';
         foreach ($skins as $name => $metadata) {
             // PHP turns numeric folder names such as "2024" into integer array keys.
             $name = (string) $name;
             $selected = $name === $current;
             $isDefault = $name === $this->defaultSkin;
+            // Templates may share a display name, so the folder tells them apart.
+            $meta = implode(' · ', array_filter([
+                $metadata['name'] !== $name || $nameCounts[$metadata['name']] > 1 ? $name : '',
+                $isDefault ? 'По умолчанию' : '',
+            ]));
             $options .= '<button class="skin-option" data-skin-option data-skin-value="' . $escape($name)
                 . '" data-skin-default="' . ($isDefault ? 'true' : 'false') . '" type="button" role="menuitemradio" aria-checked="' . ($selected ? 'true' : 'false') . '">'
                 . '<span>' . $escape($metadata['name'])
-                . ($isDefault ? '<span class="skin-default-label">По умолчанию</span>' : '')
+                . ($meta !== '' ? '<span class="skin-option-meta">' . $escape($meta) . '</span>' : '')
                 . '</span><span class="skin-option-check" aria-hidden="true">'
                 . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>' . '</span></button>';
         }

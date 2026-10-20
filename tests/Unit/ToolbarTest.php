@@ -217,8 +217,8 @@ it('renders installed templates with the current selection and keeps skin visibi
         $html = (new DLEToolbar())->render();
         preg_match_all('/data-component="([^"]+)"/', $html, $matches);
         expect($matches[1])->toBe(['skin'])
-            ->and($html)->toContain('data-skin-value="Default" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"><span>Стандартный &lt;шаблон&gt;<span class="skin-default-label">По умолчанию</span></span>')
-            ->toContain('data-skin-value="Studio" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Studio &amp; Co</span>')
+            ->and($html)->toContain('data-skin-value="Default" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"><span>Стандартный &lt;шаблон&gt;<span class="skin-option-meta">Default · По умолчанию</span></span>')
+            ->toContain('data-skin-value="Studio" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Studio &amp; Co<span class="skin-option-meta">Studio</span></span>')
             ->toContain('data-skin-trigger')
             ->toContain('role="menu" aria-label="Выбрать шаблон" hidden')
             ->toContain('data-overridden="false"')
@@ -278,8 +278,12 @@ it('selects templates with numeric folder names', function (): void {
         ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['skin'], 'enabled' => ['skin']]])->save();
         $toolbar = new DLEToolbar();
 
-        expect($toolbar->render())->toContain('data-skin-value="2024" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"')
-            ->toContain('data-skin-value="Default" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"');
+        expect($toolbar->render())->toContain('data-skin-value="2024" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"><span>Год<span class="skin-option-meta">2024 · По умолчанию</span>')
+            ->toContain('data-skin-value="Default" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Default</span>');
+
+        $GLOBALS['dletoolbar_test_skins'] = ['2024' => ['name' => 'Default'], 'Default' => ['name' => 'Default']];
+        expect($toolbar->render())->toContain('<span>Default<span class="skin-option-meta">2024 · По умолчанию</span>')
+            ->toContain('data-skin-value="Default" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Default<span class="skin-option-meta">Default</span>');
 
         $GLOBALS['config']['skin'] = 'Default';
         $_COOKIE['dle_skin'] = 'Default';
