@@ -103,7 +103,7 @@ it('warns on missing indexes without changing the log or breaking subsequent que
     expect(lastQuerySource()['num'])->toBe(count($entries))
         ->and(count($db->query_list))->toBe(count($entries) + 1);
 
-    $panel = new Queries(['slow_threshold_ms' => 20, 'fold_fast' => false]);
+    $panel = new Queries(['slow_threshold_ms' => 20, 'fold_fast' => false, 'trace_sources' => true]);
     expect($panel->render()['panel'])->toContain('SELECT 41 AS value', 'SELECT 42 AS value');
 });
 
@@ -147,12 +147,19 @@ it('installs tracing only for an allowed visible SQL panel with the experimental
     $db = $GLOBALS['db'];
     $db->query_list = [];
     $toolbar = new DLEToolbar();
+    ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+        'components' => ['queries' => ['trace_sources' => true]],
+    ])->save();
     $GLOBALS['member_id']['user_group'] = 5;
     $toolbar->init();
     expect($db->query_list)->toBeArray();
 
     $GLOBALS['member_id']['user_group'] = 1;
-    ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['time']]])->save();
+    ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['time']],
+        'components' => ['queries' => ['trace_sources' => true]],
+    ])->save();
     $toolbar->init();
     expect($db->query_list)->toBeArray();
 

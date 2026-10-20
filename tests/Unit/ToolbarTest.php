@@ -54,7 +54,10 @@ it('persists selected groups and restricts toolbar and cache access to them', fu
     $previousCookie = $_COOKIE['dle_toolbar_clear_cache'] ?? null;
 
     try {
-        ToolbarPreferences::fromRequest(['access' => ['groups' => ['2', '3']]])->save();
+        ToolbarPreferences::fromRequest([
+            'access' => ['groups' => ['2', '3']],
+            'toolbar' => ['enabled' => ['cache']],
+        ])->save();
         expect(ToolbarPreferences::load()->allowedGroups())->toBe([2, 3]);
         $toolbar = new DLEToolbar();
         foreach ([1 => false, 2 => true, 3 => true, 4 => false, 5 => false] as $group => $allowed) {

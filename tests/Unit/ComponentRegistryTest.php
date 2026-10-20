@@ -39,20 +39,19 @@ it('applies declared defaults and fresh preferences through the registry render 
         ->toBe(['controls' => '', 'hints' => '', 'styles' => '', 'panels' => '', 'scripts' => '']);
 });
 
-it('initializes hidden cache behavior', function (): void {
+it('initializes cache behavior only when the control is visible', function (bool $visible): void {
     $registry = new ComponentRegistry();
-    $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => []]]);
-    expect($registry->render($preferences)['controls'])->toBe('');
+    $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => $visible ? ['cache'] : []]]);
     $previousCookie = $_COOKIE['dle_toolbar_clear_cache'] ?? null;
     $GLOBALS['config']['allow_cache'] = true;
     $GLOBALS['config']['cache_type'] = 0;
 
     try {
         $_COOKIE['dle_toolbar_clear_cache'] = 'test-user-hash';
-        $registry->initialize();
-        expect($GLOBALS['config']['allow_cache'])->toBeFalse();
+        $registry->initialize($preferences);
+        expect($GLOBALS['config']['allow_cache'])->toBe(!$visible);
     } finally {
         if ($previousCookie === null) unset($_COOKIE['dle_toolbar_clear_cache']);
         else $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
     }
-});
+})->with(['visible' => true, 'hidden' => false]);

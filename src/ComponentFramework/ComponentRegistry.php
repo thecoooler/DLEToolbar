@@ -42,10 +42,12 @@ final class ComponentRegistry
         }
     }
 
-    /** Initializes request behavior regardless of control visibility. */
-    public function initialize(): void
+    /** Initializes request behavior for visible components. */
+    public function initialize(ToolbarPreferences $preferences): void
     {
-        foreach ($this->components as $component) {
+        $classes = self::classes($preferences->componentInstances());
+        foreach ($preferences->visibleItems() as $id) {
+            $component = $this->createComponent($id, $classes[$id], $preferences);
             if ($component instanceof RequestComponent) {
                 $component->initialize();
             }
@@ -58,10 +60,7 @@ final class ComponentRegistry
         $controls = $hints = $styles = $panels = $scripts = [];
         $classes = self::classes($preferences->componentInstances());
         foreach ($preferences->visibleItems() as $id) {
-            $class = $classes[$id];
-            $component = is_subclass_of($class, ConfigurableComponent::class)
-                ? new $class($preferences->componentParameters($id))
-                : $this->components[$id];
+            $component = $this->createComponent($id, $classes[$id], $preferences);
             $rendered = $component->render();
             if ($rendered === null) continue;
             if ($rendered['control'] !== '') $controls[] = $rendered['control'];
@@ -78,6 +77,17 @@ final class ComponentRegistry
             'panels' => implode("\n", $panels),
             'scripts' => implode("\n", $scripts),
         ];
+    }
+
+    /**
+     * @param ComponentId $id
+     * @param class-string<Component> $class
+     */
+    private function createComponent(string $id, string $class, ToolbarPreferences $preferences): Component
+    {
+        return is_subclass_of($class, ConfigurableComponent::class)
+            ? new $class($preferences->componentParameters($id))
+            : $this->components[$id];
     }
 
     /**
