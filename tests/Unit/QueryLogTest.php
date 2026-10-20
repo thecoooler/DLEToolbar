@@ -1,6 +1,7 @@
 <?php
 
 use iCooLER\DLEToolbar\Components\Queries\QueryLog;
+use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
@@ -68,6 +69,42 @@ it('lets callers change entry fields in place like the original array', function
     QueryLog::install();
     $GLOBALS['db']->query_list[0]['query'] = 'SELECT redacted';
     expect($GLOBALS['db']->query_list[0]['query'])->toBe('SELECT redacted');
+});
+
+it('warns on missing indexes without changing the log or breaking subsequent queries and rendering', function (): void {
+    $db = $GLOBALS['db'];
+    $db->query_list = [];
+    $db->query('SELECT 41 AS value');
+    $entries = $db->query_list;
+    $missingIndex = count($entries) + 1;
+    QueryLog::install();
+
+    $warnings = [];
+    set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+        $warnings[] = [$severity, $message];
+        return true;
+    });
+    try {
+        $nativeMissing = $entries[$missingIndex];
+        $tracedMissing = $db->query_list[$missingIndex];
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($nativeMissing)->toBeNull()
+        ->and($tracedMissing)->toBeNull()
+        ->and($warnings)->toHaveCount(2)
+        ->and($warnings[1])->toBe($warnings[0])
+        ->and(count($db->query_list))->toBe(count($entries))
+        ->and(iterator_to_array($db->query_list))->toBe($entries)
+        ->and(isset($db->query_list[$missingIndex]))->toBeFalse();
+
+    $db->query('SELECT 42 AS value');
+    expect(lastQuerySource()['num'])->toBe(count($entries))
+        ->and(count($db->query_list))->toBe(count($entries) + 1);
+
+    $panel = new Queries(['slow_threshold_ms' => 20, 'fold_fast' => false]);
+    expect($panel->render()['panel'])->toContain('SELECT 41 AS value', 'SELECT 42 AS value');
 });
 
 it('reports the source line of eval-encoded files without the eval suffix', function (): void {

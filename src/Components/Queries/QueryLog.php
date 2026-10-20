@@ -6,7 +6,7 @@ namespace iCooLER\DLEToolbar\Components\Queries;
  * Takes the place of DLE's query_list array and adds the call site to each appended entry.
  * The db object itself stays untouched, so references to it and DLE's error page keep working.
  *
- * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string}>
+ * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string}|null>
  * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string}>
  */
 final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
@@ -37,12 +37,18 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     }
 
     /**
-     * Returns by reference so callers can still change fields in place, as with the original array.
+     * Existing entries are returned by reference so callers can change their fields in place.
+     * Missing entries emit PHP's undefined-key warning without inserting a null into the log.
      * @param int $offset
-     * @return array{query: string, time: float, num: int, source?: string}
+     * @return array{query: string, time: float, num: int, source?: string}|null
      */
-    public function &offsetGet($offset): array
+    public function &offsetGet($offset): ?array
     {
+        if (!isset($this->entries[$offset])) {
+            /** @var null $missing PHP returns null after reporting the undefined key. */
+            $missing = $this->entries[$offset];
+            return $missing;
+        }
         return $this->entries[$offset];
     }
 
