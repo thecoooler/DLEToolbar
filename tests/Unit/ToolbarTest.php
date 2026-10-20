@@ -398,7 +398,7 @@ it('renders the SQL panel with chronological fast folds, escaping and an empty s
             ->not->toContain('&lt;1 мс')
             ->toContain('<span class="query-num">#3</span>')
             ->toContain('SELECT &quot;&lt;value&gt;&quot;')
-            ->toContain("<span class=\"query-sql\">SELECT &quot;&lt;value&gt;&quot;\nFROM dle_post</span>")
+            ->toContain("<span class=\"query-sql\"><span class=\"query-text\">SELECT &quot;&lt;value&gt;&quot;\nFROM dle_post</span></span>")
             ->toContain('class="query-copy" data-copy-query type="button" title="Скопировать SQL-запрос" aria-label="Скопировать SQL-запрос"')
             ->toContain('data-copy-status role="status" aria-live="polite"')
             ->toContain('>3 мс<')

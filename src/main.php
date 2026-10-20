@@ -10,7 +10,7 @@ if (!defined('DATALIFEENGINE')) {
 global $tpl, $DLEToolbar;
 
 /** @var \iCooLER\DLEToolbar\Toolbar\DLEToolbar $DLEToolbar */
-/** @var \dle_template $tpl */
+/** @var \dle_template&object{result: array<string, string>} $tpl */
 
 $tpl->result['main'] = str_replace($DLEToolbar->marker(), $DLEToolbar->render(), $tpl->result['main']);
 

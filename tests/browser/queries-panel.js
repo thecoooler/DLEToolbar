@@ -65,6 +65,8 @@
         folds[0].after(document.createElement('span'));
         folds[0].click();
         assert(rows[0].every((row) => !row.hidden), 'Click expands entire first group despite spacer');
+        assert(rows[0][0].querySelector('.query-source').textContent.includes('engine/modules/shop/run.php:12'),
+            'Expanded fast rows show call sites');
         assert(rows[1].every((row) => row.hidden), 'First group leaves second group collapsed');
         assert(folds[0].getAttribute('aria-expanded') === 'true', 'Fold announces expansion');
         assert(folds[0].textContent.includes('Скрыть'), 'Expanded fold label');
@@ -76,6 +78,8 @@
 
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
+        assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
+            'Ordinary rows show plugin labels');
         const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
         let copied;
         try {
