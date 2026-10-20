@@ -33,7 +33,7 @@ $db = new class {
         ['query' => 'Connection with MySQL Server', 'time' => .001, 'num' => 0],
         ['query' => 'SELECT fast_a', 'time' => .0002, 'num' => 1, 'source' => 'engine/modules/shop/run.php:12'],
         ['query' => 'SELECT fast_b', 'time' => .0003, 'num' => 2],
-        ['query' => 'SELECT "<value>"' . "\nFROM dle_post", 'time' => .002, 'num' => 3, 'source' => 'engine/Vendor/Plugin/run.php:34', 'source_modified' => true],
+        ['query' => 'SELECT "<value>"' . "\nFROM dle_post", 'time' => .002, 'num' => 3, 'source' => 'engine/Vendor/Plugin/run.php:34'],
         ['query' => 'SELECT fast_c', 'time' => .0004, 'num' => 4],
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
         ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],

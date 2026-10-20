@@ -78,8 +78,8 @@
 
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
-        assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin · изменён плагинами'),
-            'Ordinary rows show plugin labels and modification markers');
+        assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
+            'Ordinary rows show plugin labels');
         const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
         let copied;
         try {

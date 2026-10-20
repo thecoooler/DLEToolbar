@@ -69,7 +69,7 @@ final class Queries implements ConfigurableComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> $queries QueryLog when source tracing is enabled. */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
         /** @var int $queryCount */
         $queryCount = $db->query_num;
@@ -93,7 +93,7 @@ final class Queries implements ConfigurableComponent
             // DLE writes the session hash and password hashes in plain UPDATE queries.
             /** @var string $sql */
             $sql = preg_replace("/\\b(password|hash)\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
-            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $query['source'] ?? '', 'source_modified' => $query['source_modified'] ?? false];
+            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $query['source'] ?? ''];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
             if ($isFast && $lastIndex !== null && $groups[$lastIndex]['fast']) {
@@ -127,7 +127,7 @@ final class Queries implements ConfigurableComponent
                         . '<span class="query-bar"></span>'
                         . '<span class="query-num">·</span>'
                         . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                        . $this->renderSource($item['source'], $item['source_modified']) . '</span>'
+                        . $this->renderSource($item['source']) . '</span>'
                         . '<span class="query-time"></span>'
                         . $this->renderQueryCopyButton()
                         . '</div>';
@@ -144,7 +144,7 @@ final class Queries implements ConfigurableComponent
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                    . $this->renderSource($item['source'], $item['source_modified']) . '</span>'
+                    . $this->renderSource($item['source']) . '</span>'
                     . '<span class="query-time">' . ($this->foldFast && !$isSlow && $item['time'] < 0.001 ? '' : $format($item['time'])) . '</span>'
                     . $this->renderQueryCopyButton()
                     . '</div>';
@@ -180,7 +180,7 @@ final class Queries implements ConfigurableComponent
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
     }
 
-    private function renderSource(string $source, bool $modified): string
+    private function renderSource(string $source): string
     {
         if ($source === '') return '';
 
@@ -204,8 +204,7 @@ final class Queries implements ConfigurableComponent
         }
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return '<span class="query-source">' . $escape($source)
-            . ' · <span class="query-source-label">' . $escape($label) . '</span>'
-            . ($modified ? ' · изменён плагинами' : '') . '</span>';
+            . ' · <span class="query-source-label">' . $escape($label) . '</span></span>';
     }
 
     private function renderQueryCopyButton(): string {

@@ -6,12 +6,12 @@ namespace iCooLER\DLEToolbar\Components\Queries;
  * Takes the place of DLE's query_list array and adds the call site to each appended entry.
  * The db object itself stays untouched, so references to it and DLE's error page keep working.
  *
- * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}>
- * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}>
+ * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string}>
+ * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string}>
  */
 final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
 {
-    /** @var array<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> */
+    /** @var array<int, array{query: string, time: float, num: int, source?: string}> */
     private array $entries;
 
     /** @param array<int, array{query: string, time: float, num: int}> $entries */
@@ -39,7 +39,7 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     /**
      * Returns by reference so callers can still change fields in place, as with the original array.
      * @param int $offset
-     * @return array{query: string, time: float, num: int, source?: string, source_modified?: bool}
+     * @return array{query: string, time: float, num: int, source?: string}
      */
     public function &offsetGet($offset): array
     {
@@ -67,13 +67,13 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
         return count($this->entries);
     }
 
-    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string, source_modified?: bool}> */
+    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string}> */
     public function getIterator(): \ArrayIterator
     {
         return new \ArrayIterator($this->entries);
     }
 
-    /** @return array{source?: string, source_modified?: bool} */
+    /** @return array{source?: string} */
     private static function source(): array
     {
         // ENGINE_DIR mixes separators on Windows, and Windows paths ignore case, so compare normalized paths case-insensitively.
@@ -88,7 +88,6 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
             $file = preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
             if (stripos($file, $engine . '/classes/mysql.php') === 0) continue;
 
-            $modified = false;
             $cache = $engine . '/cache/system/plugins/';
             if (stripos($file, $cache) === 0) {
                 // DLE keeps this map private in both 14.x and 19.x.
@@ -99,17 +98,12 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
                     return $plugins;
                 }, null, \DLEPlugins::class);
                 $original = array_search(substr($file, strlen($cache)), $readPlugins(), true);
-                if ($original !== false) {
-                    $file = $original;
-                    $modified = true;
-                }
+                if ($original !== false) $file = $original;
             }
             $root = str_replace('\\', '/', ROOT_DIR) . '/';
             if (stripos($file, $root) === 0) $file = substr($file, strlen($root));
 
-            $source = ['source' => $file . ':' . $frame['line']];
-            if ($modified) $source['source_modified'] = true;
-            return $source;
+            return ['source' => $file . ':' . $frame['line']];
         }
         return [];
     }

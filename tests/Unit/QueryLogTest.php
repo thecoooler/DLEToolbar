@@ -94,8 +94,7 @@ it('maps a plugin cache call site back to its original file', function (string $
     try {
         QueryLog::install();
         require $fixture;
-        expect(lastQuerySource()['source'])->toBe('engine/modules/tracing-test/run.php:2')
-            ->and(lastQuerySource()['source_modified'])->toBeTrue();
+        expect(lastQuerySource()['source'])->toBe('engine/modules/tracing-test/run.php:2');
     } finally {
         $plugins->setValue(null, $before);
         unlink($fixture);

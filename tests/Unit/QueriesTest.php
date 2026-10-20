@@ -67,7 +67,7 @@ it('renders escaped call sites and path labels in ordinary and folded SQL rows',
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [
         ['query' => 'SELECT fast_a', 'time' => .0001, 'num' => 1, 'source' => 'engine/modules/shop/run.php:12'],
-        ['query' => 'SELECT fast_b', 'time' => .0002, 'num' => 2, 'source' => 'engine/Vendor/Plugin/run.php:34', 'source_modified' => true],
+        ['query' => 'SELECT fast_b', 'time' => .0002, 'num' => 2, 'source' => 'engine/Vendor/Plugin/run.php:34'],
         ['query' => 'SELECT core', 'time' => .002, 'num' => 3, 'source' => 'engine/classes/templates.class.php:56'],
         ['query' => 'SELECT escaped', 'time' => .002, 'num' => 4, 'source' => 'engine/modules/<shop>"/run.php:78'],
         ['query' => 'SELECT legacy', 'time' => .002, 'num' => 5],
@@ -78,7 +78,7 @@ it('renders escaped call sites and path labels in ordinary and folded SQL rows',
     ]));
     $panel = $rendered['panels'];
     expect($panel)->toContain('engine/modules/shop/run.php:12 · <span class="query-source-label">shop</span>')
-        ->toContain('engine/Vendor/Plugin/run.php:34 · <span class="query-source-label">Plugin</span> · изменён плагинами')
+        ->toContain('engine/Vendor/Plugin/run.php:34 · <span class="query-source-label">Plugin</span>')
         ->toContain('engine/classes/templates.class.php:56 · <span class="query-source-label">DLE</span>')
         ->toContain('engine/modules/&lt;shop&gt;&quot;/run.php:78 · <span class="query-source-label">&lt;shop&gt;&quot;</span>')
         ->not->toContain('<shop>')
