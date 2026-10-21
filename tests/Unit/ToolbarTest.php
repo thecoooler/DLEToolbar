@@ -341,7 +341,7 @@ it('selects templates with numeric folder names', function (): void {
         $toolbar = new DLEToolbar();
 
         expect($toolbar->render())->toContain('data-skin-value="2024" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"><span>Год<span class="skin-option-meta">2024 · По умолчанию</span>')
-            ->toContain('data-skin-value="Default" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Default</span>');
+            ->toContain('data-skin-value="Default" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Default<span class="skin-option-meta">Default</span></span>');
 
         $GLOBALS['dletoolbar_test_skins'] = ['2024' => ['name' => 'Default'], 'Default' => ['name' => 'Default']];
         expect($toolbar->render())->toContain('<span>Default<span class="skin-option-meta">2024 · По умолчанию</span>')
