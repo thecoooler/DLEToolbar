@@ -244,22 +244,18 @@ JS];
             : self::templateFolders();
 
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $nameCounts = array_count_values(array_column($skins, 'name'));
         $options = '';
         foreach ($skins as $name => $metadata) {
             // PHP turns numeric folder names such as "2024" into integer array keys.
             $name = (string) $name;
             $selected = $name === $current;
             $isDefault = $name === $this->defaultSkin;
-            // Templates may share a display name, so the folder tells them apart.
-            $meta = implode(' · ', array_filter([
-                $metadata['name'] !== $name || $nameCounts[$metadata['name']] > 1 ? $name : '',
-                $isDefault ? 'По умолчанию' : '',
-            ]));
+            // The folder is always shown: display names may repeat and do not identify the template.
+            $meta = $name . ($isDefault ? ' · По умолчанию' : '');
             $options .= '<button class="skin-option" data-skin-option data-skin-value="' . $escape($name)
                 . '" data-skin-default="' . ($isDefault ? 'true' : 'false') . '" type="button" role="menuitemradio" aria-checked="' . ($selected ? 'true' : 'false') . '">'
                 . '<span>' . $escape($metadata['name'])
-                . ($meta !== '' ? '<span class="skin-option-meta">' . $escape($meta) . '</span>' : '')
+                . '<span class="skin-option-meta">' . $escape($meta) . '</span>'
                 . '</span><span class="skin-option-check" aria-hidden="true">'
                 . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>' . '</span></button>';
         }
