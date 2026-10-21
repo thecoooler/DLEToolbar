@@ -180,6 +180,32 @@
         assert(skinMenu.hidden && !skinExpanded(), 'Outside pointer closes template menu');
         assert(root.activeElement === skinTrigger, 'Outside pointer restores focused template menu trigger');
 
+        // Hold the reload while checking the one-use cookie passed to PHP.
+        const originalFrame = window.requestAnimationFrame;
+        const originalUrl = window.location.href;
+        const frames = [];
+        window.requestAnimationFrame = callback => frames.push(callback);
+        try {
+            for (const option of [skinOptions[1], skinOptions[0]]) {
+                skinTrigger.disabled = false;
+                skinTrigger.click();
+                option.click();
+                const cookie = document.cookie.split('; ').find(value => value.startsWith('dle_toolbar_skin='));
+                const request = JSON.parse(decodeURIComponent(cookie.slice('dle_toolbar_skin='.length)));
+                assert(request.skin === option.dataset.skinValue, 'Temporary cookie sends selected folder, including default');
+                assert(request.token === skinTrigger.dataset.skinToken && request.token !== '', 'Temporary cookie includes CSRF token');
+                assert(!document.cookie.split('; ').some(value => value.startsWith('dle_skin=')), 'Native HttpOnly cookie stays inaccessible to JavaScript');
+                assert(window.location.href === originalUrl && !document.querySelector('form'), 'Selection preserves URL and creates no form');
+                assert(frames.length > 0, 'Selection schedules page reload');
+                assert(skinTrigger.disabled && !skinExpanded(), 'Selection prevents duplicate clicks and closes menu');
+            }
+        } finally {
+            window.requestAnimationFrame = originalFrame;
+            document.cookie = 'dle_toolbar_skin=; max-age=0; path=/';
+            skinTrigger.disabled = false;
+            skinTrigger.removeAttribute('aria-busy');
+        }
+
         window.queriesPanelTestResult = { status: 'PASS', assertions };
         result.textContent = `PASS (${assertions} assertions)`;
     } catch (error) {

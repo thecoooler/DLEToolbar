@@ -266,6 +266,68 @@ it('renders installed templates with the current selection and keeps skin visibi
     }
 });
 
+it('consumes a temporary cookie and redirects so DLE applies the persisted skin', function (): void {
+    $previousCookies = $_COOKIE;
+    $previousServer = $_SERVER;
+    try {
+        $GLOBALS['config']['skin'] = 'Air';
+        $GLOBALS['dletoolbar_test_skins'] = ['Air' => ['name' => 'Air'], 'Chronicle' => ['name' => 'Chronicle']];
+        $toolbar = new DLEToolbar();
+        $_COOKIE['dle_skin'] = 'Air';
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Chronicle', 'token' => $GLOBALS['dle_login_hash']]);
+        $_SERVER['REQUEST_URI'] = '/news/?page=2';
+        expect(fn () => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
+        expect($GLOBALS['dletoolbar_skin_redirect'])->toBe(['Location: /news/?page=2', 303]);
+        expect($_COOKIE['dle_skin'])->toBe('Chronicle')
+            ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
+            ->and($GLOBALS['config']['skin'])->toBe('Air');
+        // On the redirected request DLE reads the newly persisted cookie.
+        $GLOBALS['config']['skin'] = $_COOKIE['dle_skin'];
+        expect($toolbar->render())->toContain('data-overridden="true"')
+            ->toContain('role="menuitemradio" aria-checked="true"><span>Chronicle');
+
+        $GLOBALS['config']['skin'] = 'Air';
+        $toolbar = new DLEToolbar();
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
+        expect(fn () => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
+        expect(isset($_COOKIE['dle_skin']))->toBeFalse()
+            ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
+            ->and($toolbar->render())->toContain('data-overridden="false"')
+            ->not->toContain('class="skin-indicator"');
+    } finally {
+        $_COOKIE = $previousCookies;
+        $_SERVER = $previousServer;
+        unset($GLOBALS['dletoolbar_skin_redirect']);
+    }
+});
+
+it('rejects invalid skin cookies and requires toolbar access', function (): void {
+    $previousCookies = $_COOKIE;
+    try {
+        foreach ([
+            'broken json',
+            ['skin' => 'Air'],
+            json_encode(['skin' => 'Air', 'token' => 'wrong']),
+            json_encode(['skin' => ['Air'], 'token' => $GLOBALS['dle_login_hash']]),
+            json_encode(['skin' => '../Air', 'token' => $GLOBALS['dle_login_hash']]),
+            json_encode(['skin' => 'missing-template', 'token' => $GLOBALS['dle_login_hash']]),
+        ] as $cookie) {
+            $_COOKIE['dle_skin'] = 'Chronicle';
+            $_COOKIE['dle_toolbar_skin'] = $cookie;
+            (new DLEToolbar())->init();
+            expect($_COOKIE['dle_skin'])->toBe('Chronicle')
+                ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse();
+        }
+        $GLOBALS['member_id']['user_group'] = 5;
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
+        (new DLEToolbar())->init();
+        expect($_COOKIE['dle_skin'])->toBe('Chronicle')
+            ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeTrue();
+    } finally {
+        $_COOKIE = $previousCookies;
+    }
+});
+
 it('selects templates with numeric folder names', function (): void {
     $previousSiteConfig = $GLOBALS['config'] ?? null;
     $previousSkins = $GLOBALS['dletoolbar_test_skins'] ?? null;

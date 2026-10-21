@@ -2,9 +2,9 @@
 
 namespace iCooLER\DLEToolbar\Components\Skin;
 
-use iCooLER\DLEToolbar\ComponentFramework\Component;
+use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 
-final class Skin implements Component
+final class Skin implements RequestComponent
 {
     public static function definition(): array
     {
@@ -18,6 +18,38 @@ final class Skin implements Component
         global $config;
         /** @var array{skin: string} $config */
         $this->defaultSkin = $config['skin'];
+    }
+
+    public function initialize(): void
+    {
+        if (!isset($_COOKIE['dle_toolbar_skin'])) return;
+
+        $cookie = $_COOKIE['dle_toolbar_skin'];
+        setcookie('dle_toolbar_skin', '', time() - 3600, '/');
+        unset($_COOKIE['dle_toolbar_skin']);
+        $request = is_string($cookie) ? json_decode($cookie, true) : null;
+        global $dle_login_hash;
+        /** @var string $dle_login_hash */
+        if (!is_array($request) || !is_string($request['token'] ?? null)
+            || !hash_equals($dle_login_hash, $request['token']) || !is_string($request['skin'] ?? null)) return;
+
+        /** @var string $skin */
+        $skin = totranslit($request['skin'], false, false);
+        $skin = trim($skin);
+        if ($skin === '' || $skin !== $request['skin'] || !is_dir(ROOT_DIR . '/templates/' . $skin)) return;
+
+        // Authentication finishes after DLE selects its template. Apply the cookie on a fresh GET.
+        if ($skin === $this->defaultSkin) {
+            set_cookie('dle_skin', '', -1);
+            unset($_COOKIE['dle_skin']);
+        } else {
+            set_cookie('dle_skin', $skin, 365);
+            $_COOKIE['dle_skin'] = $skin;
+        }
+        /** @var string $uri */
+        $uri = $_SERVER['REQUEST_URI'];
+        header('Location: /' . ltrim($uri, '/'), true, 303);
+        exit;
     }
 
     public function render(): array
@@ -158,9 +190,10 @@ CSS,
         skinTrigger.setAttribute('aria-busy', 'true');
         skinTrigger.setAttribute('aria-label', 'Загрузка шаблона');
         root.dispatchEvent(new CustomEvent('dle-toolbar-popup-open'));
-        const isDefault = option.dataset.skinDefault === 'true';
-        document.cookie = 'dle_skin=' + (isDefault ? '' : encodeURIComponent(option.dataset.skinValue))
-            + '; max-age=' + (isDefault ? '0' : '31536000') + '; path=/; SameSite=Lax'
+        document.cookie = 'dle_toolbar_skin=' + encodeURIComponent(JSON.stringify({
+            skin: option.dataset.skinValue,
+            token: skinTrigger.dataset.skinToken,
+        })) + '; max-age=60; path=/; SameSite=Lax'
             + (window.location.protocol === 'https:' ? '; Secure' : '');
         requestAnimationFrame(() => requestAnimationFrame(() => window.location.reload()));
     });
@@ -197,8 +230,9 @@ JS];
     }
 
     private function renderControl(): string {
-        global $config;
+        global $config, $dle_login_hash;
         /** @var array{skin: string, version_id: string} $config */
+        /** @var string $dle_login_hash */
         $current = $config['skin'];
         /** @var string $cookieSkin */
         $cookieSkin = $_COOKIE['dle_skin'] ?? '';
@@ -234,6 +268,7 @@ JS];
 
         return '<span class="skin-picker" data-component="skin" data-overridden="' . ($overridden ? 'true' : 'false') . '">'
             . '<button class="control skin-trigger" data-skin-trigger type="button" aria-label="' . $escape($label)
+            . '" data-skin-token="' . $escape($dle_login_hash)
             . '" aria-haspopup="menu" aria-expanded="false" aria-controls="dle-toolbar-skin-menu">'
             . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>' . ($overridden ? '<span class="skin-indicator" aria-hidden="true"></span>' : '')
             . '</button><div class="skin-menu" id="dle-toolbar-skin-menu" data-skin-menu role="menu"'

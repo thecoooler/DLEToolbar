@@ -2,6 +2,12 @@
 
 namespace iCooLER\DLEToolbar\Components\Skin;
 
+function header(string $header, bool $replace = true, int $status = 0): void
+{
+    $GLOBALS['dletoolbar_skin_redirect'] = [$header, $status];
+    throw new \RuntimeException('skin redirect');
+}
+
 /** @return array<string, array{name: string}> */
 function get_folder_list(string $folder): array
 {
@@ -26,6 +32,7 @@ function setupDleToolbarTestEnvironment(): void
         'http_home_url' => 'https://example.test/',
         'admin_path' => 'admin.php',
         'skin' => 'Default',
+        'only_ssl' => false,
         'version_id' => '18.0',
     ];
     $GLOBALS['Timer'] = new class {

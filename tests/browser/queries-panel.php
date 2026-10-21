@@ -19,6 +19,8 @@ function get_folder_list(string $path): array
     return ['Default' => ['name' => 'Default'], 'Studio' => ['name' => 'Studio']];
 }
 
+setcookie('dle_skin', 'Default', 0, '/', '', false, true);
+$dle_login_hash = 'browser-test-user-hash';
 $config = ['skin' => 'Default', 'version_id' => '18.0'];
 $user_group = [1 => ['group_name' => 'Администраторы']];
 $dle_module = 'main';
