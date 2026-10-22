@@ -4,6 +4,6 @@ namespace iCooLER\DLEToolbar\ComponentFramework;
 
 interface RequestComponent extends Component
 {
-    /** Runs after toolbar access is granted, even when the control is disabled. */
+    /** Runs for visible components after toolbar access is granted. */
     public function initialize(): void;
 }

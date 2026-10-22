@@ -4,7 +4,6 @@ namespace iCooLER\DLEToolbar\Toolbar;
 
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\PopupLifecycle;
-use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 
 class DLEToolbar {
     private ComponentRegistry $components;
@@ -33,16 +32,7 @@ class DLEToolbar {
     public function init(): void {
         if (!$this->isHasAccess()) return;
 
-        global $config;
-        /** @var array{version_id: string} $config */
-        $preferences = ToolbarPreferences::load();
-        if (version_compare($config['version_id'], '14.0', '>=')
-            && in_array('queries', $preferences->visibleItems(), true)
-            && $preferences->componentParameters('queries')['trace_sources']) {
-            QueryLog::install();
-        }
-
-        $this->components->initialize();
+        $this->components->initialize(ToolbarPreferences::load());
     }
 
     public function render(): string {

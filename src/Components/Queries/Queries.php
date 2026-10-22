@@ -3,6 +3,7 @@
 namespace iCooLER\DLEToolbar\Components\Queries;
 
 use iCooLER\DLEToolbar\ComponentFramework\ConfigurableComponent;
+use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 
 /**
@@ -10,10 +11,11 @@ use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
  * The script runs with `root` in scope and emits dle-toolbar-popup-open
  * so the toolbar can dismiss its shared tooltip.
  */
-final class Queries implements ConfigurableComponent
+final class Queries implements ConfigurableComponent, RequestComponent
 {
     private float $slowThreshold;
     private bool $foldFast;
+    private bool $traceSources;
 
     public static function parameters(): array
     {
@@ -31,6 +33,17 @@ final class Queries implements ConfigurableComponent
     {
         $this->slowThreshold = (float) $values['slow_threshold_ms'] / 1000;
         $this->foldFast = (bool) $values['fold_fast'];
+        $this->traceSources = (bool) $values['trace_sources'];
+    }
+
+    public function initialize(): void
+    {
+        global $config;
+        /** @var array{version_id: string} $config */
+
+        if ($this->traceSources && version_compare($config['version_id'], '14.0', '>=')) {
+            QueryLog::install();
+        }
     }
 
     public static function definition(): array

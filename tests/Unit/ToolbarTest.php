@@ -54,7 +54,10 @@ it('persists selected groups and restricts toolbar and cache access to them', fu
     $previousCookie = $_COOKIE['dle_toolbar_clear_cache'] ?? null;
 
     try {
-        ToolbarPreferences::fromRequest(['access' => ['groups' => ['2', '3']]])->save();
+        ToolbarPreferences::fromRequest([
+            'access' => ['groups' => ['2', '3']],
+            'toolbar' => ['enabled' => ['cache']],
+        ])->save();
         expect(ToolbarPreferences::load()->allowedGroups())->toBe([2, 3]);
         $toolbar = new DLEToolbar();
         foreach ([1 => false, 2 => true, 3 => true, 4 => false, 5 => false] as $group => $allowed) {
@@ -301,7 +304,7 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
     }
 });
 
-it('rejects invalid skin cookies and requires toolbar access', function (): void {
+it('rejects invalid skin cookies, requires toolbar access and ignores hidden skin control', function (): void {
     $previousCookies = $_COOKIE;
     try {
         foreach ([
@@ -319,6 +322,13 @@ it('rejects invalid skin cookies and requires toolbar access', function (): void
                 ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse();
         }
         $GLOBALS['member_id']['user_group'] = 5;
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
+        (new DLEToolbar())->init();
+        expect($_COOKIE['dle_skin'])->toBe('Chronicle')
+            ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeTrue();
+
+        $GLOBALS['member_id']['user_group'] = 1;
+        ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['time']]])->save();
         $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
         (new DLEToolbar())->init();
         expect($_COOKIE['dle_skin'])->toBe('Chronicle')
