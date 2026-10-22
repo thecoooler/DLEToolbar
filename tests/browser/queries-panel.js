@@ -135,6 +135,9 @@
         skinTrigger.click();
         assert(skinExpanded() && !skinMenu.hidden, 'Template menu opens');
         assert(root.activeElement === skinOptions[0], 'Template menu focuses current template');
+        const skinList = skinMenu.querySelector('.skin-menu-list');
+        assert(getComputedStyle(skinMenu).overflow === 'hidden' && getComputedStyle(skinList).overflowY === 'auto', 'Template list scrolls inside the rounded frame');
+        assert(skinMenu.getBoundingClientRect().top >= 0, 'Template menu stays inside the viewport');
         key(skinOptions[0], 'ArrowDown');
         assert(root.activeElement === skinOptions[1], 'Template navigation remains local');
         key(skinOptions[1], 'Escape');

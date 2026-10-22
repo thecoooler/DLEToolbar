@@ -90,11 +90,13 @@ final class Skin implements RequestComponent
                 z-index: 2;
                 bottom: calc(100% + 8px);
                 left: 0;
-                min-width: min(280px, calc(100vw - 24px));
-                max-width: min(360px, calc(100vw - 24px));
-                max-height: min(320px, calc(100dvh - 40px));
-                overflow: auto;
-                padding: 4px;
+                display: flex;
+                flex-direction: column;
+                width: max-content;
+                min-width: min(320px, calc(100vw - 24px));
+                max-width: min(440px, calc(100vw - 24px));
+                max-height: min(560px, var(--skin-menu-space, calc(100dvh - 120px)));
+                overflow: hidden;
                 border: 1px solid var(--border);
                 border-radius: 10px;
                 background: var(--surface);
@@ -102,6 +104,18 @@ final class Skin implements RequestComponent
                 box-shadow: var(--shadow);
                 transform-origin: center bottom;
                 animation: toolbar-popover-in 160ms cubic-bezier(.2, .8, .2, 1);
+            }
+            /* The rounded frame clips; only the inner list scrolls, so the scrollbar stays inside the corners. */
+            .skin-menu-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-height: 0;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                padding: 4px;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent;
             }
             .skin-menu[hidden] { display: none; }
             .skin-menu[data-closing="true"] {
@@ -122,14 +136,16 @@ final class Skin implements RequestComponent
                 justify-content: space-between;
                 gap: 16px;
                 width: 100%;
-                min-height: 36px;
-                padding: 7px 9px;
+                flex: 0 0 auto;
+                min-height: 44px;
+                padding: 7px 10px;
                 border: 0;
                 border-radius: 6px;
                 background: transparent;
                 color: var(--foreground);
                 font: inherit;
-                font-size: 12px;
+                font-size: 13px;
+                line-height: 1.3;
                 text-align: left;
                 cursor: pointer;
                 transition: background-color 120ms ease, color 120ms ease;
@@ -140,14 +156,16 @@ final class Skin implements RequestComponent
             .skin-option[aria-checked="true"] { font-weight: 600; }
             .skin-option:focus-visible { outline: 2px solid var(--foreground); outline-offset: -2px; }
             .skin-option-check {
+                flex: 0 0 auto;
                 opacity: 0;
                 color: var(--foreground);
             }
             .skin-option[aria-checked="true"] .skin-option-check { opacity: 1; }
             .skin-option-check svg { width: 16px; height: 16px; }
-            .skin-option-meta { display: block; color: var(--muted); font-size: 10px; font-weight: 400; }
+            .skin-option > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+            .skin-option-meta { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 400; }
             @media (max-width: 480px) {
-                .skin-menu { min-width: min(260px, calc(100vw - 20px)); max-width: calc(100vw - 20px); }
+                .skin-menu { min-width: min(280px, calc(100vw - 20px)); max-width: calc(100vw - 20px); }
             }
             @media (max-width: 480px) { .skin-picker { width: 36px; } }
             @media (prefers-reduced-motion: reduce) {
@@ -167,6 +185,8 @@ CSS,
         panel: skinMenu,
         closeDuration: 130,
         onOpen: () => {
+            // Keep the menu below the viewport top: it opens upward from the picker.
+            skinMenu.style.setProperty('--skin-menu-space', skinPicker.getBoundingClientRect().top - 20 + 'px');
             const menuWidth = skinMenu.getBoundingClientRect().width;
             const pickerRect = skinPicker.getBoundingClientRect();
             const menuLeft = Math.min(
@@ -268,7 +288,7 @@ JS];
             . '" aria-haspopup="menu" aria-expanded="false" aria-controls="dle-toolbar-skin-menu">'
             . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>' . ($overridden ? '<span class="skin-indicator" aria-hidden="true"></span>' : '')
             . '</button><div class="skin-menu" id="dle-toolbar-skin-menu" data-skin-menu role="menu"'
-            . ' aria-label="Выбрать шаблон" hidden>' . $options . '</div></span>';
+            . ' aria-label="Выбрать шаблон" hidden><div class="skin-menu-list">' . $options . '</div></div></span>';
     }
 
     /**
