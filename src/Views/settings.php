@@ -118,6 +118,8 @@ if (!defined('DATALIFEENGINE')) {
     #dlt-settings-form .dlt-icon-glyph svg { display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
     #dlt-settings-form .dlt-icon-glyph svg.fill { fill: currentColor; stroke: none; }
     #dlt-settings-form .dlt-icon-label { font-size: 11px; line-height: 1.2; }
+    /* The admin theme sizes .modal-dialog by its content (inline-block, width: auto). */
+    #dlt-settings-form .modal-dialog { width: 50rem; max-width: 93%; }
     #dlt-settings-form .modal-header,
     #dlt-settings-form .modal-body,
     #dlt-settings-form .modal-footer { padding-left: 32px; padding-right: 32px; }
