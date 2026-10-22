@@ -304,7 +304,7 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
     }
 });
 
-it('rejects invalid skin cookies and requires toolbar access', function (): void {
+it('rejects invalid skin cookies, requires toolbar access and ignores hidden skin control', function (): void {
     $previousCookies = $_COOKIE;
     try {
         foreach ([
@@ -322,6 +322,13 @@ it('rejects invalid skin cookies and requires toolbar access', function (): void
                 ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse();
         }
         $GLOBALS['member_id']['user_group'] = 5;
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
+        (new DLEToolbar())->init();
+        expect($_COOKIE['dle_skin'])->toBe('Chronicle')
+            ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeTrue();
+
+        $GLOBALS['member_id']['user_group'] = 1;
+        ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['time']]])->save();
         $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
         (new DLEToolbar())->init();
         expect($_COOKIE['dle_skin'])->toBe('Chronicle')
