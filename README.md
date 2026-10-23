@@ -161,3 +161,7 @@ Workflow проверит формат тега и принадлежность 
 Ошибки и предложения — через [issues](https://github.com/thecoooler/DLEToolbar/issues/new/choose).
 Как прислать pull request — в [CONTRIBUTING.md](CONTRIBUTING.md). Уязвимости
 сообщайте приватно, см. [SECURITY.md](SECURITY.md).
+
+## Лицензия
+
+[MIT](LICENSE).
