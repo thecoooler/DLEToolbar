@@ -28,6 +28,18 @@ it('keeps the DLE counter distinct from filtered SQL rows and respects time thre
         ->toMatch('/query-row-slow[^>]*>.*?SELECT slow/s');
 });
 
+/** Renders the given SQL as panel rows and returns the panel text with HTML entities decoded. */
+function maskedQueriesPanel(array $queries): string
+{
+    setupDleToolbarTestEnvironment();
+    foreach ($queries as $number => $query) {
+        $GLOBALS['db']->query_list[] = ['query' => $query, 'time' => .002, 'num' => $number];
+    }
+    return html_entity_decode((new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'], ENT_QUOTES, 'UTF-8');
+}
+
 it('masks password and session hash values in SQL rows', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [
@@ -40,12 +52,60 @@ it('masks password and session hash values in SQL rows', function (): void {
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     expect($panel)->toContain('password=&#039;***&#039;, lastdate=&#039;1&#039;, hash=&#039;***&#039;, logged_ip=&#039;::1&#039;')
-        ->toContain('PASSWORD=&#039;***&#039; WHERE name=&#039;admin&#039;')
+        ->toContain('PASSWORD = &#039;***&#039; WHERE name=&#039;admin&#039;')
         ->toContain('user_hash=&#039;***&#039; AND u.password=&#039;***&#039;')
         ->not->toContain('def456')
         ->not->toContain('ghi789')
         ->not->toContain('secret')
         ->not->toContain('abc123');
+});
+
+it('masks secret columns in INSERT value lists', function (): void {
+    $panel = maskedQueriesPanel([
+        "INSERT INTO dle_users (name, password, email, reg_date, lastdate, user_group, info, signature, favorites, xfields, hash, logged_ip)"
+            . " VALUES ('admin', '\$2y\$10\$zz1', 'a@example.com', 1700000000, '1700000000', '4', '', '', '', '', 'zz2', '::1')",
+        "INSERT INTO dle_twofactor (user_id, `pin`, attempt, date) VALUES ('1', \"123456\", '0', '1700000000')",
+        "INSERT INTO dle_lostdb (lostname, lostid) values ('1', 'zz3')",
+        "INSERT INTO dle_logs (name, value) VALUES ('password', 'visible')",
+    ]);
+    expect($panel)->toContain("VALUES ('admin', '***', 'a@example.com', 1700000000, '1700000000', '4', '', '', '', '', '***', '::1')")
+        ->toContain("VALUES ('1', '***', '0', '1700000000')")
+        ->toContain("values ('1', '***')")
+        ->toContain("VALUES ('password', 'visible')")
+        ->not->toContain('123456')
+        ->not->toMatch('/zz\d/');
+});
+
+it('masks secret columns in comparisons and assignments', function (): void {
+    $panel = maskedQueriesPanel([
+        "SELECT 1 FROM dle_users WHERE `password` LIKE \"zz1\" AND hash != 'zz2' AND hash <> 'zz3' AND u.hash NOT LIKE 'zz4'",
+        "SELECT * FROM dle_twofactor WHERE user_id='1' AND pin=654321",
+        "UPDATE dle_api SET api_key='zz5', apikey='zz6', access_token=\"zz7\", client_secret = 'zz8', salt='zz9' WHERE id=1",
+    ]);
+    expect($panel)->toContain("`password` LIKE '***' AND hash != '***' AND hash <> '***' AND u.hash NOT LIKE '***'")
+        ->toContain("user_id='1' AND pin='***'")
+        ->toContain("api_key='***', apikey='***', access_token='***', client_secret = '***', salt='***' WHERE id=1")
+        ->not->toContain('654321')
+        ->not->toMatch('/zz\d/');
+});
+
+it('keeps values of columns that only resemble secret names', function (): void {
+    $queries = [
+        "SELECT * FROM dle_post WHERE author='admin' AND ping='pong' AND pinned=1 AND keywords='kw' AND passport='pp'",
+        "INSERT INTO dle_toolbar_settings (setting_key, setting_value) VALUES ('queries', '{\"a\":1}')",
+        "SELECT name, password, hash FROM dle_users WHERE user_id = 7 ORDER BY hash",
+    ];
+    $panel = maskedQueriesPanel($queries);
+    foreach ($queries as $query) {
+        expect($panel)->toContain($query);
+    }
+});
+
+it('masks queries with long literals such as news texts', function (): void {
+    $story = str_repeat('Текст с \\\'кавычками\\\' и \\\\ обратной чертой. ', 40000);
+    $panel = maskedQueriesPanel(["INSERT INTO dle_post (title, full_story, hash) VALUES ('t', '$story', 'zzlong')"]);
+    expect($panel)->toContain("VALUES ('t', '$story', '***')")
+        ->not->toContain('zzlong');
 });
 
 it('explains that DLE 13.x keeps no SQL list instead of reporting an empty page', function (): void {

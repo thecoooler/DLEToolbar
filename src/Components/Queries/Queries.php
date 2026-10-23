@@ -103,9 +103,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
 
             $number++;
-            // DLE writes the session hash and password hashes in plain UPDATE queries; prefixed columns such as user_hash are masked too.
-            /** @var string $sql */
-            $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
+            $sql = self::maskSecrets($query['query']);
             $source = $query['source'] ?? '';
             $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $source,
                 'initiator' => $source === '' ? '' : self::initiator($source)];
@@ -256,6 +254,29 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
         }
         return $label;
+    }
+
+    /**
+     * Masks values of password, hash, token, secret, salt, API key and DLE two-factor or recovery code columns
+     * in comparisons and in INSERT column lists, which DLE uses to write the password and session hash on registration.
+     */
+    private static function maskSecrets(string $sql): string
+    {
+        $name = '`?\w*(?:password|hash|token|secret|salt|pin|lostid|api_?key)`?';
+        // Possessive quantifiers keep long literals such as news texts from exhausting the PCRE stack.
+        $literal = '\'[^\'\\\\]*+(?:\\\\.[^\'\\\\]*+)*+\'|"[^"\\\\]*+(?:\\\\.[^"\\\\]*+)*+"';
+        /** @var string $sql */
+        $sql = preg_replace_callback('/(\(([\w\s,`]+)\)\s*VALUES\s*\()((?:' . $literal . '|[^\'"()])*+)\)/i',
+            static function (array $match) use ($name, $literal): string {
+                $secrets = preg_grep('/^' . $name . '$/i', array_map('trim', explode(',', $match[2])));
+                $position = 0;
+                return $match[1] . preg_replace_callback('/' . $literal . '|[^,\s]+/',
+                    static function (array $value) use ($secrets, &$position): string {
+                        return isset($secrets[$position++]) ? "'***'" : $value[0];
+                    }, $match[3]) . ')';
+            }, $sql);
+        /** @var string */
+        return preg_replace('/(' . $name . '\s*(?:=|!=|<>|(?:NOT\s+)?LIKE)\s*)(?:' . $literal . '|\d+\b)/i', "\$1'***'", $sql);
     }
 
     private static function queriesWord(int $count): string
