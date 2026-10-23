@@ -28,6 +28,7 @@ function setupDleToolbarTestEnvironment(): void
     $GLOBALS['dletoolbar_native_db'] ??= $GLOBALS['db'];
     $GLOBALS['dletoolbar_native_db']->query('DELETE FROM `' . PREFIX . '_dletoolbar_settings`');
     \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences::resetRequestCache();
+    \iCooLER\DLEToolbar\Components\Entry\PageEntry::reset();
     $GLOBALS['config'] = [
         'http_home_url' => 'https://example.test/',
         'admin_path' => 'admin.php',

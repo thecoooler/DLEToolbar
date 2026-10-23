@@ -1,5 +1,6 @@
 <?php
 
+use iCooLER\DLEToolbar\Components\Entry\PageEntry;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
@@ -60,6 +61,7 @@ beforeEach(function (): void {
 it('extracts every integration patch from the patch list', function (): void {
     expect(integrationPatches('engine/init.php'))->toHaveCount(2)
         ->and(integrationPatches('engine/modules/show.full.php'))->toHaveCount(1)
+        ->and(integrationPatches('engine/modules/profile.php'))->toHaveCount(1)
         ->and(integrationPatches('engine/modules/main.php'))->toHaveCount(2);
 });
 
@@ -98,6 +100,28 @@ it('survives a failure while capturing news fields', function (): void {
     // DLE hands a NULL xfields column to the hook for news without additional fields.
     $state = runRequest([], null);
     expect($state['log'])->toContain('[DLEToolbar]');
+});
+
+it('captures the viewed news and profile rows for the entry panel', function (): void {
+    $state = runRequest([]);
+    expect(PageEntry::news())->toBe(['xfields' => ''])
+        ->and($state['log'])->toBe('');
+    // main.php releases the toolbar after output, so the profile hook gets its own instance.
+    runIntegrationPatch('engine/modules/profile.php', 0, ['DLEToolbar' => new DLEToolbar(), 'row' => ['user_id' => 1, 'name' => 'admin']]);
+    expect(PageEntry::user())->toBe(['user_id' => 1, 'name' => 'admin']);
+});
+
+it('survives a failure while capturing the profile row', function (): void {
+    $previous = ini_set('error_log', $log = tempnam(sys_get_temp_dir(), 'dletoolbar'));
+    try {
+        // A profile hook can only fail inside the toolbar; a missing row stands in for that failure.
+        runIntegrationPatch('engine/modules/profile.php', 0, ['DLEToolbar' => new DLEToolbar(), 'row' => null]);
+        expect(file_get_contents($log))->toContain('[DLEToolbar] user profile')
+            ->and(PageEntry::user())->toBeNull();
+    } finally {
+        ini_set('error_log', $previous === false ? '' : $previous);
+        unlink($log);
+    }
 });
 
 it('survives a failure while rendering a component', function (): void {

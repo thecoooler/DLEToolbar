@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сравнение вариантов вкладки «Обзор» — DLEToolbar</title>
+    <style>
+        :root {
+            --bg-page: #f1f5f9;
+            --text-page: #0f172a;
+            --card-border: #cbd5e1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-page);
+            padding: 24px 20px 60px;
+            line-height: 1.5;
+        }
+        .header {
+            max-width: 1560px;
+            margin: 0 auto 24px;
+            padding: 0 4px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .header p {
+            margin-top: 6px;
+            color: #475569;
+            font-size: 14px;
+        }
+        .nav-variants {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            text-decoration: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 120ms ease;
+        }
+        .nav-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        .section-variant {
+            max-width: 1560px;
+            margin: 36px auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 20px 24px 28px;
+            box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
+        }
+        .variant-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .variant-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .variant-tag {
+            padding: 3px 9px;
+            border-radius: 6px;
+            background: #0284c7;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+        .variant-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .variant-desc {
+            font-size: 13px;
+            color: #64748b;
+        }
+        .columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+        }
+        @media (max-width: 1100px) {
+            .columns { grid-template-columns: minmax(0, 1fr); }
+        }
+        .column-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* DLEToolbar Entry Component CSS Simulation */
+        .dle-toolbar-scope {
+            --surface: #fff;
+            --foreground: #27272a;
+            --muted: #52525b;
+            --border: #e4e4e7;
+            --hover: #f4f4f5;
+            --row-stripe: #fafafa;
+            --shadow: 0 8px 30px rgb(24 24 27 / 10%), 0 2px 6px rgb(24 24 27 / 5%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--foreground);
+        }
+        .dle-toolbar-scope[data-theme="dark"] {
+            --surface: #18181b;
+            --foreground: #fafafa;
+            --muted: #a1a1aa;
+            --border: #3f3f46;
+            --hover: #27272a;
+            --row-stripe: #1c1c20;
+            --shadow: 0 8px 30px rgb(0 0 0 / 25%), 0 2px 6px rgb(0 0 0 / 15%);
+            background: #09090b;
+            padding: 12px;
+            border-radius: 18px;
+        }
+        .entry-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 760px;
+            height: 520px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--surface);
+            color: var(--foreground);
+            box-shadow: var(--shadow);
+            margin: 0 auto;
+        }
+        .entry-header {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 14px 14px 12px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .entry-heading { flex: 1 1 auto; min-width: 0; margin-right: 6px; }
+        .entry-kind {
+            margin: 0 0 3px;
+            color: var(--muted);
+            font: 600 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        .entry-kind span { margin-left: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0; }
+        .entry-header h2 {
+            margin: 0;
+            color: var(--foreground);
+            font: 650 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: -.02em;
+            overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .entry-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+        .entry-badge {
+            padding: 2px 8px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+        .entry-badge[data-tone="success"] { border-color: rgb(22 163 74 / 30%); background: rgb(22 163 74 / 8%); color: #15803d; }
+        .entry-badge[data-tone="warning"] { border-color: rgb(217 119 6 / 30%); background: rgb(217 119 6 / 8%); color: #b45309; }
+        .entry-badge[data-tone="info"] { border-color: rgb(37 99 235 / 30%); background: rgb(37 99 235 / 8%); color: #1d4ed8; }
+        .entry-badge[data-tone="danger"] { border-color: rgb(185 28 28 / 30%); background: rgb(185 28 28 / 8%); color: #b91c1c; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-badge[data-tone="success"] { color: #4ade80; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-badge[data-tone="warning"] { color: #fbbf24; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-badge[data-tone="info"] { color: #93c5fd; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-badge[data-tone="danger"] { color: #fca5a5; }
+
+        .entry-tabs {
+            display: flex;
+            flex: 0 0 auto;
+            gap: 2px;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .entry-tab {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+            padding: 8px 8px 10px;
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font: 600 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            cursor: pointer;
+        }
+        .entry-tab[aria-selected="true"] { color: var(--foreground); }
+        .entry-tab[aria-selected="true"]::after {
+            content: '';
+            position: absolute;
+            right: 8px;
+            bottom: -1px;
+            left: 8px;
+            height: 2px;
+            border-radius: 2px 2px 0 0;
+            background: var(--foreground);
+        }
+        .entry-count {
+            min-width: 18px;
+            padding: 1px 5px;
+            border-radius: 999px;
+            background: var(--hover);
+            color: var(--muted);
+            font: 600 10px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            text-align: center;
+        }
+        .entry-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            padding: 8px 18px 14px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* Variant A Styles */
+        .entry-dash { display: grid; gap: 10px; padding: 6px 0 4px; }
+        .entry-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+        .entry-tile {
+            min-width: 0;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--row-stripe);
+        }
+        .entry-tile-label { display: block; color: var(--muted); font-size: 11px; line-height: 1.3; }
+        .entry-tile-value {
+            display: block;
+            margin-top: 3px;
+            color: var(--foreground);
+            font: 650 18px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -.02em;
+            overflow-wrap: anywhere;
+        }
+        .entry-tile-hint { display: block; margin-top: 1px; color: var(--muted); font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+        .entry-cards { display: grid; gap: 8px; }
+        .entry-card {
+            --tone: var(--border);
+            min-width: 0;
+            padding: 10px 12px 10px 14px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--tone);
+            border-radius: 10px;
+        }
+        .entry-card[data-tone="success"] { --tone: #16a34a; }
+        .entry-card[data-tone="warning"] { --tone: #d97706; }
+        .entry-card[data-tone="info"] { --tone: #2563eb; }
+        .entry-card[data-tone="danger"] { --tone: #b91c1c; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-card[data-tone="success"] { --tone: #4ade80; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-card[data-tone="warning"] { --tone: #fbbf24; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-card[data-tone="info"] { --tone: #93c5fd; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-card[data-tone="danger"] { --tone: #fca5a5; }
+        .entry-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+        .entry-card-title { margin: 0; color: var(--muted); font: 600 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+        .entry-verdict { margin: 0; color: var(--foreground); font-weight: 650; text-align: right; }
+        .entry-facts { display: grid; grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); gap: 3px 12px; margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; }
+        .entry-facts > dt { margin: 0; color: var(--muted); font-weight: 500; }
+        .entry-facts > dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+        .entry-notes { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.45; }
+        .entry-notes li { position: relative; padding-left: 14px; overflow-wrap: anywhere; }
+        .entry-notes li + li { margin-top: 2px; }
+        .entry-notes li::before { content: ''; position: absolute; top: .55em; left: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--tone); }
+        .entry-muted { color: var(--muted); }
+        a { color: inherit; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
+
+        /* Variant B Styles */
+        .entry-hero {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--row-stripe);
+        }
+        .entry-hero-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .entry-hero-badges {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .entry-hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            white-space: nowrap;
+        }
+        .entry-hero-badge[data-tone="success"] { border-color: rgb(22 163 74 / 35%); background: rgb(22 163 74 / 10%); color: #15803d; }
+        .entry-hero-badge[data-tone="warning"] { border-color: rgb(217 119 6 / 35%); background: rgb(217 119 6 / 10%); color: #b45309; }
+        .entry-hero-badge[data-tone="info"] { border-color: rgb(37 99 235 / 35%); background: rgb(37 99 235 / 10%); color: #1d4ed8; }
+        .entry-hero-badge[data-tone="danger"] { border-color: rgb(185 28 28 / 35%); background: rgb(185 28 28 / 10%); color: #b91c1c; }
+        .entry-hero-badge[data-tone="neutral"] { border-color: var(--border); background: var(--surface); color: var(--foreground); }
+        .dle-toolbar-scope[data-theme="dark"] .entry-hero-badge[data-tone="success"] { color: #4ade80; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-hero-badge[data-tone="warning"] { color: #fbbf24; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-hero-badge[data-tone="info"] { color: #93c5fd; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-hero-badge[data-tone="danger"] { color: #fca5a5; }
+        .entry-hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 8px;
+            color: var(--foreground);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .entry-hero-fact { display: inline-flex; align-items: baseline; gap: 4px; }
+        .entry-hero-label { color: var(--muted); font-weight: 500; }
+        .entry-hero-val { font-weight: 550; }
+        .entry-hero-sep { color: var(--border); font-weight: 400; }
+        .entry-hero-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .entry-hero-metric {
+            min-width: 0;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+        }
+        .entry-hero-metric-label {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .entry-hero-metric-val {
+            display: block;
+            margin-top: 2px;
+            color: var(--foreground);
+            font: 650 17px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -.02em;
+            overflow-wrap: anywhere;
+        }
+        .entry-hero-metric-hint {
+            display: block;
+            margin-top: 1px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .entry-collapses {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .entry-collapse {
+            --tone: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            overflow: hidden;
+            transition: border-color 140ms ease;
+        }
+        .entry-collapse[data-tone="success"] { --tone: #16a34a; }
+        .entry-collapse[data-tone="warning"] { --tone: #d97706; border-color: rgb(217 119 6 / 35%); }
+        .entry-collapse[data-tone="danger"] { --tone: #b91c1c; border-color: rgb(185 28 28 / 35%); }
+        .entry-collapse[data-tone="info"] { --tone: #2563eb; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-collapse[data-tone="success"] { --tone: #4ade80; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-collapse[data-tone="warning"] { --tone: #fbbf24; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-collapse[data-tone="danger"] { --tone: #fca5a5; }
+        .entry-collapse summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 9px 12px;
+            background: var(--row-stripe);
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+        .entry-collapse summary::-webkit-details-marker { display: none; }
+        .entry-collapse summary:hover { background: var(--hover); }
+        .entry-collapse-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            font: 600 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .entry-collapse-name {
+            color: var(--foreground);
+            letter-spacing: .02em;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+        .entry-collapse-toggle {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-right: 1.5px solid var(--muted);
+            border-bottom: 1.5px solid var(--muted);
+            transform: rotate(-45deg);
+            transition: transform 140ms ease;
+            margin-right: 2px;
+        }
+        .entry-collapse[open] .entry-collapse-toggle {
+            transform: rotate(45deg);
+        }
+        .entry-collapse-body {
+            padding: 10px 14px 12px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .entry-collapse-body .entry-facts { margin: 0; }
+        .entry-collapse-body .entry-notes { margin: 0; }
+        .entry-collapse-empty {
+            margin: 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* Variant C Styles */
+        .entry-timeline-strip {
+            display: flex;
+            align-items: stretch;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 2px 0 4px;
+            scrollbar-width: none;
+        }
+        .entry-timeline-stat {
+            flex: 1 1 0;
+            min-width: 90px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--row-stripe);
+            text-align: center;
+        }
+        .entry-timeline-stat-val {
+            display: block;
+            color: var(--foreground);
+            font: 650 16px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -.02em;
+            white-space: nowrap;
+        }
+        .entry-timeline-stat-label {
+            display: block;
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+        .entry-timeline-stat-hint {
+            display: block;
+            margin-top: 1px;
+            color: var(--muted);
+            font-size: 10px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .entry-timeline {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 4px 0 4px 26px;
+        }
+        .entry-timeline::before {
+            content: '';
+            position: absolute;
+            top: 14px;
+            bottom: 14px;
+            left: 9px;
+            width: 2px;
+            background: var(--border);
+        }
+        .entry-timeline-item {
+            position: relative;
+            --item-tone: var(--border);
+            --tone: var(--border);
+        }
+        .entry-timeline-item[data-tone="success"] { --item-tone: #16a34a; --tone: #16a34a; }
+        .entry-timeline-item[data-tone="warning"] { --item-tone: #d97706; --tone: #d97706; }
+        .entry-timeline-item[data-tone="info"] { --item-tone: #2563eb; --tone: #2563eb; }
+        .entry-timeline-item[data-tone="danger"] { --item-tone: #b91c1c; --tone: #b91c1c; }
+        .entry-timeline-item[data-tone="neutral"] { --item-tone: var(--muted); --tone: var(--muted); }
+        .dle-toolbar-scope[data-theme="dark"] .entry-timeline-item[data-tone="success"] { --item-tone: #4ade80; --tone: #4ade80; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-timeline-item[data-tone="warning"] { --item-tone: #fbbf24; --tone: #fbbf24; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-timeline-item[data-tone="info"] { --item-tone: #93c5fd; --tone: #93c5fd; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-timeline-item[data-tone="danger"] { --item-tone: #fca5a5; --tone: #fca5a5; }
+        .dle-toolbar-scope[data-theme="dark"] .entry-timeline-item[data-tone="neutral"] { --item-tone: var(--muted); --tone: var(--muted); }
+        .entry-timeline-marker {
+            position: absolute;
+            top: 12px;
+            left: -24px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2.5px solid var(--item-tone);
+            box-shadow: 0 0 0 2px var(--surface);
+            z-index: 1;
+        }
+        .entry-timeline-box {
+            padding: 10px 12px 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+        }
+        .entry-timeline-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .entry-timeline-title {
+            margin: 0;
+            color: var(--muted);
+            font: 600 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        .entry-timeline-callout {
+            margin: 8px 0 0;
+            padding: 6px 10px;
+            border-radius: 7px;
+            background: var(--row-stripe);
+            border-left: 2px solid var(--item-tone);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .entry-timeline-callout-label {
+            color: var(--muted);
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .entry-timeline-callout-value {
+            color: var(--foreground);
+        }
+        .entry-timeline-empty {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Сравнение вариантов компоновки вкладки «Обзор» (Dashboard)</h1>
+        <p>Компонент «Сведения о странице» (DLEToolbar). Все варианты используют одинаковые входные данные и поддерживают светлую и тёмную тему.</p>
+        <nav class="nav-variants">
+            <a href="#variant-a" class="nav-btn">Вариант A: Классический (текущий)</a>
+            <a href="#variant-b" class="nav-btn">Вариант B: Компактный «Hero»</a>
+            <a href="#variant-c" class="nav-btn">Вариант C: Таймлайн событий</a>
+        </nav>
+    </header>
+
+    <!-- VARIANT A -->
+    <section class="section-variant" id="variant-a">
+        <div class="variant-header">
+            <div class="variant-title-wrap">
+                <span class="variant-tag">Вариант A (по умолчанию)</span>
+                <h2 class="variant-title">Классический: Плитки метрик + карточки вердиктов</h2>
+            </div>
+            <div class="variant-desc">Плитки 4 шт. вверху + список карточек с цветной полосой статуса слева</div>
+        </div>
+        <div class="columns">
+            <div>
+                <div class="column-label"><span>☀️</span> Светлая тема (Light Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="light">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant A -->
+                            <div class="entry-dash entry-dash--classic">
+                                <div class="entry-tiles">
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Просмотры</span>
+                                        <span class="entry-tile-value">1 234</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Комментарии</span>
+                                        <span class="entry-tile-value">12</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Рейтинг</span>
+                                        <span class="entry-tile-value">4.5</span>
+                                        <span class="entry-tile-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Добавлена</span>
+                                        <span class="entry-tile-value">3 дня назад</span>
+                                        <span class="entry-tile-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-cards">
+                                    <section class="entry-card" data-tone="success">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Публикация</h3>
+                                            <p class="entry-verdict">Опубликована</p>
+                                        </div>
+                                        <dl class="entry-facts">
+                                            <dt>Автор</dt><dd><a href="#">admin</a></dd>
+                                            <dt>Добавлена</dt><dd>19.10.2026 <span class="entry-muted">· 3 дня назад</span></dd>
+                                            <dt>Категории</dt><dd>Наука, Экспедиции</dd>
+                                        </dl>
+                                    </section>
+                                    <section class="entry-card" data-tone="neutral">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Редактирование</h3>
+                                            <p class="entry-verdict">Редактировалась</p>
+                                        </div>
+                                        <dl class="entry-facts">
+                                            <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                            <dt>Кто</dt><dd>chief_editor</dd>
+                                            <dt>Причина</dt><dd>Исправлены опечатки в названии судна и маршруте</dd>
+                                        </dl>
+                                    </section>
+                                    <section class="entry-card" data-tone="warning">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Доступ</h3>
+                                            <p class="entry-verdict">Ограничен</p>
+                                        </div>
+                                        <ul class="entry-notes">
+                                            <li>Группа Гости: Только чтение</li>
+                                            <li>Только для стран: RU, BY, KZ</li>
+                                        </ul>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label"><span>🌙</span> Тёмная тема (Dark Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="dark">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant A (Dark) -->
+                            <div class="entry-dash entry-dash--classic">
+                                <div class="entry-tiles">
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Просмотры</span>
+                                        <span class="entry-tile-value">1 234</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Комментарии</span>
+                                        <span class="entry-tile-value">12</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Рейтинг</span>
+                                        <span class="entry-tile-value">4.5</span>
+                                        <span class="entry-tile-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-tile">
+                                        <span class="entry-tile-label">Добавлена</span>
+                                        <span class="entry-tile-value">3 дня назад</span>
+                                        <span class="entry-tile-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-cards">
+                                    <section class="entry-card" data-tone="success">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Публикация</h3>
+                                            <p class="entry-verdict">Опубликована</p>
+                                        </div>
+                                        <dl class="entry-facts">
+                                            <dt>Автор</dt><dd><a href="#">admin</a></dd>
+                                            <dt>Добавлена</dt><dd>19.10.2026 <span class="entry-muted">· 3 дня назад</span></dd>
+                                            <dt>Категории</dt><dd>Наука, Экспедиции</dd>
+                                        </dl>
+                                    </section>
+                                    <section class="entry-card" data-tone="neutral">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Редактирование</h3>
+                                            <p class="entry-verdict">Редактировалась</p>
+                                        </div>
+                                        <dl class="entry-facts">
+                                            <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                            <dt>Кто</dt><dd>chief_editor</dd>
+                                            <dt>Причина</dt><dd>Исправлены опечатки в названии судна и маршруте</dd>
+                                        </dl>
+                                    </section>
+                                    <section class="entry-card" data-tone="warning">
+                                        <div class="entry-card-head">
+                                            <h3 class="entry-card-title">Доступ</h3>
+                                            <p class="entry-verdict">Ограничен</p>
+                                        </div>
+                                        <ul class="entry-notes">
+                                            <li>Группа Гости: Только чтение</li>
+                                            <li>Только для стран: RU, BY, KZ</li>
+                                        </ul>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VARIANT B -->
+    <section class="section-variant" id="variant-b">
+        <div class="variant-header">
+            <div class="variant-title-wrap">
+                <span class="variant-tag" style="background: #16a34a;">Вариант B</span>
+                <h2 class="variant-title">Компактный «Hero»: Статус-шапка + сетка 2 колонки + аккордеоны</h2>
+            </div>
+            <div class="variant-desc">Крупные бейджи статуса с автором и датой, 2 колонки метрик и сворачиваемые &lt;details&gt;</div>
+        </div>
+        <div class="columns">
+            <div>
+                <div class="column-label"><span>☀️</span> Светлая тема (Light Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="light">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant B -->
+                            <div class="entry-dash entry-dash--hero">
+                                <div class="entry-hero">
+                                    <div class="entry-hero-head">
+                                        <div class="entry-hero-badges">
+                                            <span class="entry-hero-badge" data-tone="success">Опубликована</span>
+                                            <span class="entry-hero-badge" data-tone="warning">Доступ: Ограничен</span>
+                                        </div>
+                                    </div>
+                                    <div class="entry-hero-meta">
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Автор:</span> <span class="entry-hero-val"><a href="#">admin</a></span></span>
+                                        <span class="entry-hero-sep" aria-hidden="true">·</span>
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Добавлена:</span> <span class="entry-hero-val">19.10.2026 <span class="entry-muted">· 3 дня назад</span></span></span>
+                                        <span class="entry-hero-sep" aria-hidden="true">·</span>
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Категории:</span> <span class="entry-hero-val">Наука, Экспедиции</span></span>
+                                    </div>
+                                </div>
+                                <div class="entry-hero-grid">
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Просмотры</span>
+                                        <span class="entry-hero-metric-val">1 234</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Комментарии</span>
+                                        <span class="entry-hero-metric-val">12</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Рейтинг</span>
+                                        <span class="entry-hero-metric-val">4.5</span>
+                                        <span class="entry-hero-metric-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Добавлена</span>
+                                        <span class="entry-hero-metric-val">3 дня назад</span>
+                                        <span class="entry-hero-metric-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-collapses">
+                                    <details class="entry-collapse" data-tone="neutral" open>
+                                        <summary>
+                                            <span class="entry-collapse-title">
+                                                <span class="entry-collapse-name">Редактирование</span>
+                                                <span class="entry-badge" data-tone="neutral">Редактировалась</span>
+                                            </span>
+                                            <span class="entry-collapse-toggle" aria-hidden="true"></span>
+                                        </summary>
+                                        <div class="entry-collapse-body">
+                                            <dl class="entry-facts">
+                                                <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                                <dt>Кто</dt><dd>chief_editor</dd>
+                                                <dt>Причина</dt><dd>Исправлены опечатки в названии судна и маршруте</dd>
+                                            </dl>
+                                        </div>
+                                    </details>
+                                    <details class="entry-collapse" data-tone="warning" open>
+                                        <summary>
+                                            <span class="entry-collapse-title">
+                                                <span class="entry-collapse-name">Доступ</span>
+                                                <span class="entry-badge" data-tone="warning">Ограничен</span>
+                                            </span>
+                                            <span class="entry-collapse-toggle" aria-hidden="true"></span>
+                                        </summary>
+                                        <div class="entry-collapse-body">
+                                            <ul class="entry-notes">
+                                                <li>Группа Гости: Только чтение</li>
+                                                <li>Только для стран: RU, BY, KZ</li>
+                                            </ul>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label"><span>🌙</span> Тёмная тема (Dark Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="dark">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant B (Dark) -->
+                            <div class="entry-dash entry-dash--hero">
+                                <div class="entry-hero">
+                                    <div class="entry-hero-head">
+                                        <div class="entry-hero-badges">
+                                            <span class="entry-hero-badge" data-tone="success">Опубликована</span>
+                                            <span class="entry-hero-badge" data-tone="warning">Доступ: Ограничен</span>
+                                        </div>
+                                    </div>
+                                    <div class="entry-hero-meta">
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Автор:</span> <span class="entry-hero-val"><a href="#">admin</a></span></span>
+                                        <span class="entry-hero-sep" aria-hidden="true">·</span>
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Добавлена:</span> <span class="entry-hero-val">19.10.2026 <span class="entry-muted">· 3 дня назад</span></span></span>
+                                        <span class="entry-hero-sep" aria-hidden="true">·</span>
+                                        <span class="entry-hero-fact"><span class="entry-hero-label">Категории:</span> <span class="entry-hero-val">Наука, Экспедиции</span></span>
+                                    </div>
+                                </div>
+                                <div class="entry-hero-grid">
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Просмотры</span>
+                                        <span class="entry-hero-metric-val">1 234</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Комментарии</span>
+                                        <span class="entry-hero-metric-val">12</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Рейтинг</span>
+                                        <span class="entry-hero-metric-val">4.5</span>
+                                        <span class="entry-hero-metric-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-hero-metric">
+                                        <span class="entry-hero-metric-label">Добавлена</span>
+                                        <span class="entry-hero-metric-val">3 дня назад</span>
+                                        <span class="entry-hero-metric-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-collapses">
+                                    <details class="entry-collapse" data-tone="neutral" open>
+                                        <summary>
+                                            <span class="entry-collapse-title">
+                                                <span class="entry-collapse-name">Редактирование</span>
+                                                <span class="entry-badge" data-tone="neutral">Редактировалась</span>
+                                            </span>
+                                            <span class="entry-collapse-toggle" aria-hidden="true"></span>
+                                        </summary>
+                                        <div class="entry-collapse-body">
+                                            <dl class="entry-facts">
+                                                <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                                <dt>Кто</dt><dd>chief_editor</dd>
+                                                <dt>Причина</dt><dd>Исправлены опечатки в названии судна и маршруте</dd>
+                                            </dl>
+                                        </div>
+                                    </details>
+                                    <details class="entry-collapse" data-tone="warning" open>
+                                        <summary>
+                                            <span class="entry-collapse-title">
+                                                <span class="entry-collapse-name">Доступ</span>
+                                                <span class="entry-badge" data-tone="warning">Ограничен</span>
+                                            </span>
+                                            <span class="entry-collapse-toggle" aria-hidden="true"></span>
+                                        </summary>
+                                        <div class="entry-collapse-body">
+                                            <ul class="entry-notes">
+                                                <li>Группа Гости: Только чтение</li>
+                                                <li>Только для стран: RU, BY, KZ</li>
+                                            </ul>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VARIANT C -->
+    <section class="section-variant" id="variant-c">
+        <div class="variant-header">
+            <div class="variant-title-wrap">
+                <span class="variant-tag" style="background: #8b5cf6;">Вариант C</span>
+                <h2 class="variant-title">Вертикальная лента / Таймлайн: Метрики в 1 строку + аудит-лента</h2>
+            </div>
+            <div class="variant-desc">Компактная полоса метрик + хронология жизненного цикла: Создана → Отредактирована (с причиной) → Доступ</div>
+        </div>
+        <div class="columns">
+            <div>
+                <div class="column-label"><span>☀️</span> Светлая тема (Light Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="light">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant C -->
+                            <div class="entry-dash entry-dash--timeline">
+                                <div class="entry-timeline-strip">
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">1 234</span>
+                                        <span class="entry-timeline-stat-label">Просмотры</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">12</span>
+                                        <span class="entry-timeline-stat-label">Комментарии</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">4.5</span>
+                                        <span class="entry-timeline-stat-label">Рейтинг</span>
+                                        <span class="entry-timeline-stat-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">3 дня назад</span>
+                                        <span class="entry-timeline-stat-label">Добавлена</span>
+                                        <span class="entry-timeline-stat-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-timeline">
+                                    <div class="entry-timeline-item" data-tone="success">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Публикация</h3>
+                                                <span class="entry-badge" data-tone="success">Опубликована</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <dl class="entry-facts">
+                                                    <dt>Автор</dt><dd><a href="#">admin</a></dd>
+                                                    <dt>Добавлена</dt><dd>19.10.2026 <span class="entry-muted">· 3 дня назад</span></dd>
+                                                    <dt>Категории</dt><dd>Наука, Экспедиции</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="entry-timeline-item" data-tone="neutral">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Редактирование</h3>
+                                                <span class="entry-badge" data-tone="neutral">Редактировалась</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <dl class="entry-facts">
+                                                    <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                                    <dt>Кто</dt><dd>chief_editor</dd>
+                                                </dl>
+                                                <div class="entry-timeline-callout">
+                                                    <span class="entry-timeline-callout-label">Причина правки:</span>
+                                                    <span class="entry-timeline-callout-value">Исправлены опечатки в названии судна и маршруте</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="entry-timeline-item" data-tone="warning">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Доступ</h3>
+                                                <span class="entry-badge" data-tone="warning">Ограничен</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <ul class="entry-notes">
+                                                    <li>Группа Гости: Только чтение</li>
+                                                    <li>Только для стран: RU, BY, KZ</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label"><span>🌙</span> Тёмная тема (Dark Theme)</div>
+                <div class="dle-toolbar-scope" data-theme="dark">
+                    <div class="entry-panel">
+                        <header class="entry-header">
+                            <div class="entry-heading">
+                                <p class="entry-kind">Новость <span>ID 42</span></p>
+                                <h2>Экспедиция на Северный полюс завершилась успешно</h2>
+                                <div class="entry-badges">
+                                    <span class="entry-badge" data-tone="success">Опубликована</span>
+                                    <span class="entry-badge" data-tone="neutral">На главной</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="entry-tabs">
+                            <button class="entry-tab" aria-selected="true" type="button">Обзор</button>
+                            <button class="entry-tab" aria-selected="false" type="button">Основное <span class="entry-count">9</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">SEO <span class="entry-count">5</span></button>
+                            <button class="entry-tab" aria-selected="false" type="button">Параметры <span class="entry-count">7</span></button>
+                        </div>
+                        <div class="entry-body">
+                            <!-- Render Variant C (Dark) -->
+                            <div class="entry-dash entry-dash--timeline">
+                                <div class="entry-timeline-strip">
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">1 234</span>
+                                        <span class="entry-timeline-stat-label">Просмотры</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">12</span>
+                                        <span class="entry-timeline-stat-label">Комментарии</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">4.5</span>
+                                        <span class="entry-timeline-stat-label">Рейтинг</span>
+                                        <span class="entry-timeline-stat-hint">голосов: 10</span>
+                                    </div>
+                                    <div class="entry-timeline-stat">
+                                        <span class="entry-timeline-stat-val">3 дня назад</span>
+                                        <span class="entry-timeline-stat-label">Добавлена</span>
+                                        <span class="entry-timeline-stat-hint">19.10.2026</span>
+                                    </div>
+                                </div>
+                                <div class="entry-timeline">
+                                    <div class="entry-timeline-item" data-tone="success">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Публикация</h3>
+                                                <span class="entry-badge" data-tone="success">Опубликована</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <dl class="entry-facts">
+                                                    <dt>Автор</dt><dd><a href="#">admin</a></dd>
+                                                    <dt>Добавлена</dt><dd>19.10.2026 <span class="entry-muted">· 3 дня назад</span></dd>
+                                                    <dt>Категории</dt><dd>Наука, Экспедиции</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="entry-timeline-item" data-tone="neutral">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Редактирование</h3>
+                                                <span class="entry-badge" data-tone="neutral">Редактировалась</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <dl class="entry-facts">
+                                                    <dt>Когда</dt><dd>20.10.2026 <span class="entry-muted">· 2 дня назад</span></dd>
+                                                    <dt>Кто</dt><dd>chief_editor</dd>
+                                                </dl>
+                                                <div class="entry-timeline-callout">
+                                                    <span class="entry-timeline-callout-label">Причина правки:</span>
+                                                    <span class="entry-timeline-callout-value">Исправлены опечатки в названии судна и маршруте</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="entry-timeline-item" data-tone="warning">
+                                        <div class="entry-timeline-marker" aria-hidden="true"></div>
+                                        <div class="entry-timeline-box">
+                                            <div class="entry-timeline-head">
+                                                <h3 class="entry-timeline-title">Доступ</h3>
+                                                <span class="entry-badge" data-tone="warning">Ограничен</span>
+                                            </div>
+                                            <div class="entry-timeline-body">
+                                                <ul class="entry-notes">
+                                                    <li>Группа Гости: Только чтение</li>
+                                                    <li>Только для стран: RU, BY, KZ</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>
