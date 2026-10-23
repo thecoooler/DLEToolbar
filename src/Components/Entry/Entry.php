@@ -166,7 +166,7 @@ final class Entry implements Component
             .entry-badge {
                 padding: 2px 8px;
                 border: 1px solid var(--border);
-                border-radius: 999px;
+                border-radius: 6px;
                 color: var(--muted);
                 font-size: 11px;
                 line-height: 1.5;
