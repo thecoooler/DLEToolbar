@@ -76,24 +76,22 @@
         assert(rows[1].every((row) => !row.hidden), 'Enter expands second group');
         assert(rows[0].every((row) => row.hidden), 'Second group leaves first collapsed');
 
-        const filters = [...panel.querySelectorAll('.query-filter')];
-        const entries = [...panel.querySelectorAll('.query-list > [data-initiator]')];
-        const visible = () => entries.filter((entry) => !entry.hidden).map((entry) => entry.dataset.initiator);
-        assert(JSON.stringify(filters.map((filter) => filter.textContent))
-            === JSON.stringify(['Все6 · 23 мс', 'Plugin1 · 2 мс', 'shop2 · <1 мс', 'Без источника3 · 21 мс']),
-            'Initiator filters show query count and total time');
-        assert(filters[0].getAttribute('aria-pressed') === 'true' && entries.every((entry) => !entry.hidden),
-            'All initiators are shown at first');
-        filters[2].click();
-        assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
-        assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',
-            'Pressed filter is announced');
-        filters[3].click();
-        assert(JSON.stringify(visible()) === '["",""]', 'Filter without call site shows untraced rows');
-        assert(rows[1].every((row) => !row.hidden), 'Filtering keeps the expanded fold state');
-        filters[0].click();
-        assert(entries.every((entry) => !entry.hidden), 'All filter restores every row');
-        assert(expanded(), 'Filter click does not close panel');
+        const chips = [...panel.querySelectorAll('[data-owner-filter]')];
+        const queryRows = [...panel.querySelectorAll('.query-row[data-owner]')];
+        const visibleOwners = () => queryRows.filter((row) => !row.hidden).map((row) => row.dataset.owner);
+        assert(chips.length === 3, 'Three owners rendered as chips');
+        assert(chips[0].textContent.includes('DLE') && chips[0].textContent.includes('3'), 'DLE chip present');
+        assert(chips[1].textContent.includes('Plugin') && chips[1].textContent.includes('1'), 'Plugin chip present');
+        assert(chips[2].textContent.includes('shop') && chips[2].textContent.includes('2'), 'shop chip present');
+        assert(chips.every((chip) => chip.getAttribute('aria-pressed') === 'false') && queryRows.every((row) => !row.hidden),
+            'All owner rows shown initially');
+        chips[2].click();
+        assert(chips[2].getAttribute('aria-pressed') === 'true', 'Clicked owner chip is pressed');
+        assert(visibleOwners().every((owner) => owner === chips[2].dataset.ownerFilter), 'Only clicked owner rows are visible');
+        chips[2].click();
+        assert(chips[2].getAttribute('aria-pressed') === 'false', 'Unclicked owner chip resets');
+        assert(queryRows.every((row) => !row.hidden), 'All rows restored after untoggling');
+        assert(expanded(), 'Chip click does not close panel');
 
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');

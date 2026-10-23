@@ -131,7 +131,7 @@ it('maps a plugin cache call site back to its original file', function (string $
     try {
         QueryLog::install();
         require $fixture;
-        expect(lastQuerySource()['source'])->toBe('engine/modules/tracing-test/run.php:2');
+        expect(lastQuerySource()['source'])->toBe('engine/modules/tracing-test/run.php:2 (копия с плагинами)');
     } finally {
         $plugins->setValue(null, $before);
         unlink($fixture);
@@ -163,8 +163,8 @@ it('installs tracing only for an allowed visible SQL panel with the experimental
     $toolbar->init();
     expect($db->query_list)->toBeArray();
 
-    // Source tracing is experimental and stays off until enabled in the SQL panel settings.
-    ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries']]])->save();
+    // Source tracing can be disabled in the SQL panel settings.
+    ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries']], 'components' => ['queries' => ['trace_sources' => false]]])->save();
     $toolbar->init();
     expect($db->query_list)->toBeArray();
 
