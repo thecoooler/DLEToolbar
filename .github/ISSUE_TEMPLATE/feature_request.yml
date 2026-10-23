@@ -1,0 +1,43 @@
+name: Предложение
+description: Новая возможность или изменение существующего поведения.
+labels: [enhancement, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую задачу это решает
+      description: Опишите ситуацию, в которой не хватает возможности.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предлагаемое поведение
+      description: Как это должно выглядеть и работать. Можно приложить набросок или скриншот.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      multiple: true
+      options:
+        - Статус ответа и время генерации
+        - Запросы MySQL
+        - Сброс кэша
+        - Смена шаблона
+        - Пользовательские ссылки
+        - Редактирование новости
+        - Настройки в админке
+        - Новый компонент
+        - Другое
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Рассмотренные альтернативы
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Участие
+      options:
+        - label: Готов прислать pull request
