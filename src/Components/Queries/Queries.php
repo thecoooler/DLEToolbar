@@ -121,7 +121,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $groups[] = ['fast' => $isFast, 'items' => [$item]];
         }
 
-        /** @var array<string, array{count: int, time: float}> $initiators */
+        /** @var array<array-key, array{count: int, time: float}> $initiators */
         $initiators = [];
         foreach ($groups as $group) {
             $initiator = $group['items'][0]['initiator'];
@@ -134,13 +134,25 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
             return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
         });
-        // Every initiator gets its own hue in filter order: first the palette, then golden-ratio steps
-        // over 75–345° like the palette, so no hue falls into the red band of slow queries.
+        // Every initiator gets its own hue in filter order: first the palette, then the hue farthest from those taken.
+        // Hues stay within 75–345° like the palette, so none falls into the red band of slow queries.
         $palette = [255, 145, 310, 75, 195, 345];
-        /** @var array<string, int> $hues */
+        /** @var array<array-key, int> $hues */
         $hues = [];
         foreach (array_keys($initiators) as $index => $name) {
-            if ((string) $name !== '') $hues[(string) $name] = $palette[$index] ?? (int) round(75 + fmod($index * 0.618034, 1) * 270);
+            if ((string) $name === '') continue;
+            if (isset($palette[$index])) {
+                $hues[$name] = $palette[$index];
+                continue;
+            }
+            $best = -1;
+            $hue = 75;
+            for ($candidate = 75; $candidate <= 345; $candidate++) {
+                $distance = 180;
+                foreach ($hues as $taken) $distance = min($distance, abs($candidate - $taken), 360 - abs($candidate - $taken));
+                if ($distance > $best) [$best, $hue] = [$distance, $candidate];
+            }
+            $hues[$name] = $hue;
         }
         $tint = static fn (string $initiator): string => isset($hues[$initiator]) ? ' query-tinted' : '';
         $hueStyle = static fn (string $initiator): string =>
@@ -498,7 +510,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             :host([data-theme="dark"]) .query-row-slow .query-bar { background: #fca5a5; }
             :host([data-theme="dark"]) .query-row-slow .query-num,
             :host([data-theme="dark"]) .query-row-slow .query-time { color: #fca5a5; }
-            .query-tinted { --query-color: oklch(55% .16 var(--query-hue)); }
+            .query-tinted { --query-color: oklch(50% .15 var(--query-hue)); }
             :host([data-theme="dark"]) .query-tinted { --query-color: oklch(76% .13 var(--query-hue)); }
             .query-row-plain.query-tinted .query-bar,
             .query-tinted .query-row-plain .query-bar,
@@ -514,6 +526,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 border-radius: 50%;
                 background: var(--query-color);
             }
+            .query-filter.query-tinted[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--surface); }
             .query-row-fast { opacity: .7; }
             .query-row-fast:hover { opacity: 1; }
             .query-fold {

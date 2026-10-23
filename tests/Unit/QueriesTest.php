@@ -170,7 +170,7 @@ it('filters SQL rows by initiator with per-initiator count and total time', func
         ->and($rendered['scripts'])->toContain("querySelectorAll('.query-list > [data-initiator]')");
 });
 
-it('gives every initiator its own hue outside the slow-query red', function (): void {
+it('gives every initiator its own hue away from other hues and the slow-query red', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [['query' => 'SELECT core', 'time' => .002, 'num' => 1, 'source' => 'engine/init.php:1']];
     for ($index = 1; $index <= 14; $index++) {
@@ -182,13 +182,29 @@ it('gives every initiator its own hue outside the slow-query red', function (): 
     ]))['panels'];
     preg_match_all('/data-query-filter="([^"]*)" style="--query-hue: (\d+)"/', $panel, $filters);
     $hues = array_map('intval', $filters[2]);
+    $distances = [];
+    foreach ($hues as $index => $hue) {
+        foreach (array_slice($hues, $index + 1) as $other) $distances[] = min(abs($hue - $other), 360 - abs($hue - $other));
+    }
 
     expect($filters[1])->toHaveCount(15)
         ->and(array_slice($filters[1], 0, 3))->toBe(['DLE', 'module14', 'module13'])
-        ->and(array_slice($hues, 0, 6))->toBe([255, 145, 310, 75, 195, 345])
-        ->and(array_unique($hues))->toHaveCount(15)
-        ->and(array_filter($hues, static fn (int $hue): bool => $hue < 75 || $hue > 345))->toBe([])
+        ->and($hues)->toBe([255, 145, 310, 75, 195, 345, 110, 225, 282, 170, 92, 127, 327, 210, 240])
+        ->and(min($distances))->toBe(15)
         ->and($panel)->toContain('<div class="query-row query-row-plain query-tinted" data-initiator="module14" style="--query-hue: 145">');
+});
+
+it('tints slow rows and numeric initiator names without losing the slow marking', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [
+        ['query' => 'SELECT core', 'time' => .002, 'num' => 1, 'source' => 'engine/init.php:1'],
+        ['query' => 'SELECT numeric', 'time' => .030, 'num' => 2, 'source' => 'engine/modules/123/run.php:1'],
+    ];
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    expect($panel)->toContain('<button class="query-filter query-tinted" type="button" data-query-filter="123" style="--query-hue: 145"')
+        ->toMatch('/<div class="query-row query-row-slow query-tinted" data-initiator="123" style="--query-hue: 145">.*?SELECT numeric/s');
 });
 
 it('escapes initiator names in filters and row attributes', function (): void {

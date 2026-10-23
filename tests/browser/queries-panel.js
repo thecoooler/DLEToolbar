@@ -93,10 +93,30 @@
             && bar(rows[0][0]) === dot(filters[2]), 'Rows and folded groups take their initiator colour');
         assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
             'Source label takes its initiator colour');
+        const slowRow = panel.querySelector('.query-row-slow');
+        slowRow.classList.add('query-tinted');
+        slowRow.style.setProperty('--query-hue', '145');
+        assert(bar(slowRow) === 'rgb(185, 28, 28)', 'Slow rows keep the red bar with an initiator colour');
+        const host = root.host;
+        const theme = host.getAttribute('data-theme');
+        host.setAttribute('data-theme', 'dark');
+        try {
+            assert(bar(slowRow) === 'rgb(252, 165, 165)', 'Slow rows keep the red bar in the dark theme');
+            assert(bar(pluginRow) === dot(filters[1])
+                && getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+                'Dark theme colours the bar and the source label alike');
+        } finally {
+            if (theme === null) host.removeAttribute('data-theme');
+            else host.setAttribute('data-theme', theme);
+            slowRow.classList.remove('query-tinted');
+            slowRow.style.removeProperty('--query-hue');
+        }
         filters[2].click();
         assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
         assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',
             'Pressed filter is announced');
+        assert(getComputedStyle(filters[2], '::before').boxShadow !== 'none'
+            && getComputedStyle(filters[1], '::before').boxShadow === 'none', 'Pressed filter rings its colour dot');
         filters[3].click();
         assert(JSON.stringify(visible()) === '["",""]', 'Filter without call site shows untraced rows');
         assert(rows[1].every((row) => !row.hidden), 'Filtering keeps the expanded fold state');
