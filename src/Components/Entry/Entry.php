@@ -1,8 +1,8 @@
 <?php
 
-namespace iCooLER\\DLEToolbar\\Components\\Entry;
+namespace iCooLER\DLEToolbar\Components\Entry;
 
-use iCooLER\\DLEToolbar\\ComponentFramework\\Component;
+use iCooLER\DLEToolbar\ComponentFramework\Component;
 
 /**
  * Shows the data of the viewed news, category or user profile in a tabbed panel.

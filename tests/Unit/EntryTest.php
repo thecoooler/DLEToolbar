@@ -12,7 +12,8 @@ beforeEach(function (): void {
     $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
     $GLOBALS['xfields'] = [];
     NewsFields::capture('');
-    $GLOBALS['cat_info'] = [\n        3 => ['id' => 3, 'parentid' => 0, 'name' => 'Кино &amp; сериалы', 'alt_name' => 'kino'],
+    $GLOBALS['cat_info'] = [
+        3 => ['id' => 3, 'parentid' => 0, 'name' => 'Кино &amp; сериалы', 'alt_name' => 'kino'],
         7 => ['id' => 7, 'parentid' => 3, 'name' => 'Драмы', 'alt_name' => 'drama', 'posi' => 2, 'active' => 1,
             'descr' => 'Описание', 'fulldescr' => str_repeat('Длинное описание. ', 20), 'news_sort' => 'rating',
             'news_msort' => '', 'show_sub' => 0, 'disable_index' => 1, 'short_tpl' => 'shortstory-drama', 'schema_org' => 'Movie'],
