@@ -11,7 +11,7 @@ final class NewsEntry
     private const ACCESS = [1 => 'Только чтение', 2 => 'Чтение и комментарии', 3 => 'Нет доступа'];
 
     /**
-     * @param array<string, scalar|list<string>|null> $row
+     * @param array<string, scalar|array<array-key, string>|null> $row
      * @return EntryData
      */
     public static function build(array $row): array
@@ -107,7 +107,7 @@ final class NewsEntry
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
                 // The stories are already split into pages and compiled at capture time.
-                ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, ['short_story', 'full_story', 'cats'])],
+                ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, ['short_story', 'full_story', 'cats', 'xfields', 'xfields_array'])],
             ], static fn (array $tab): bool => $tab['rows'] !== [])),
         ];
     }

@@ -24,14 +24,22 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-dleplugin
+      - name: Load native DLE class definitions
+        env:
+          DLE_STATIC_ROOT: ${{ runner.temp }}/dle-static
+        run: |
+          mkdir -p "$DLE_STATIC_ROOT/DLE/src"
+          curl --fail --silent --show-error --location https://dle-news.ru/files/dle_trial.zip --output "$DLE_STATIC_ROOT/dle.zip"
+          unzip -p "$DLE_STATIC_ROOT/dle.zip" upload/engine/classes/userxfields.class.php > "$DLE_STATIC_ROOT/DLE/src/userxfields.class.php"
+          test -s "$DLE_STATIC_ROOT/DLE/src/userxfields.class.php"
       - name: Analyze plugin
         env:
           PHP_VERSION: ${{ matrix.php-version }}
         run: |
           if [[ "$PHP_VERSION" == 8.4 ]]; then
-            dleplugin static
+            dleplugin static --dependency-root "$RUNNER_TEMP/dle-static"
           else
-            dleplugin static --php-version "$PHP_VERSION"
+            dleplugin static --php-version "$PHP_VERSION" --dependency-root "$RUNNER_TEMP/dle-static"
           fi
   test:
     name: Pest tests

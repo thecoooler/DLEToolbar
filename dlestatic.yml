@@ -1,0 +1,3 @@
+# Native API introduced in DLE 19. Resolve DLE/src from --dependency-root.
+# CI extracts the original class from the DLE trial; local analysis can use an installed DLE copy.
+dependencies: [DLE]

@@ -121,8 +121,8 @@ DLE, включая поля «Да/Нет».
 
 ```sh
 dleplugin test                       # тесты Pest в Docker
-dleplugin static                     # статический анализ для PHP 8.4
-dleplugin static --php-version 7.4   # статический анализ для PHP 7.4
+dleplugin static --dependency-root /tmp/dle-static
+dleplugin static --php-version 7.4 --dependency-root /tmp/dle-static
 dleplugin build --version <версия>   # сборка релиза в dist/DLEToolbar.xml
 dleplugin check <каталог DLE>...     # применимость патчей
 ```
@@ -132,6 +132,13 @@ dleplugin check <каталог DLE>...     # применимость патч�
 
 Для проверок используйте dleplugin v0.3.1 или новее: определения штатных
 функций DLE, включая `set_cookie()`, входят в bootstrap анализатора.
+Для API допполей профиля нужен исходный `userxfields.class.php` из установленного
+DLE 19+ (в CI он берётся из официальной trial-версии). Подготовьте каталог определений:
+
+```sh
+mkdir -p /tmp/dle-static/DLE/src
+cp /path/to/dle/engine/classes/userxfields.class.php /tmp/dle-static/DLE/src/
+```
 
 ### CI и выпуск релиза
 

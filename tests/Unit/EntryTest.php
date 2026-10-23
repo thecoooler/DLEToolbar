@@ -9,6 +9,8 @@ beforeEach(function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['config']['allow_alt_url'] = 1;
     $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
+    $GLOBALS['is_logged'] = true;
+    $GLOBALS['member_id']['user_id'] = 1;
     $GLOBALS['xfields'] = [];
     NewsFields::capture('');
     $GLOBALS['cat_info'] = [
@@ -52,9 +54,10 @@ it('shows the viewed news with status, dates, fields and tabs', function (): voi
         [0 => 'secret', 1 => 'Тайное', 3 => 'text', 20 => '2'],
         [0 => 'free', 1 => 'Бесплатно', 3 => 'yesorno', 20 => ''],
     ];
-    $row = entryNewsRow(['date' => time() + 86400, 'approve' => 0]);
+    $row = entryNewsRow(['date' => time() + 86400, 'approve' => 0,
+        'xfields' => 'poster|a.jpg||secret|HIDDEN_NEWS_VALUE||free|1']);
     PageEntry::captureNews($row);
-    NewsFields::capture('poster|a.jpg||secret|x||free|1');
+    NewsFields::capture($row['xfields']);
     $rendered = renderEntry();
 
     expect($rendered['control'])->toContain('data-entry-open')
@@ -68,6 +71,8 @@ it('shows the viewed news with status, dates, fields and tabs', function (): voi
         ->toContain('<dt>Постер<code>poster</code></dt><dd>a.jpg</dd>')
         ->toContain('<dt>Бесплатно<code>free</code></dt><dd>Да</dd>')
         ->not->toContain('Тайное')
+        ->not->toContain('HIDDEN_NEWS_VALUE')
+        ->not->toContain('<code>xfields</code>')
         ->toContain('Пользователи: Нет доступа<br>Гости: Только чтение')
         ->toContain('<dt>Дата редактирования</dt><dd><span class="entry-empty">—</span></dd>')
         ->toContain('1 234')
@@ -93,9 +98,13 @@ it('links to news editing only for groups allowed to edit news', function (bool 
 it('omits the fields tab for news without visible fields', function (): void {
     $GLOBALS['dle_module'] = 'showfull';
     $GLOBALS['news_found'] = true;
-    PageEntry::captureNews(entryNewsRow(['tags' => ['один', 'два']]));
+    PageEntry::captureNews(entryNewsRow(['tags' => ['один', 'два'], 'xfields' => 'secret|HIDDEN_NEWS_VALUE',
+        'xfields_array' => ['secret' => 'HIDDEN_DECODED_NEWS_VALUE']]));
     $panel = renderEntry()['panel'];
     expect($panel)->not->toContain('data-entry-tab="fields"')
+        ->not->toContain('HIDDEN_NEWS_VALUE')
+        ->not->toContain('HIDDEN_DECODED_NEWS_VALUE')
+        ->not->toContain('<code>xfields_array</code>')
         ->toContain('<dt>Теги</dt><dd>один, два</dd>');
 });
 
@@ -120,6 +129,7 @@ it('shows the viewed category with its parent, children and settings', function 
 
 it('shows the viewed profile without account secrets', function (): void {
     $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['xfields'] = [[0 => 'city', 5 => '0'], [0 => 'site', 5 => '0']];
     PageEntry::captureUser([
         'user_id' => 12, 'name' => 'tester', 'email' => 'tester@example.test', 'user_group' => 3, 'banned' => 'yes',
         'restricted' => 2, 'reg_date' => 1700000000, 'lastdate' => 1700003600, 'news_num' => 2, 'comm_num' => 10,
@@ -138,6 +148,54 @@ it('shows the viewed profile without account secrets', function (): void {
         ->not->toContain('SESSION_HASH')
         ->not->toContain('TOTP_SECRET')
         ->not->toContain('mod=editusers');
+});
+
+it('applies native profile field privacy across DLE versions', function (string $version, int $viewer, int $group, bool $editor, bool $loggedIn, bool $visible): void {
+    require_once \DLEPlugins::Check(ENGINE_DIR . '/classes/userxfields.class.php');
+    $previous = \DLEUserXFields::$fields;
+    try {
+        $GLOBALS['dle_module'] = 'userinfo';
+        $GLOBALS['config']['version_id'] = $version;
+        $GLOBALS['is_logged'] = $loggedIn;
+        $GLOBALS['member_id'] = ['user_id' => $viewer, 'user_group' => $group];
+        $GLOBALS['user_group'][$group]['admin_editusers'] = (int) $editor;
+        $GLOBALS['xfields'] = [[0 => 'city', 5 => '0'], [0 => 'private', 5 => '1']];
+        \DLEUserXFields::$fields = ['fields' => [
+            'city' => ['name' => 'city', 'private' => 0],
+            'private' => ['name' => 'private', 'private' => 1],
+        ]];
+        PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
+            'xfields' => 'city|PUBLIC_CITY||private|PRIVATE_PROFILE_VALUE||deleted|UNDEFINED_PROFILE_VALUE']);
+        $panel = renderEntry()['panel'];
+        expect($panel)->toContain('PUBLIC_CITY')
+            ->not->toContain('UNDEFINED_PROFILE_VALUE')
+            ->not->toContain('<code>xfields</code>');
+        if ($visible) expect($panel)->toContain('PRIVATE_PROFILE_VALUE');
+        else expect($panel)->not->toContain('PRIVATE_PROFILE_VALUE');
+    } finally {
+        \DLEUserXFields::$fields = $previous;
+    }
+})->with([
+    'legacy other profile' => ['18.0', 9, 3, false, true, false],
+    'legacy owner' => ['18.0', 12, 3, false, true, true],
+    'legacy admin' => ['18.0', 1, 1, true, true, true],
+    'legacy editor' => ['18.0', 9, 2, true, true, false],
+    'legacy guest' => ['18.0', 12, 1, true, false, false],
+    'modern other profile' => ['21.0', 9, 3, false, true, false],
+    'modern owner' => ['21.0', 12, 3, false, true, true],
+    'modern admin' => ['21.0', 1, 1, true, true, true],
+    'modern editor' => ['21.0', 9, 2, true, true, true],
+    'modern guest' => ['21.0', 12, 1, true, false, false],
+]);
+
+it('omits the profile fields tab when all stored fields are private', function (): void {
+    $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['member_id'] = ['user_id' => 9, 'user_group' => 3];
+    $GLOBALS['xfields'] = [[0 => 'private', 5 => '1']];
+    PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
+        'xfields' => 'private|PRIVATE_PROFILE_VALUE']);
+    expect(renderEntry()['panel'])->not->toContain('data-entry-tab="fields"')
+        ->not->toContain('PRIVATE_PROFILE_VALUE');
 });
 
 it('words ages with Russian plural forms', function (int $seconds, string $expected): void {

@@ -52,9 +52,9 @@ files:
           }
 
   engine/modules/profile.php:
-    - after:
+    - before:
         search: |
-          $user_found = TRUE;
+          if( $row['banned'] == 'yes' )
         replace: |
           try {
             if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
