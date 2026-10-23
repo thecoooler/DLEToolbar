@@ -16,8 +16,11 @@ final class CacheCleaner
         global $config;
         /** @var array{cache_type: mixed} $config */
 
+        // A worker keeps resolved paths for realpath_cache_ttl seconds.
+        clearstatcache(true);
+
         // Without a resolved root the confinement check would accept any path.
-        $root = realpath($this->directory);
+        $root = $this->resolve($this->directory);
         if ($root !== false) {
             $this->removeFiles($root, $root . '/system', ['.htaccess', 'cron.json', 'cron.php']);
 
@@ -38,7 +41,7 @@ final class CacheCleaner
      */
     private function removeFiles(string $root, string $directory, array $excluded): void
     {
-        $directory = realpath($directory);
+        $directory = $this->resolve($directory);
         if ($directory === false
             || ($directory !== $root && strpos($directory, $root . DIRECTORY_SEPARATOR) !== 0)) {
             return;
@@ -51,5 +54,24 @@ final class CacheCleaner
                 unlink($entry->getPathname());
             }
         }
+    }
+
+    /**
+     * On Windows realpath() expands directory links and junctions one level
+     * at a time, so a chain of them is resolved until the path stops changing.
+     *
+     * @return string|false
+     */
+    private function resolve(string $path)
+    {
+        for ($level = 0; $level < 40; $level++) {
+            $resolved = realpath($path);
+            if ($resolved === false || $resolved === $path) {
+                return $resolved;
+            }
+            $path = $resolved;
+        }
+
+        return false;
     }
 }

@@ -62,6 +62,20 @@ it('does not enter a system directory that links outside the cache', function ()
         ->and(is_file($this->cache . '/news.tmp'))->toBeFalse();
 });
 
+it('resolves the system directory again after another process replaces it with an outside link', function (): void {
+    expect(realpath($this->cache . '/system'))->toBe(realpath($this->cache) . '/system');
+    // PHP's own rename() and symlink() would drop the realpath cache.
+    exec(sprintf('mv %s %s && ln -s %s %s',
+        escapeshellarg($this->cache . '/system'), escapeshellarg($this->cache . '/old-system'),
+        escapeshellarg($this->outside), escapeshellarg($this->cache . '/system')), $output, $status);
+    expect($status)->toBe(0);
+
+    (new CacheCleaner($this->cache))->clear();
+
+    expect(is_file($this->outside . '/secret.php'))->toBeTrue()
+        ->and(is_file($this->outside . '/config.php'))->toBeTrue();
+});
+
 it('removes linked entries themselves and keeps their targets outside the cache', function (): void {
     symlink($this->outside . '/secret.php', $this->cache . '/system/linked.php');
     symlink($this->outside . '/config.php', $this->cache . '/linked.tmp');
