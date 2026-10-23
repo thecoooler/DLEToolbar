@@ -247,6 +247,9 @@ class DLEToolbar {
                 .dock, .control, .control > svg, .tooltip { transition: none; }
                 .control:active { transform: none; }
             }
+            @media print {
+                :host { display: none !important; }
+            }
             {{component_styles}}
         </style>
         {{component_panels}}

@@ -15,6 +15,13 @@ try {
     console.log(`${status} (${assertions} assertions)`);
     if (error) console.error(error);
     if (status !== 'PASS') process.exitCode = 1;
+
+    // Template print styles cannot override the shadow :host rule, which wins with !important.
+    await page.addStyleTag({ content: '@media print { [data-dle-toolbar] { display: block !important; } }' });
+    await page.emulateMedia({ media: 'print' });
+    const printDisplay = await page.evaluate(() => getComputedStyle(document.querySelector('[data-dle-toolbar]')).display);
+    console.log(`print display: ${printDisplay}`);
+    if (printDisplay !== 'none') process.exitCode = 1;
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;
