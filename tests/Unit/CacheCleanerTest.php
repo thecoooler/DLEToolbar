@@ -53,10 +53,12 @@ it('does not enter a system directory that links outside the cache', function ()
     rmdir($this->cache . '/system');
     symlink($this->outside, $this->cache . '/system');
     writeCacheCleanerFiles($this->cache, ['news.tmp' => 'cache']);
+    $workingDirectory = getcwd();
 
     (new CacheCleaner($this->cache))->clear();
 
-    expect(is_link($this->cache . '/system'))->toBeTrue()
+    expect(getcwd())->toBe($workingDirectory)
+        ->and(is_link($this->cache . '/system'))->toBeTrue()
         ->and(is_file($this->outside . '/secret.php'))->toBeTrue()
         ->and(is_file($this->outside . '/config.php'))->toBeTrue()
         ->and(is_file($this->cache . '/news.tmp'))->toBeFalse();

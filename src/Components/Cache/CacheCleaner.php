@@ -34,6 +34,8 @@ final class CacheCleaner
 
     /**
      * Removes entries of a directory that resolves inside the cache root.
+     * The directory becomes the working directory, so entries are removed
+     * relative to it and a parent replaced meanwhile cannot redirect unlink().
      * unlink() removes a symbolic link itself, never its target; links
      * to directories are skipped like real subdirectories.
      *
@@ -42,17 +44,30 @@ final class CacheCleaner
     private function removeFiles(string $root, string $directory, array $excluded): void
     {
         $directory = $this->resolve($directory);
-        if ($directory === false
-            || ($directory !== $root && strpos($directory, $root . DIRECTORY_SEPARATOR) !== 0)) {
+        if ($directory === false) {
             return;
         }
 
-        foreach (new \DirectoryIterator($directory) as $entry) {
-            $name = $entry->getFilename();
-            if ($name !== '.' && $name !== '..' && !in_array($name, $excluded, true)
-                && substr($name, -5) !== '.lock' && !$entry->isDir()) {
-                unlink($entry->getPathname());
+        $workingDirectory = getcwd();
+        if (!chdir($directory)) {
+            return;
+        }
+        try {
+            // getcwd() reports where the entered directory is, even if its path was replaced.
+            $entered = $this->resolve((string) getcwd());
+            if ($entered !== $root && strpos((string) $entered, $root . DIRECTORY_SEPARATOR) !== 0) {
+                return;
             }
+
+            foreach (new \DirectoryIterator('.') as $entry) {
+                $name = $entry->getFilename();
+                if ($name !== '.' && $name !== '..' && !in_array($name, $excluded, true)
+                    && substr($name, -5) !== '.lock' && !$entry->isDir()) {
+                    unlink($name);
+                }
+            }
+        } finally {
+            chdir((string) $workingDirectory);
         }
     }
 
