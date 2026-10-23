@@ -76,6 +76,25 @@
         assert(rows[1].every((row) => !row.hidden), 'Enter expands second group');
         assert(rows[0].every((row) => row.hidden), 'Second group leaves first collapsed');
 
+        const filters = [...panel.querySelectorAll('.query-filter')];
+        const entries = [...panel.querySelectorAll('.query-list > [data-initiator]')];
+        const visible = () => entries.filter((entry) => !entry.hidden).map((entry) => entry.dataset.initiator);
+        assert(JSON.stringify(filters.map((filter) => filter.textContent))
+            === JSON.stringify(['Все6 · 23 мс', 'Plugin1 · 2 мс', 'shop2 · <1 мс', 'Без источника3 · 21 мс']),
+            'Initiator filters show query count and total time');
+        assert(filters[0].getAttribute('aria-pressed') === 'true' && entries.every((entry) => !entry.hidden),
+            'All initiators are shown at first');
+        filters[2].click();
+        assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
+        assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',
+            'Pressed filter is announced');
+        filters[3].click();
+        assert(JSON.stringify(visible()) === '["",""]', 'Filter without call site shows untraced rows');
+        assert(rows[1].every((row) => !row.hidden), 'Filtering keeps the expanded fold state');
+        filters[0].click();
+        assert(entries.every((entry) => !entry.hidden), 'All filter restores every row');
+        assert(expanded(), 'Filter click does not close panel');
+
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
         assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),

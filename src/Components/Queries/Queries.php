@@ -106,10 +106,14 @@ final class Queries implements ConfigurableComponent, RequestComponent
             // DLE writes the session hash and password hashes in plain UPDATE queries; prefixed columns such as user_hash are masked too.
             /** @var string $sql */
             $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
-            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $query['source'] ?? ''];
+            $source = $query['source'] ?? '';
+            $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $source,
+                'initiator' => $source === '' ? '' : self::initiator($source)];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
-            if ($isFast && $lastIndex !== null && $groups[$lastIndex]['fast']) {
+            // A folded group keeps one initiator so the initiator filter can show or hide it whole.
+            if ($isFast && $lastIndex !== null && $groups[$lastIndex]['fast']
+                && $groups[$lastIndex]['items'][0]['initiator'] === $item['initiator']) {
                 $groups[$lastIndex]['items'][] = $item;
                 continue;
             }
@@ -120,18 +124,27 @@ final class Queries implements ConfigurableComponent, RequestComponent
         $rows = '';
         $slowCount = 0;
         $totalTime = 0.0;
+        /** @var array<string, array{count: int, time: float}> $initiators */
+        $initiators = [];
 
         foreach ($groups as $group) {
             $items = $group['items'];
+            $initiator = $items[0]['initiator'];
+            $initiators[$initiator] ??= ['count' => 0, 'time' => 0.0];
+            $initiators[$initiator]['count'] += count($items);
+            $initiators[$initiator]['time'] += array_sum(array_column($items, 'time'));
+            $initiatorAttribute = ' data-initiator="' . $escape($initiator) . '"';
 
             if ($group['fast'] && count($items) > 1) {
                 $sum = array_sum(array_column($items, 'time'));
                 $totalTime += $sum;
-                $rows .= '<div class="query-group" data-query-group><div class="query-row query-fold" data-fold role="button" tabindex="0" aria-expanded="false">'
+                $rows .= '<div class="query-group" data-query-group' . $initiatorAttribute . '>'
+                    . '<div class="query-row query-fold" data-fold role="button" tabindex="0" aria-expanded="false">'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">···</span>'
                     . '<span class="query-sql">№' . $items[0]['number'] . '–' . $items[count($items) - 1]['number']
-                    . ' · <span data-fold-verb></span>' . count($items) . ' быстрых</span>'
+                    . ' · <span data-fold-verb></span>' . count($items) . ' быстрых'
+                    . ($initiator === '' ? '' : ' · ' . $escape($initiator)) . '</span>'
                     . '<span class="query-time"></span>'
                     . '</div>';
 
@@ -153,7 +166,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $isSlow = $item['time'] >= $this->slowThreshold;
                 $slowCount += $isSlow ? 1 : 0;
                 $totalTime += $item['time'];
-                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . '">'
+                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . '"' . $initiatorAttribute . '>'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
@@ -164,6 +177,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
         }
 
+        $filters = '';
         if (version_compare($config['version_id'], '14.0', '<')) {
             // DLE before 14.0 counts queries but does not keep their list.
             $stats = '';
@@ -173,14 +187,31 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $stats = '';
             $rows = '<p class="query-empty">SQL-запросов на этой странице нет.</p>';
         } else {
-            $remainder = $number % 100;
-            $words = [1 => 'запрос', 2 => 'запроса', 3 => 'запроса', 4 => 'запроса'];
-            $word = $remainder >= 11 && $remainder <= 14
-                ? 'запросов'
-                : ($words[$number % 10] ?? 'запросов');
-            $stats = '<span class="query-stats"><b>' . $number . ' ' . $word . '</b> · ' . $format($totalTime)
+            $stats = '<span class="query-stats"><b>' . $number . ' ' . self::queriesWord($number) . '</b> · ' . $format($totalTime)
                 . ($slowCount > 0 ? ' · <span class="query-stats-alert">⚠ ' . $slowCount . '</span>' : '')
                 . '</span>';
+
+            // Initiators are known only when source tracing recorded call sites.
+            if (array_keys($initiators) !== ['']) {
+                // DLE goes first, plugins and modules follow by total time, queries without a call site go last.
+                uksort($initiators, static function ($a, $b) use ($initiators): int {
+                    $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
+                    return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
+                });
+                $filter = static fn (string $attribute, string $name, int $count, float $time, bool $pressed): string =>
+                    '<button class="query-filter" type="button" ' . $attribute . ' aria-pressed="' . ($pressed ? 'true' : 'false') . '"'
+                    . ' title="' . $count . ' ' . self::queriesWord($count) . ', ' . $format($time) . '">'
+                    . '<span class="query-filter-name">' . $escape($name) . '</span>'
+                    . '<span class="query-filter-stats">' . $count . ' · ' . $format($time) . '</span></button>';
+                $filters = '<div class="query-filters" role="group" aria-label="Инициатор запросов">'
+                    . $filter('data-query-filter-all', 'Все', $number, $totalTime, true);
+                foreach ($initiators as $name => $total) {
+                    $name = (string) $name;
+                    $filters .= $filter('data-query-filter="' . $escape($name) . '"', $name === '' ? 'Без источника' : $name,
+                        $total['count'], $total['time'], false);
+                }
+                $filters .= '</div>';
+            }
         }
 
         return '<section class="query-panel" data-query-panel id="dle-toolbar-queries-panel"'
@@ -189,6 +220,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . $stats
             . '<button class="query-close" data-query-close type="button" aria-label="Закрыть список запросов">'
             . self::icon('close') . '</button></header>'
+            . $filters
             . '<div class="query-list">' . $rows . '</div>'
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
     }
@@ -197,6 +229,14 @@ final class Queries implements ConfigurableComponent, RequestComponent
     {
         if ($source === '') return '';
 
+        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return '<span class="query-source">' . $escape($source)
+            . ' · <span class="query-source-label">' . $escape(self::initiator($source)) . '</span></span>';
+    }
+
+    /** Names the module or plugin that issued the query, or DLE for the engine itself. */
+    private static function initiator(string $source): string
+    {
         // Drop the line number, then name the module or plugin by its directory or file.
         $parts = explode('/', substr($source, 0, (int) strrpos($source, ':')));
         $label = 'DLE';
@@ -215,9 +255,14 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $label = count($parts) >= 4 ? $parts[2] : $parts[1];
             }
         }
-        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        return '<span class="query-source">' . $escape($source)
-            . ' · <span class="query-source-label">' . $escape($label) . '</span></span>';
+        return $label;
+    }
+
+    private static function queriesWord(int $count): string
+    {
+        $remainder = $count % 100;
+        $words = [1 => 'запрос', 2 => 'запроса', 3 => 'запроса', 4 => 'запроса'];
+        return $remainder >= 11 && $remainder <= 14 ? 'запросов' : ($words[$count % 10] ?? 'запросов');
     }
 
     private function renderQueryCopyButton(): string {
@@ -311,6 +356,41 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-close:hover { background: var(--hover); color: var(--foreground); }
             .query-close:focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
             .query-close svg { width: 16px; height: 16px; }
+            .query-filters {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 8px 18px;
+                border-bottom: 1px solid var(--border);
+            }
+            .query-filter {
+                display: inline-flex;
+                align-items: baseline;
+                gap: 6px;
+                padding: 4px 10px;
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                background: var(--surface);
+                color: var(--foreground);
+                font: 600 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                cursor: pointer;
+                transition: background-color 140ms ease, color 140ms ease;
+            }
+            .query-filter:hover { background: var(--hover); }
+            .query-filter:focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
+            .query-filter-stats {
+                color: var(--muted);
+                font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+            }
+            .query-filter[aria-pressed="true"] {
+                border-color: var(--foreground);
+                background: var(--foreground);
+                color: var(--surface);
+            }
+            .query-filter[aria-pressed="true"] .query-filter-stats { color: inherit; opacity: .75; }
+            .query-group[hidden] { display: none; }
             .query-list {
                 flex: 1 1 auto;
                 min-height: 0;
@@ -436,6 +516,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             @media (max-width: 480px) {
                 .query-panel { height: min(560px, calc(100dvh - 112px)); border-radius: 12px; }
                 .query-header { gap: 8px; padding: 11px 12px; }
+                .query-filters { padding: 8px 12px; }
                 .query-stats { display: none; }
                 .query-row {
                     --query-gap: 8px;
@@ -448,7 +529,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
             @media (prefers-reduced-motion: reduce) {
                 .query-panel { animation: none; }
-                .query-close, .query-fold { transition: none; }
+                .query-close, .query-fold, .query-filter { transition: none; }
             }
         </style>
 HTML;
@@ -479,6 +560,16 @@ HTML;
         const closeButton = queryPanel.querySelector('[data-query-close]');
         const closedQueriesLabel = queriesButton.getAttribute('aria-label');
         const folds = [...queryPanel.querySelectorAll('[data-fold]')];
+        const filters = [...queryPanel.querySelectorAll('.query-filter')];
+        filters.forEach((filter) => {
+            filter.addEventListener('click', () => {
+                filters.forEach((button) => button.setAttribute('aria-pressed', button === filter ? 'true' : 'false'));
+                queryPanel.querySelectorAll('.query-list > [data-initiator]').forEach((entry) => {
+                    entry.hidden = !filter.hasAttribute('data-query-filter-all')
+                        && entry.dataset.initiator !== filter.dataset.queryFilter;
+                });
+            });
+        });
         const queryPopup = createPopup({
             trigger: queriesButton,
             panel: queryPanel,
