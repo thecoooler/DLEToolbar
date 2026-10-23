@@ -482,6 +482,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             :host([data-theme="dark"]) .query-row-slow .query-bar { background: #fca5a5; }
             :host([data-theme="dark"]) .query-row-slow .query-num,
             :host([data-theme="dark"]) .query-row-slow .query-time { color: #fca5a5; }
+            .query-copy-buffer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
             .query-row-fast { opacity: .7; }
             .query-row-fast:hover { opacity: 1; }
             .query-fold {
@@ -546,15 +547,26 @@ HTML;
         queryPanel.querySelectorAll('[data-copy-query]').forEach((button) => {
             button.addEventListener('click', () => {
                 copyStatus.textContent = '';
-                if (!navigator.clipboard) {
-                    copyStatus.textContent = 'Для копирования SQL-запроса откройте сайт по HTTPS.';
-                    return;
-                }
                 const sql = button.closest('.query-row').querySelector('.query-text').textContent;
-                navigator.clipboard.writeText(sql).then(
-                    () => { copyStatus.textContent = 'SQL-запрос скопирован.'; },
-                    () => { copyStatus.textContent = 'Не удалось скопировать SQL-запрос. Проверьте разрешение браузера на доступ к буферу обмена.'; }
-                );
+                const report = (copied) => {
+                    copyStatus.textContent = copied ? 'SQL-запрос скопирован.'
+                        : 'Не удалось скопировать SQL-запрос. Проверьте разрешение браузера на доступ к буферу обмена.';
+                };
+                // Without HTTPS browsers hide the Clipboard API, so copy the selected text of a temporary field instead.
+                const copyBySelection = () => {
+                    const buffer = document.createElement('textarea');
+                    buffer.className = 'query-copy-buffer';
+                    buffer.readOnly = true;
+                    buffer.value = sql;
+                    queryPanel.append(buffer);
+                    buffer.select();
+                    const copied = document.execCommand('copy');
+                    buffer.remove();
+                    button.focus();
+                    return copied;
+                };
+                if (navigator.clipboard) navigator.clipboard.writeText(sql).then(() => report(true), () => report(copyBySelection()));
+                else report(copyBySelection());
             });
         });
         const closeButton = queryPanel.querySelector('[data-query-close]');

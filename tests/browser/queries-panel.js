@@ -100,7 +100,16 @@
         assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
             'Ordinary rows show plugin labels');
         const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+        const originalExecCommand = document.execCommand;
         let copied;
+        let selectionCopies;
+        // The fallback copies the selection of a temporary field inside the panel.
+        document.execCommand = (command) => {
+            const field = root.activeElement;
+            copied = command === 'copy' && field.closest('[data-query-panel]') === panel
+                ? field.value.slice(field.selectionStart, field.selectionEnd) : undefined;
+            return selectionCopies;
+        };
         try {
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
                 writeText: (text) => { copied = text; return Promise.resolve(); },
@@ -111,13 +120,30 @@
             assert(status.textContent === 'SQL-запрос скопирован.', 'Copy success feedback');
             assert(expanded(), 'Copy click does not close panel');
             navigator.clipboard.writeText = () => Promise.reject(new Error('denied'));
+            copied = undefined;
+            selectionCopies = true;
+            copy.click();
+            await wait(0);
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Rejected Clipboard API falls back to selection copy');
+            assert(status.textContent === 'SQL-запрос скопирован.', 'Fallback copy success feedback');
+            selectionCopies = false;
             copy.click();
             await wait(0);
             assert(status.textContent.startsWith('Не удалось скопировать'), 'Copy rejection feedback');
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+            copied = undefined;
+            selectionCopies = true;
             copy.click();
-            assert(status.textContent.includes('HTTPS'), 'Unavailable clipboard feedback');
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Selection copy gets original SQL without Clipboard API');
+            assert(status.textContent === 'SQL-запрос скопирован.', 'Selection copy success feedback');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed');
+            assert(root.activeElement === copy, 'Selection copy restores button focus');
+            assert(expanded(), 'Selection copy does not close panel');
+            selectionCopies = false;
+            copy.click();
+            assert(status.textContent.startsWith('Не удалось скопировать'), 'Selection copy failure feedback');
         } finally {
+            document.execCommand = originalExecCommand;
             if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
             else delete navigator.clipboard;
         }
