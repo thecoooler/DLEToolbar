@@ -230,8 +230,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
         if ($source === '') return '';
 
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        return '<span class="query-source">' . $escape($source)
-            . ' · <span class="query-source-label">' . $escape(self::initiator($source)) . '</span></span>';
+        return '<span class="query-source"><span class="query-source-label">' . $escape(self::initiator($source)) . '</span>'
+            . ' · ' . $escape($source) . '</span>';
     }
 
     /** Names the module or plugin that issued the query, or DLE for the engine itself. */
@@ -369,7 +369,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 gap: 6px;
                 padding: 4px 10px;
                 border: 1px solid var(--border);
-                border-radius: 999px;
+                border-radius: 6px;
                 background: var(--surface);
                 color: var(--foreground);
                 font: 600 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

@@ -83,10 +83,10 @@ it('renders escaped call sites and path labels in ordinary and folded SQL rows',
         'toolbar' => ['enabled' => ['queries']],
     ]));
     $panel = $rendered['panels'];
-    expect($panel)->toContain('engine/modules/shop/run.php:12 · <span class="query-source-label">shop</span>')
-        ->toContain('engine/Vendor/Plugin/run.php:34 · <span class="query-source-label">Plugin</span>')
-        ->toContain('engine/classes/templates.class.php:56 · <span class="query-source-label">DLE</span>')
-        ->toContain('engine/modules/&lt;shop&gt;&quot;/run.php:78 · <span class="query-source-label">&lt;shop&gt;&quot;</span>')
+    expect($panel)->toContain('<span class="query-source-label">shop</span> · engine/modules/shop/run.php:12')
+        ->toContain('<span class="query-source-label">Plugin</span> · engine/Vendor/Plugin/run.php:34')
+        ->toContain('<span class="query-source-label">DLE</span> · engine/classes/templates.class.php:56')
+        ->toContain('<span class="query-source-label">&lt;shop&gt;&quot;</span> · engine/modules/&lt;shop&gt;&quot;/run.php:78')
         ->not->toContain('<shop>')
         ->toContain('<span class="query-text">SELECT legacy</span></span>')
         ->toContain('<span class="query-text">SELECT empty</span></span>')
@@ -126,7 +126,7 @@ it('labels single-file modules and plugins by their file or directory name', fun
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     foreach ($sources as $source => $label) {
-        expect($panel)->toContain($source . ' · <span class="query-source-label">' . $label . '</span>');
+        expect($panel)->toContain('<span class="query-source-label">' . $label . '</span> · ' . $source);
     }
 });
 
