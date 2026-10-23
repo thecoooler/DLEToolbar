@@ -129,6 +129,8 @@
             selectionCopies = false;
             copy.click();
             await wait(0);
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Rejected Clipboard API attempted selection copy on failure');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed on rejected fallback failure');
             assert(status.textContent.startsWith('Не удалось скопировать'), 'Copy rejection feedback');
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
             copied = undefined;
@@ -141,6 +143,8 @@
             assert(expanded(), 'Selection copy does not close panel');
             selectionCopies = false;
             copy.click();
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Selection copy gets original SQL on failure');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed on failure');
             assert(status.textContent.startsWith('Не удалось скопировать'), 'Selection copy failure feedback');
         } finally {
             document.execCommand = originalExecCommand;

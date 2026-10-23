@@ -482,7 +482,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             :host([data-theme="dark"]) .query-row-slow .query-bar { background: #fca5a5; }
             :host([data-theme="dark"]) .query-row-slow .query-num,
             :host([data-theme="dark"]) .query-row-slow .query-time { color: #fca5a5; }
-            .query-copy-buffer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+            .query-copy-buffer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; font-size: 16px; }
             .query-row-fast { opacity: .7; }
             .query-row-fast:hover { opacity: 1; }
             .query-fold {
@@ -561,8 +561,8 @@ HTML;
                     queryPanel.append(buffer);
                     buffer.select();
                     const copied = document.execCommand('copy');
-                    buffer.remove();
                     button.focus();
+                    buffer.remove();
                     return copied;
                 };
                 if (navigator.clipboard) navigator.clipboard.writeText(sql).then(() => report(true), () => report(copyBySelection()));
