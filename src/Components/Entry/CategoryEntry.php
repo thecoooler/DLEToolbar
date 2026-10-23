@@ -77,31 +77,6 @@ final class CategoryEntry
             ['Тип рейтинга', 'rating_type', static fn ($value): string => (int) $value < 0 ? $global : Format::code($value)],
         ]);
 
-        $active = !array_key_exists('active', $row) || (int) $row['active'] === 1;
-        $restrictions = [];
-        foreach ([
-            'disable_main' => 'Скрыта с главной',
-            'disable_index' => 'Индексация запрещена',
-            'disable_search' => 'Исключена из поиска',
-            'disable_rating' => 'Рейтинг отключён',
-            'disable_comments' => 'Комментарии отключены',
-        ] as $column => $note) {
-            if (!empty($row[$column])) $restrictions[] = $note;
-        }
-
-        $overview = Dashboard::render([
-            ['Подкатегорий', Format::number(count($children))],
-            ['Новостей на странице', (int) ($row['news_number'] ?? 0) ? Format::number($row['news_number']) : $global],
-            ['Сортировка', self::choice(self::SORT, $row['news_sort'] ?? '')],
-        ], [
-            Dashboard::card('Статус', $active ? 'Активна' : 'Отключена', $active ? 'success' : 'warning', [
-                ['Родитель', isset($categories[$parent]) ? Format::escape($name($parent)) : '<span class="entry-muted">корневая</span>'],
-                ['Подкатегории', $children ? Format::text(implode(', ', $children)) : Format::empty()],
-            ]),
-            Dashboard::card('Видимость и доступ', $restrictions ? 'Есть ограничения' : 'Без ограничений',
-                $restrictions ? 'warning' : 'success', [], array_map([Format::class, 'escape'], $restrictions)),
-        ]);
-
         $links = [];
         if (Format::allows('admin_categories')) {
             $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=categories&action=edit&catid=' . $id), 'icon' => 'edit'];
@@ -114,13 +89,12 @@ final class CategoryEntry
             'badges' => $badges,
             'links' => $links,
             'tabs' => array_values(array_filter([
-                ['id' => 'overview', 'label' => 'Обзор', 'rows' => [], 'dashboard' => $overview],
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'templates', 'label' => 'Шаблоны', 'rows' => $templates],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, [])],
-            ], static fn (array $tab): bool => $tab['rows'] !== [] || isset($tab['dashboard']))),
+            ], static fn (array $tab): bool => $tab['rows'] !== [])),
         ];
     }
 

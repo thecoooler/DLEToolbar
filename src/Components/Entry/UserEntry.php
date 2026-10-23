@@ -78,31 +78,6 @@ final class UserEntry
             ['Категории без модерации', 'cat_allow_addnews', [Format::class, 'text']],
         ]);
 
-        $restrictions = [];
-        if ($banned) $restrictions[] = 'Заблокирован';
-        if (isset(self::RESTRICTED[$restricted])) {
-            $restrictions[] = 'Ограничение: ' . mb_strtolower(self::RESTRICTED[$restricted])
-                . ((int) ($row['restricted_date'] ?? 0) > 0 ? ' до ' . langdate('d.m.Y H:i', (int) $row['restricted_date']) : ' без срока');
-        }
-        if (!empty($row['allowed_ip'])) $restrictions[] = 'Вход только с IP: ' . str_replace("\r", '', (string) $row['allowed_ip']);
-
-        $overview = Dashboard::render([
-            ['Публикаций', Format::number($row['news_num'] ?? 0)],
-            ['Комментариев', Format::number($row['comm_num'] ?? 0)],
-            ['Группа', Format::escape($user_group[$group]['group_name'] ?? (string) $group)],
-            ['Был на сайте', (int) ($row['lastdate'] ?? 0) > 0 ? Format::escape(Format::ago((int) $row['lastdate'])) : Format::empty()],
-        ], [
-            Dashboard::card('Аккаунт', $banned ? 'Заблокирован' : 'Активен', $banned ? 'danger' : 'success', [
-                ['Регистрация', Format::dateAgo($row['reg_date'] ?? 0)],
-                ['Последний визит', Format::dateAgo($row['lastdate'] ?? 0)],
-                ['E-mail', Format::text($row['email'] ?? '')],
-            ]),
-            Dashboard::card('Доступ', $restrictions ? 'Ограничен' : 'Без ограничений',
-                $banned ? 'danger' : ($restrictions ? 'warning' : 'success'),
-                array_key_exists('twofactor_auth', $row) ? [['Двухфакторная', Format::flag($row['twofactor_auth'])]] : [],
-                array_map([Format::class, 'escape'], $restrictions)),
-        ]);
-
         $links = [];
         if (Format::allows('admin_editusers')) {
             $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']), 'icon' => 'edit'];
@@ -115,13 +90,12 @@ final class UserEntry
             'badges' => $badges,
             'links' => $links,
             'tabs' => array_values(array_filter([
-                ['id' => 'overview', 'label' => 'Обзор', 'rows' => [], 'dashboard' => $overview],
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'profile', 'label' => 'Профиль', 'rows' => $profile],
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'access', 'label' => 'Доступ', 'rows' => $access],
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, array_merge(self::SECRET, ['xfields']))],
-            ], static fn (array $tab): bool => $tab['rows'] !== [] || isset($tab['dashboard']))),
+            ], static fn (array $tab): bool => $tab['rows'] !== [])),
         ];
     }
 }

@@ -90,40 +90,6 @@ final class NewsEntry
         ]);
         $options[] = ['Доступ групп', $access ? implode('<br>', array_map([Format::class, 'escape'], $access)) : '<span class="entry-muted">по настройкам групп</span>'];
 
-        $published = (int) $row['approve'] === 1;
-        $date = (int) $row['date'];
-        $edited = (int) ($row['editdate'] ?? 0);
-        $restrictions = [];
-        if (!$published) $restrictions[] = 'Не опубликована: видна только автору и редакторам';
-        if ($date > time()) $restrictions[] = 'Дата публикации ещё не наступила';
-        if (!empty($row['need_pass'])) $restrictions[] = 'Нужен пароль';
-        foreach ($access as $line) $restrictions[] = 'Группа ' . $line;
-        if (!empty($row['allowed_country'])) $restrictions[] = 'Только для стран: ' . $row['allowed_country'];
-        if (!empty($row['not_allowed_country'])) $restrictions[] = 'Закрыта для стран: ' . $row['not_allowed_country'];
-
-        $overview = Dashboard::render([
-            ['Просмотры', Format::number($row['news_read'] ?? 0)],
-            ['Комментарии', Format::number($row['comm_num'] ?? 0)],
-            ['Рейтинг', Format::escape((string) ($row['rating'] ?? 0)), 'голосов: ' . (int) ($row['vote_num'] ?? 0)],
-            ['Добавлена', Format::escape(Format::ago($date)), Format::escape(langdate('d.m.Y', $date))],
-        ], [
-            Dashboard::card('Публикация', $date > time() ? 'Отложена' : ($published ? 'Опубликована' : 'На модерации'),
-                $published ? ($date > time() ? 'info' : 'success') : 'warning', [
-                    ['Автор', $author === '' ? Format::empty() : Format::link(Format::profileUrl($author), $author)],
-                    ['Добавлена', Format::dateAgo($date)],
-                    ['Категории', $categories ? Format::escape(implode(', ', $categories)) : Format::empty()],
-                ]),
-            $edited > 0
-                ? Dashboard::card('Редактирование', 'Редактировалась', 'neutral', [
-                    ['Когда', Format::dateAgo($edited)],
-                    ['Кто', Format::text($row['editor'] ?? '')],
-                    ['Причина', Format::text($row['reason'] ?? '')],
-                ])
-                : Dashboard::card('Редактирование', 'Не редактировалась', 'neutral'),
-            Dashboard::card('Доступ', $restrictions ? 'Ограничен' : 'Без ограничений', $restrictions ? 'warning' : 'success', [],
-                array_map([Format::class, 'escape'], $restrictions)),
-        ]);
-
         $links = [];
         if (Format::allows('admin_editnews')) {
             $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=editnews&action=editnews&id=' . (int) $row['id']), 'icon' => 'edit'];
@@ -136,14 +102,13 @@ final class NewsEntry
             'badges' => $badges,
             'links' => $links,
             'tabs' => array_values(array_filter([
-                ['id' => 'overview', 'label' => 'Обзор', 'rows' => [], 'dashboard' => $overview],
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
                 // The stories are already split into pages and compiled at capture time.
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, ['short_story', 'full_story', 'cats'])],
-            ], static fn (array $tab): bool => $tab['rows'] !== [] || isset($tab['dashboard']))),
+            ], static fn (array $tab): bool => $tab['rows'] !== [])),
         ];
     }
 }
