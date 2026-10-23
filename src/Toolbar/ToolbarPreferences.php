@@ -17,9 +17,6 @@ final class ToolbarPreferences
     /** @var array<string, array<string, array{message: string, value: string}>> */
     private array $errors = [];
 
-    /** DLE default groups with fixed IDs: registered users and guests. */
-    private const EXCLUDED_GROUPS = [4, 5];
-
     /** @return Settings */
     private static function defaults(): array
     {
@@ -47,13 +44,13 @@ final class ToolbarPreferences
         return ComponentRegistry::definitions();
     }
 
-    /** @return array<int, array{group_name: string}> Groups that may be granted toolbar access. */
+    /** @return array<int, array{group_name: string, allow_admin: mixed}> Groups allowed into the admin panel may be granted toolbar access. */
     public static function groups(): array
     {
         global $user_group;
-        /** @var array<int, array{group_name: string}> $user_group */
+        /** @var array<int, array{group_name: string, allow_admin: mixed}> $user_group */
 
-        return array_diff_key($user_group, array_flip(self::EXCLUDED_GROUPS));
+        return array_filter($user_group, static fn (array $group): bool => (bool) $group['allow_admin']);
     }
 
     public static function load(): self

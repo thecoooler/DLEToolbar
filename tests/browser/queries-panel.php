@@ -22,7 +22,8 @@ function get_folder_list(string $path): array
 setcookie('dle_skin', 'Default', 0, '/', '', false, true);
 $dle_login_hash = 'browser-test-user-hash';
 $config = ['skin' => 'Default', 'version_id' => '18.0'];
-$user_group = [1 => ['group_name' => 'Администраторы']];
+$member_id = ['user_group' => 1];
+$user_group = [1 => ['group_name' => 'Администраторы', 'allow_admin' => 1]];
 $dle_module = 'main';
 $news_found = false;
 $Timer = new class {

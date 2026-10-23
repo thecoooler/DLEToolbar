@@ -103,9 +103,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
 
             $number++;
-            // DLE writes the session hash and password hashes in plain UPDATE queries.
+            // DLE writes the session hash and password hashes in plain UPDATE queries; prefixed columns such as user_hash are masked too.
             /** @var string $sql */
-            $sql = preg_replace("/\\b(password|hash)\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
+            $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
             $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $query['source'] ?? ''];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
