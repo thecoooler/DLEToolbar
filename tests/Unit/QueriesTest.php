@@ -32,6 +32,7 @@ it('masks password and session hash values in SQL rows', function (): void {
     $GLOBALS['db']->query_list = [
         ['query' => "UPDATE dle_users SET password='\$2y\$10\$secret', lastdate='1', hash='abc123', logged_ip='::1' WHERE user_id='1'", 'time' => .002, 'num' => 1],
         ['query' => "UPDATE dle_users SET PASSWORD = 'a\\'b' WHERE name='admin'", 'time' => .002, 'num' => 2],
+        ['query' => "SELECT * FROM dle_users WHERE user_hash='def456' AND u.password='ghi789'", 'time' => .002, 'num' => 3],
     ];
 
     $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
@@ -39,6 +40,9 @@ it('masks password and session hash values in SQL rows', function (): void {
     ]))['panels'];
     expect($panel)->toContain('password=&#039;***&#039;, lastdate=&#039;1&#039;, hash=&#039;***&#039;, logged_ip=&#039;::1&#039;')
         ->toContain('PASSWORD=&#039;***&#039; WHERE name=&#039;admin&#039;')
+        ->toContain('user_hash=&#039;***&#039; AND u.password=&#039;***&#039;')
+        ->not->toContain('def456')
+        ->not->toContain('ghi789')
         ->not->toContain('secret')
         ->not->toContain('abc123');
 });

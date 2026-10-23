@@ -397,6 +397,22 @@ it('lists template folders by directory name before DLE 14.3', function (): void
     }
 });
 
+it('offers and grants the toolbar only to groups allowed into the admin panel', function (): void {
+    expect(array_keys(ToolbarPreferences::groups()))->not->toContain(6)
+        ->and(ToolbarPreferences::fromRequest(['access' => ['groups' => ['1', '6']]])->allowedGroups())->toBe([1]);
+
+    $html = (new ToolbarSettingsPage(ToolbarPreferences::fromConfig([]), '?mod=dletoolbar'))->render();
+    expect($html)->not->toContain('<option value="6"');
+
+    ToolbarPreferences::fromRequest(['access' => ['groups' => ['3']]])->save();
+    $GLOBALS['member_id'] = ['user_group' => 3];
+    $toolbar = new DLEToolbar();
+    expect($toolbar->isHasAccess())->toBeTrue();
+
+    $GLOBALS['user_group'][3]['allow_admin'] = 0;
+    expect($toolbar->isHasAccess())->toBeFalse();
+});
+
 it('allows only the administrator group to access the toolbar', function (): void {
     $previous = $GLOBALS['member_id'] ?? null;
     try {

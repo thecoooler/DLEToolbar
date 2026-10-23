@@ -44,10 +44,11 @@ function setupDleToolbarTestEnvironment(): void
     $GLOBALS['member_id'] = ['user_group' => 1];
     $GLOBALS['user_group'] = [
         1 => ['group_name' => 'Администраторы', 'allow_admin' => 1, 'admin_editnews' => 1],
-        2 => ['group_name' => 'Главные редакторы'],
-        3 => ['group_name' => 'Журналисты'],
-        4 => ['group_name' => 'Пользователи'],
-        5 => ['group_name' => 'Гости'],
+        2 => ['group_name' => 'Главные редакторы', 'allow_admin' => 1, 'admin_editnews' => 1],
+        3 => ['group_name' => 'Журналисты', 'allow_admin' => 1, 'admin_editnews' => 0],
+        4 => ['group_name' => 'Пользователи', 'allow_admin' => 0, 'admin_editnews' => 0],
+        5 => ['group_name' => 'Гости', 'allow_admin' => 0, 'admin_editnews' => 0],
+        6 => ['group_name' => 'VIP', 'allow_admin' => 0, 'admin_editnews' => 0],
     ];
     $GLOBALS['dle_login_hash'] = 'test-user-hash';
     $GLOBALS['dletoolbar_test_skins'] = ['Default' => ['name' => 'Default']];

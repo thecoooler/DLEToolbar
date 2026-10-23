@@ -24,7 +24,7 @@ class DLEToolbar {
         /** @var array{user_group: int|string} $member_id */
         $group = (int) $member_id['user_group'];
 
-        // Users and guests can never be granted access, so their pages skip the settings query.
+        // Groups without admin panel access can never be granted access, so their pages skip the settings query.
         return isset(ToolbarPreferences::groups()[$group])
             && ToolbarPreferences::load()->allowsGroup($group);
     }

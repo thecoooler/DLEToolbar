@@ -30,12 +30,13 @@ $config = [
     'skin' => 'Default',
     'version_id' => '18.0',
 ];
+$member_id = ['user_group' => 1];
 $user_group = [
-    1 => ['group_name' => 'Администраторы'],
-    2 => ['group_name' => 'Главные редакторы'],
-    3 => ['group_name' => 'Журналисты'],
-    4 => ['group_name' => 'Посетители'],
-    5 => ['group_name' => 'Гости'],
+    1 => ['group_name' => 'Администраторы', 'allow_admin' => 1],
+    2 => ['group_name' => 'Главные редакторы', 'allow_admin' => 1],
+    3 => ['group_name' => 'Журналисты', 'allow_admin' => 1],
+    4 => ['group_name' => 'Посетители', 'allow_admin' => 0],
+    5 => ['group_name' => 'Гости', 'allow_admin' => 0],
 ];
 $dle_module = 'main';
 $dle_login_hash = 'preview';
