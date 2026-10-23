@@ -84,6 +84,15 @@
             'Initiator filters show query count and total time');
         assert(filters[0].getAttribute('aria-pressed') === 'true' && entries.every((entry) => !entry.hidden),
             'All initiators are shown at first');
+        const dot = (filter) => getComputedStyle(filter, '::before').backgroundColor;
+        const bar = (row) => getComputedStyle(row.querySelector('.query-bar')).backgroundColor;
+        const pluginRow = panel.querySelector('.query-list > [data-initiator="Plugin"]');
+        assert(!filters[0].classList.contains('query-tinted') && !filters[3].classList.contains('query-tinted')
+            && dot(filters[1]) !== dot(filters[2]), 'Every initiator filter gets its own colour dot');
+        assert(bar(pluginRow) === dot(filters[1]) && bar(folds[0]) === dot(filters[2])
+            && bar(rows[0][0]) === dot(filters[2]), 'Rows and folded groups take their initiator colour');
+        assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+            'Source label takes its initiator colour');
         filters[2].click();
         assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
         assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',

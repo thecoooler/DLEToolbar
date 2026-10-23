@@ -121,24 +121,44 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $groups[] = ['fast' => $isFast, 'items' => [$item]];
         }
 
+        /** @var array<string, array{count: int, time: float}> $initiators */
+        $initiators = [];
+        foreach ($groups as $group) {
+            $initiator = $group['items'][0]['initiator'];
+            $initiators[$initiator] ??= ['count' => 0, 'time' => 0.0];
+            $initiators[$initiator]['count'] += count($group['items']);
+            $initiators[$initiator]['time'] += array_sum(array_column($group['items'], 'time'));
+        }
+        // DLE goes first, plugins and modules follow by total time, queries without a call site go last.
+        uksort($initiators, static function ($a, $b) use ($initiators): int {
+            $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
+            return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
+        });
+        // Every initiator gets its own hue in filter order: first the palette, then golden-ratio steps
+        // over 75–345° like the palette, so no hue falls into the red band of slow queries.
+        $palette = [255, 145, 310, 75, 195, 345];
+        /** @var array<string, int> $hues */
+        $hues = [];
+        foreach (array_keys($initiators) as $index => $name) {
+            if ((string) $name !== '') $hues[(string) $name] = $palette[$index] ?? (int) round(75 + fmod($index * 0.618034, 1) * 270);
+        }
+        $tint = static fn (string $initiator): string => isset($hues[$initiator]) ? ' query-tinted' : '';
+        $hueStyle = static fn (string $initiator): string =>
+            isset($hues[$initiator]) ? ' style="--query-hue: ' . $hues[$initiator] . '"' : '';
+
         $rows = '';
         $slowCount = 0;
         $totalTime = 0.0;
-        /** @var array<string, array{count: int, time: float}> $initiators */
-        $initiators = [];
 
         foreach ($groups as $group) {
             $items = $group['items'];
             $initiator = $items[0]['initiator'];
-            $initiators[$initiator] ??= ['count' => 0, 'time' => 0.0];
-            $initiators[$initiator]['count'] += count($items);
-            $initiators[$initiator]['time'] += array_sum(array_column($items, 'time'));
-            $initiatorAttribute = ' data-initiator="' . $escape($initiator) . '"';
+            $initiatorAttribute = ' data-initiator="' . $escape($initiator) . '"' . $hueStyle($initiator);
 
             if ($group['fast'] && count($items) > 1) {
                 $sum = array_sum(array_column($items, 'time'));
                 $totalTime += $sum;
-                $rows .= '<div class="query-group" data-query-group' . $initiatorAttribute . '>'
+                $rows .= '<div class="query-group' . $tint($initiator) . '" data-query-group' . $initiatorAttribute . '>'
                     . '<div class="query-row query-fold" data-fold role="button" tabindex="0" aria-expanded="false">'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">···</span>'
@@ -166,7 +186,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $isSlow = $item['time'] >= $this->slowThreshold;
                 $slowCount += $isSlow ? 1 : 0;
                 $totalTime += $item['time'];
-                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . '"' . $initiatorAttribute . '>'
+                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . $tint($initiator) . '"' . $initiatorAttribute . '>'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
@@ -193,13 +213,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
 
             // Initiators are known only when source tracing recorded call sites.
             if (array_keys($initiators) !== ['']) {
-                // DLE goes first, plugins and modules follow by total time, queries without a call site go last.
-                uksort($initiators, static function ($a, $b) use ($initiators): int {
-                    $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
-                    return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
-                });
-                $filter = static fn (string $attribute, string $name, int $count, float $time, bool $pressed): string =>
-                    '<button class="query-filter" type="button" ' . $attribute . ' aria-pressed="' . ($pressed ? 'true' : 'false') . '"'
+                $filter = static fn (string $attribute, string $name, int $count, float $time, bool $pressed, string $initiator = ''): string =>
+                    '<button class="query-filter' . $tint($initiator) . '" type="button" ' . $attribute . $hueStyle($initiator)
+                    . ' aria-pressed="' . ($pressed ? 'true' : 'false') . '"'
                     . ' title="' . $count . ' ' . self::queriesWord($count) . ', ' . $format($time) . '">'
                     . '<span class="query-filter-name">' . $escape($name) . '</span>'
                     . '<span class="query-filter-stats">' . $count . ' · ' . $format($time) . '</span></button>';
@@ -208,7 +224,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 foreach ($initiators as $name => $total) {
                     $name = (string) $name;
                     $filters .= $filter('data-query-filter="' . $escape($name) . '"', $name === '' ? 'Без источника' : $name,
-                        $total['count'], $total['time'], false);
+                        $total['count'], $total['time'], false, $name);
                 }
                 $filters .= '</div>';
             }
@@ -482,6 +498,22 @@ final class Queries implements ConfigurableComponent, RequestComponent
             :host([data-theme="dark"]) .query-row-slow .query-bar { background: #fca5a5; }
             :host([data-theme="dark"]) .query-row-slow .query-num,
             :host([data-theme="dark"]) .query-row-slow .query-time { color: #fca5a5; }
+            .query-tinted { --query-color: oklch(55% .16 var(--query-hue)); }
+            :host([data-theme="dark"]) .query-tinted { --query-color: oklch(76% .13 var(--query-hue)); }
+            .query-row-plain.query-tinted .query-bar,
+            .query-tinted .query-row-plain .query-bar,
+            .query-tinted .query-fold .query-bar { background: var(--query-color); }
+            .query-tinted .query-source-label,
+            :host([data-theme="dark"]) .query-tinted .query-source-label { color: var(--query-color); font-weight: 600; }
+            .query-filter.query-tinted::before {
+                content: "";
+                flex: 0 0 auto;
+                align-self: center;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--query-color);
+            }
             .query-row-fast { opacity: .7; }
             .query-row-fast:hover { opacity: 1; }
             .query-fold {

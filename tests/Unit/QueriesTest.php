@@ -24,6 +24,8 @@ it('keeps the DLE counter distinct from filtered SQL rows and respects time thre
         ->not->toContain('Connection with MySQL Server')
         ->not->toContain('data-fold')
         ->not->toContain('class="query-filters"')
+        ->not->toContain(' query-tinted"')
+        ->not->toContain('style="--query-hue')
         ->toMatch('/SELECT threshold<\/span><\/span>\s*<span class="query-time">1 мс<\/span>/')
         ->toMatch('/query-row-slow[^>]*>.*?SELECT slow/s');
 });
@@ -145,26 +147,48 @@ it('filters SQL rows by initiator with per-initiator count and total time', func
         'toolbar' => ['enabled' => ['queries']],
     ]));
     $panel = $rendered['panels'];
-    preg_match_all('/<button class="query-filter"[^>]*>.*?<\/button>/s', $panel, $filters);
+    preg_match_all('/<button class="query-filter[" ][^>]*>.*?<\/button>/s', $panel, $filters);
 
     expect($filters[0])->toBe([
         '<button class="query-filter" type="button" data-query-filter-all aria-pressed="true" title="7 запросов, 21 мс">'
             . '<span class="query-filter-name">Все</span><span class="query-filter-stats">7 · 21 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="DLE" aria-pressed="false" title="3 запроса, 3 мс">'
+        '<button class="query-filter query-tinted" type="button" data-query-filter="DLE" style="--query-hue: 255" aria-pressed="false" title="3 запроса, 3 мс">'
             . '<span class="query-filter-name">DLE</span><span class="query-filter-stats">3 · 3 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="Plugin" aria-pressed="false" title="1 запрос, 10 мс">'
+        '<button class="query-filter query-tinted" type="button" data-query-filter="Plugin" style="--query-hue: 145" aria-pressed="false" title="1 запрос, 10 мс">'
             . '<span class="query-filter-name">Plugin</span><span class="query-filter-stats">1 · 10 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="shop" aria-pressed="false" title="2 запроса, 5 мс">'
+        '<button class="query-filter query-tinted" type="button" data-query-filter="shop" style="--query-hue: 310" aria-pressed="false" title="2 запроса, 5 мс">'
             . '<span class="query-filter-name">shop</span><span class="query-filter-stats">2 · 5 мс</span></button>',
         '<button class="query-filter" type="button" data-query-filter="" aria-pressed="false" title="1 запрос, 3 мс">'
             . '<span class="query-filter-name">Без источника</span><span class="query-filter-stats">1 · 3 мс</span></button>',
     ])
-        ->and($panel)->toContain('<div class="query-group" data-query-group data-initiator="DLE">')
+        ->and($panel)->toContain('<div class="query-group query-tinted" data-query-group data-initiator="DLE" style="--query-hue: 255">')
         ->toContain('№2–3 · <span data-fold-verb></span>2 быстрых · DLE</span>')
-        ->toMatch('/<div class="query-row query-row-plain" data-initiator="shop">.*?SELECT shop_fast/s')
+        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="shop" style="--query-hue: 310">.*?SELECT shop_fast/s')
+        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="Plugin" style="--query-hue: 145">.*?SELECT plugin/s')
         ->toMatch('/<div class="query-row query-row-plain" data-initiator="">.*?SELECT before_toolbar/s')
         ->and(substr_count($panel, 'data-fold '))->toBe(1)
         ->and($rendered['scripts'])->toContain("querySelectorAll('.query-list > [data-initiator]')");
+});
+
+it('gives every initiator its own hue outside the slow-query red', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [['query' => 'SELECT core', 'time' => .002, 'num' => 1, 'source' => 'engine/init.php:1']];
+    for ($index = 1; $index <= 14; $index++) {
+        $GLOBALS['db']->query_list[] = ['query' => 'SELECT ' . $index, 'time' => .002 + $index / 1000, 'num' => $index + 1,
+            'source' => 'engine/modules/module' . $index . '/run.php:1'];
+    }
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    preg_match_all('/data-query-filter="([^"]*)" style="--query-hue: (\d+)"/', $panel, $filters);
+    $hues = array_map('intval', $filters[2]);
+
+    expect($filters[1])->toHaveCount(15)
+        ->and(array_slice($filters[1], 0, 3))->toBe(['DLE', 'module14', 'module13'])
+        ->and(array_slice($hues, 0, 6))->toBe([255, 145, 310, 75, 195, 345])
+        ->and(array_unique($hues))->toHaveCount(15)
+        ->and(array_filter($hues, static fn (int $hue): bool => $hue < 75 || $hue > 345))->toBe([])
+        ->and($panel)->toContain('<div class="query-row query-row-plain query-tinted" data-initiator="module14" style="--query-hue: 145">');
 });
 
 it('escapes initiator names in filters and row attributes', function (): void {
