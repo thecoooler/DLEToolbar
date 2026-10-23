@@ -155,3 +155,13 @@ Workflow проверит формат тега и принадлежность 
 
 Правила кода — в `AGENTS.md`, предметная модель — в `CONTEXT.md`,
 результаты проверки готовности — в `AUDIT.md`.
+
+## Участие в разработке
+
+Ошибки и предложения — через [issues](https://github.com/thecoooler/DLEToolbar/issues/new/choose).
+Как прислать pull request — в [CONTRIBUTING.md](CONTRIBUTING.md). Уязвимости
+сообщайте приватно, см. [SECURITY.md](SECURITY.md).
+
+## Лицензия
+
+[MIT](LICENSE).
