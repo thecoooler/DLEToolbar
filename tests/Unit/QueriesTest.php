@@ -23,8 +23,8 @@ it('keeps the DLE counter distinct from filtered SQL rows and respects time thre
         ->toContain('query-stats-alert">⚠ 1')
         ->not->toContain('Connection with MySQL Server')
         ->not->toContain('data-fold')
-        ->not->toContain('class="query-filters"')
-        ->toMatch('/SELECT threshold<\/span><\/span>\s*<span class="query-time">1 мс<\/span>/')
+        ->toContain('class="query-owners"')
+        ->toMatch('/SELECT threshold.*?>1 мс</')
         ->toMatch('/query-row-slow[^>]*>.*?SELECT slow/s');
 });
 
@@ -40,7 +40,7 @@ it('masks password and session hash values in SQL rows', function (): void {
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     expect($panel)->toContain('password=&#039;***&#039;, lastdate=&#039;1&#039;, hash=&#039;***&#039;, logged_ip=&#039;::1&#039;')
-        ->toContain('PASSWORD=&#039;***&#039; WHERE name=&#039;admin&#039;')
+        ->toContain('PASSWORD = &#039;***&#039; WHERE name=&#039;admin&#039;')
         ->toContain('user_hash=&#039;***&#039; AND u.password=&#039;***&#039;')
         ->not->toContain('def456')
         ->not->toContain('ghi789')
@@ -83,15 +83,15 @@ it('renders escaped call sites and path labels in ordinary and folded SQL rows',
         'toolbar' => ['enabled' => ['queries']],
     ]));
     $panel = $rendered['panels'];
-    expect($panel)->toContain('<span class="query-source-label">shop</span> · engine/modules/shop/run.php:12')
-        ->toContain('<span class="query-source-label">Plugin</span> · engine/Vendor/Plugin/run.php:34')
-        ->toContain('<span class="query-source-label">DLE</span> · engine/classes/templates.class.php:56')
-        ->toContain('<span class="query-source-label">&lt;shop&gt;&quot;</span> · engine/modules/&lt;shop&gt;&quot;/run.php:78')
+    expect($panel)->toContain('<span class="query-owner">shop</span><span class="query-source-file">engine/modules/shop/run.php:12</span>')
+        ->toContain('<span class="query-owner">Plugin</span><span class="query-source-file">engine/Vendor/Plugin/run.php:34</span>')
+        ->toContain('<span class="query-owner">DLE</span><span class="query-source-file">engine/classes/templates.class.php:56</span>')
+        ->toContain('<span class="query-owner">&lt;shop&gt;&quot;</span><span class="query-source-file">engine/modules/&lt;shop&gt;&quot;/run.php:78</span>')
         ->not->toContain('<shop>')
-        ->toContain('<span class="query-text">SELECT legacy</span></span>')
-        ->toContain('<span class="query-text">SELECT empty</span></span>')
-        ->toMatch('/data-fast-row hidden>.*?query-source.*?engine\/modules\/shop/s')
-        ->and(substr_count($panel, '<span class="query-source">'))->toBe(5)
+        ->toContain('SELECT legacy')
+        ->toContain('SELECT empty')
+        ->toMatch('/data-fast-row.*?query-source.*?engine\/modules\/shop/s')
+        ->and(substr_count($panel, '<span class="query-source">'))->toBe(7)
         ->and($rendered['scripts'])->toContain("querySelector('.query-text').textContent");
 });
 
@@ -108,7 +108,7 @@ it('recognizes every native engine directory without inventing plugin labels', f
     $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
-    expect(substr_count($panel, '<span class="query-source-label">DLE</span>'))->toBe(11);
+    expect(substr_count($panel, '<span class="query-owner">DLE</span>'))->toBe(11);
 });
 
 it('labels single-file modules and plugins by their file or directory name', function (): void {
@@ -126,11 +126,11 @@ it('labels single-file modules and plugins by their file or directory name', fun
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     foreach ($sources as $source => $label) {
-        expect($panel)->toContain('<span class="query-source-label">' . $label . '</span> · ' . $source);
+        expect($panel)->toContain('<span class="query-owner">' . $label . '</span><span class="query-source-file">' . $source . '</span>');
     }
 });
 
-it('filters SQL rows by initiator with per-initiator count and total time', function (): void {
+it('filters SQL rows by owner with per-owner count and total time', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [
         ['query' => 'SELECT before_toolbar', 'time' => .003, 'num' => 1],
@@ -145,29 +145,24 @@ it('filters SQL rows by initiator with per-initiator count and total time', func
         'toolbar' => ['enabled' => ['queries']],
     ]));
     $panel = $rendered['panels'];
-    preg_match_all('/<button class="query-filter"[^>]*>.*?<\/button>/s', $panel, $filters);
+    preg_match_all('/<button class="query-owner-chip"[^>]*>.*?<\/button>/s', $panel, $filters);
 
     expect($filters[0])->toBe([
-        '<button class="query-filter" type="button" data-query-filter-all aria-pressed="true" title="7 запросов, 21 мс">'
-            . '<span class="query-filter-name">Все</span><span class="query-filter-stats">7 · 21 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="DLE" aria-pressed="false" title="3 запроса, 3 мс">'
-            . '<span class="query-filter-name">DLE</span><span class="query-filter-stats">3 · 3 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="Plugin" aria-pressed="false" title="1 запрос, 10 мс">'
-            . '<span class="query-filter-name">Plugin</span><span class="query-filter-stats">1 · 10 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="shop" aria-pressed="false" title="2 запроса, 5 мс">'
-            . '<span class="query-filter-name">shop</span><span class="query-filter-stats">2 · 5 мс</span></button>',
-        '<button class="query-filter" type="button" data-query-filter="" aria-pressed="false" title="1 запрос, 3 мс">'
-            . '<span class="query-filter-name">Без источника</span><span class="query-filter-stats">1 · 3 мс</span></button>',
+        '<button class="query-owner-chip" type="button" data-owner-filter="o2" style="--owner: #3f9c8f" aria-pressed="false" title="Показать только запросы: Plugin">'
+            . '<span class="query-owner-dot" aria-hidden="true"></span>Plugin <b>1</b><span class="query-owner-time">10 мс</span></button>',
+        '<button class="query-owner-chip" type="button" data-owner-filter="o0" aria-pressed="false" title="Показать только запросы: DLE">'
+            . '<span class="query-owner-dot" aria-hidden="true"></span>DLE <b>4</b><span class="query-owner-time">6 мс</span></button>',
+        '<button class="query-owner-chip" type="button" data-owner-filter="o1" style="--owner: #5b7bb8" aria-pressed="false" title="Показать только запросы: shop">'
+            . '<span class="query-owner-dot" aria-hidden="true"></span>shop <b>2</b><span class="query-owner-time">5 мс</span></button>',
     ])
-        ->and($panel)->toContain('<div class="query-group" data-query-group data-initiator="DLE">')
-        ->toContain('№2–3 · <span data-fold-verb></span>2 быстрых · DLE</span>')
-        ->toMatch('/<div class="query-row query-row-plain" data-initiator="shop">.*?SELECT shop_fast/s')
-        ->toMatch('/<div class="query-row query-row-plain" data-initiator="">.*?SELECT before_toolbar/s')
+        ->and($panel)->toContain('<div class="query-group" data-query-group>')
+        ->toContain('data-owner="o1"')
+        ->toContain('style="--owner: #5b7bb8"')
         ->and(substr_count($panel, 'data-fold '))->toBe(1)
-        ->and($rendered['scripts'])->toContain("querySelectorAll('.query-list > [data-initiator]')");
+        ->and($rendered['scripts'])->toContain("const applyOwnerFilter = () => {");
 });
 
-it('escapes initiator names in filters and row attributes', function (): void {
+it('escapes owner names in filters and row attributes', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [
         ['query' => 'SELECT 1', 'time' => .002, 'num' => 1, 'source' => 'engine/modules/"><i>/run.php:1'],
@@ -175,7 +170,8 @@ it('escapes initiator names in filters and row attributes', function (): void {
     $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
-    expect($panel)->toContain('data-query-filter="&quot;&gt;&lt;i&gt;"')
-        ->toContain('data-initiator="&quot;&gt;&lt;i&gt;"')
+    expect($panel)->toContain('title="Показать только запросы: &quot;&gt;&lt;i&gt;"')
+        ->toContain('&quot;&gt;&lt;i&gt; <b>1</b>')
+        ->toContain('data-owner="o0"')
         ->not->toContain('"><i>');
 });

@@ -6,7 +6,8 @@ namespace iCooLER\DLEToolbar;
 final class ToolbarTestDatabase
 {
     public int $query_num = 0;
-    public array $query_list = [];
+    /** @var array<int, array<string, mixed>>|\ArrayAccess<int, array<string, mixed>> */
+    public $query_list = [];
     public float $MySQL_time_taken = 0;
     public array $query_errors_list = [];
     public array $queries = [];
