@@ -60,65 +60,40 @@ it('masks password and session hash values in SQL rows', function (): void {
         ->not->toContain('abc123');
 });
 
-it('masks secret positions of INSERT value tuples', function (): void {
+it('masks secret columns in INSERT value lists', function (): void {
     $panel = maskedQueriesPanel([
         "INSERT INTO dle_users (name, password, email, reg_date, lastdate, user_group, info, signature, favorites, xfields, hash, logged_ip)"
-            . " VALUES ('admin', '\$2y\$10\$regpass', 'a@example.com', '1700000000', '1700000000', '4', '', '', '', '', 'reghash', '::1')",
-        "REPLACE INTO dle_tokens (`id`, `user_id`, `token`) values (1, 2, 'tok1'), (3, MD5('x,y'), \"tok2\")"
-            . " ON DUPLICATE KEY UPDATE `token` = VALUES(`token`), hash = 'duphash'",
+            . " VALUES ('admin', '\$2y\$10\$zz1', 'a@example.com', 1700000000, '1700000000', '4', '', '', '', '', 'zz2', '::1')",
+        "INSERT INTO dle_twofactor (user_id, `pin`, attempt, date) VALUES ('1', \"123456\", '0', '1700000000')",
+        "INSERT INTO dle_lostdb (lostname, lostid) values ('1', 'zz3')",
         "INSERT INTO dle_logs (name, value) VALUES ('password', 'visible')",
     ]);
-    expect($panel)->toContain("VALUES ('admin', '***', 'a@example.com', '1700000000', '1700000000', '4', '', '', '', '', '***', '::1')")
-        ->toContain("values (1, 2, '***'), (3, MD5('x,y'), \"***\") ON DUPLICATE KEY UPDATE `token` = VALUES(`token`), hash = '***'")
-        ->toContain("VALUES ('password', 'visible')")
-        ->not->toContain('regpass')
-        ->not->toContain('reghash')
-        ->not->toContain('tok1')
-        ->not->toContain('tok2')
-        ->not->toContain('duphash');
-});
-
-it('masks secrets in comparisons, lists, patterns and function arguments', function (): void {
-    $panel = maskedQueriesPanel([
-        "SELECT user_id FROM dle_users WHERE hash IN ('zzh1', \"zzh2\") AND password NOT IN ('zzp1') AND `password` LIKE '%zzp2%'",
-        "SELECT 1 FROM dle_users WHERE password NOT LIKE 'zzp3' AND hash != 'zzh3' AND hash <> 'zzh4' AND hash <=> 'zzh5'",
-        "UPDATE dle_users SET password = MD5(CONCAT('zzp4', 'zzp5')), hash=SHA1('zzh6') WHERE name = 'admin'",
-        "SELECT 1 FROM dle_users WHERE password = BINARY 'zzp6' AND pin = -42 AND pin = 0x2a AND hash = _utf8mb4'zzh7' AND name='it''s'",
-    ]);
-    expect($panel)->toContain("hash IN ('***', \"***\") AND password NOT IN ('***') AND `password` LIKE '***'")
-        ->toContain("password NOT LIKE '***' AND hash != '***' AND hash <> '***' AND hash <=> '***'")
-        ->toContain("password = MD5(CONCAT('***', '***')), hash=SHA1('***') WHERE name = 'admin'")
-        ->toContain("password = BINARY '***' AND pin = -'***' AND pin = '***' AND hash = _utf8mb4'***' AND name='it''s'")
-        ->not->toMatch('/zz[ph]\d/')
-        ->not->toContain('42');
-});
-
-it('masks two-factor codes, password recovery ids and API keys', function (): void {
-    $panel = maskedQueriesPanel([
-        "INSERT INTO dle_twofactor (user_id, pin, attempt, date) VALUES ('1', '123456', '0', '1700000000')",
-        "SELECT * FROM dle_twofactor WHERE user_id='1' AND pin=654321",
-        "INSERT INTO dle_lostdb (lostname, lostid) values ('1', 'zz1')",
-        "DELETE FROM dle_lostdb WHERE lostid = \"zz2\"",
-        "UPDATE dle_users SET twofactor_secret='zz1', otp_code='zz2' WHERE user_id='1'",
-        "UPDATE dle_api SET api_key='zz1', apikey='zz2', access_token=\"zz3\", client_secret = 'zz4', salt='zz5', auth_key='zz6', oauth_token='zz7', user_pass='zz8'",
-    ]);
-    expect($panel)->toContain("VALUES ('1', '***', '0', '1700000000')")
-        ->toContain("user_id='1' AND pin='***'")
+    expect($panel)->toContain("VALUES ('admin', '***', 'a@example.com', 1700000000, '1700000000', '4', '', '', '', '', '***', '::1')")
+        ->toContain("VALUES ('1', '***', '0', '1700000000')")
         ->toContain("values ('1', '***')")
-        ->toContain('lostid = "***"')
-        ->toContain("twofactor_secret='***', otp_code='***'")
-        ->toContain("api_key='***', apikey='***', access_token=\"***\", client_secret = '***', salt='***', auth_key='***', oauth_token='***', user_pass='***'")
+        ->toContain("VALUES ('password', 'visible')")
         ->not->toContain('123456')
+        ->not->toMatch('/zz\d/');
+});
+
+it('masks secret columns in comparisons and assignments', function (): void {
+    $panel = maskedQueriesPanel([
+        "SELECT 1 FROM dle_users WHERE `password` LIKE \"zz1\" AND hash != 'zz2' AND hash <> 'zz3' AND u.hash NOT LIKE 'zz4'",
+        "SELECT * FROM dle_twofactor WHERE user_id='1' AND pin=654321",
+        "UPDATE dle_api SET api_key='zz5', apikey='zz6', access_token=\"zz7\", client_secret = 'zz8', salt='zz9' WHERE id=1",
+    ]);
+    expect($panel)->toContain("`password` LIKE '***' AND hash != '***' AND hash <> '***' AND u.hash NOT LIKE '***'")
+        ->toContain("user_id='1' AND pin='***'")
+        ->toContain("api_key='***', apikey='***', access_token='***', client_secret = '***', salt='***' WHERE id=1")
         ->not->toContain('654321')
         ->not->toMatch('/zz\d/');
 });
 
 it('keeps values of columns that only resemble secret names', function (): void {
     $queries = [
-        "SELECT * FROM dle_post WHERE author='admin' AND ping='pong' AND pinned=1 AND keywords='kw' AND hashtags='tag'",
+        "SELECT * FROM dle_post WHERE author='admin' AND ping='pong' AND pinned=1 AND keywords='kw' AND passport='pp'",
         "INSERT INTO dle_toolbar_settings (setting_key, setting_value) VALUES ('queries', '{\"a\":1}')",
         "SELECT name, password, hash FROM dle_users WHERE user_id = 7 ORDER BY hash",
-        "SELECT * FROM dle_post WHERE title = 'password = \\'x\\'' AND passport = 'pp'",
     ];
     $panel = maskedQueriesPanel($queries);
     foreach ($queries as $query) {

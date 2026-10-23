@@ -257,96 +257,26 @@ final class Queries implements ConfigurableComponent, RequestComponent
     }
 
     /**
-     * Replaces literals compared with or written to secret columns: passwords, hashes, tokens, secrets, salts,
-     * authentication and two-factor codes, API keys. Covers comparisons, IN lists, SET assignments
-     * and INSERT/REPLACE value tuples, where DLE writes password and session hashes on registration.
+     * Masks values of password, hash, token, secret, salt, API key and DLE two-factor or recovery code columns
+     * in comparisons and in INSERT column lists, which DLE uses to write the password and session hash on registration.
      */
     private static function maskSecrets(string $sql): string
     {
+        $name = '`?\w*(?:password|hash|token|secret|salt|pin|lostid|api_?key)`?';
         // Possessive quantifiers keep long literals such as news texts from exhausting the PCRE stack.
-        preg_match_all('/\'[^\'\\\\]*+(?:(?:\\\\.|\'\')[^\'\\\\]*+)*+\'|"[^"\\\\]*+(?:(?:\\\\.|"")[^"\\\\]*+)*+"|`[^`]*+(?:``[^`]*+)*+`'
-            . '|0x[0-9a-f]+\b|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?!\w)|[\w$]+|\s+|<=>|!=|<>|./is', $sql, $matches);
-        $tokens = $matches[0];
-        $count = count($tokens);
-        // Short words such as pin or auth count only as a whole name part, so author, ping or pinned stay visible.
-        $isSecret = static fn (string $token): bool => (bool) preg_match('/^`?(?:\w*(?:passw(?:or)?d|token|secret|twofactor|two_factor'
-            . '|(?:api|access|auth|private|license)_?key)\w*|\w*hash(?:_\w+)?'
-            . '|(?:\w+_)?(?:pass|pwd|salt|pin|otp|totp|2fa|mfa|auth|oauth|lostid)(?:_\w+)?)`?$/i', $token);
-        $isLiteral = static fn (string $token): bool => (bool) preg_match('/^(?:[\'"]|0x[0-9a-f]+$|\d+(?:\.\d+)?(?:e[+-]?\d+)?$)/i', $token);
-        $next = static function (int $index) use ($tokens, $count): int {
-            for ($index++; $index < $count && trim($tokens[$index]) === ''; $index++);
-            return $index;
-        };
-        $mask = static function (int $from, int $to) use (&$tokens, $count, $isLiteral): void {
-            for (; $from < $to && $from < $count; $from++) {
-                if ($isLiteral($tokens[$from])) $tokens[$from] = $tokens[$from][0] === '"' ? '"***"' : "'***'";
-            }
-        };
-        // Index of the comma or closing parenthesis that ends the tuple value starting at $index.
-        $boundary = static function (int $index) use ($tokens, $count): int {
-            for ($depth = 0; $index < $count && ($depth > 0 || ($tokens[$index] !== ',' && $tokens[$index] !== ')')); $index++) {
-                if ($tokens[$index] === '(') $depth++;
-                elseif ($tokens[$index] === ')') $depth--;
-            }
-            return $index;
-        };
-        // Index after the compared value starting at $index: a function call such as MD5('...') or an IN list is taken whole.
-        $valueEnd = static function (int $index) use ($tokens, $count, $next): int {
-            while ($index < $count && preg_match('/^(?:BINARY|N|_\w+|[-+~])$/i', $tokens[$index])) $index = $next($index);
-            if ($index < $count && preg_match('/^[a-z_]\w*$/i', $tokens[$index]) && ($tokens[$next($index)] ?? '') === '(') {
-                $index = $next($index);
-            }
-            if (($tokens[$index] ?? '') !== '(') return $index + 1;
-            for ($depth = 0; $index < $count; $index++) {
-                if ($tokens[$index] === '(') $depth++;
-                elseif ($tokens[$index] === ')' && --$depth === 0) return $index + 1;
-            }
-            return $count;
-        };
-
-        for ($i = 0; $i < $count; $i++) {
-            if ($tokens[$i] === '(') {
-                // A column list followed by VALUES: mask the secret positions of every tuple.
-                $columns = [];
-                $j = $i;
-                do {
-                    $j = $next($j);
-                    if ($j >= $count || !preg_match('/^(?:`.*`|[a-z_$][\w$]*)$/is', $tokens[$j])) continue 2;
-                    $columns[] = $isSecret($tokens[$j]);
-                    $j = $next($j);
-                } while (($tokens[$j] ?? '') === ',');
-                $values = $next($j);
-                if (($tokens[$j] ?? '') !== ')' || !in_array(true, $columns, true)
-                    || !in_array(strtoupper($tokens[$values] ?? ''), ['VALUES', 'VALUE'], true)) continue;
-                $j = $next($values);
-                while (($tokens[$j] ?? '') === '(') {
-                    foreach ($columns as $secret) {
-                        $start = $next($j);
-                        $j = $boundary($start);
-                        if ($secret) $mask($start, $j);
-                        if (($tokens[$j] ?? ')') === ')') break;
-                    }
-                    // Values beyond the column list are skipped up to the closing parenthesis.
-                    while (($tokens[$j] ?? ')') === ',') $j = $boundary($next($j));
-                    $j = $next($j);
-                    if (($tokens[$j] ?? '') === ',') $j = $next($j);
-                }
-                $i = $j - 1;
-                continue;
-            }
-            if (!$isSecret($tokens[$i])) continue;
-
-            $j = $next($i);
-            if (strtoupper($tokens[$j] ?? '') === 'NOT') $j = $next($j);
-            if (in_array(strtoupper($tokens[$j] ?? ''), ['=', '!=', '<>', '<=>', 'LIKE', 'IN'], true)) {
-                $start = $next($j);
-                $i = $valueEnd($start);
-                $mask($start, $i);
-                $i--;
-            }
-        }
-
-        return implode('', $tokens);
+        $literal = '\'[^\'\\\\]*+(?:\\\\.[^\'\\\\]*+)*+\'|"[^"\\\\]*+(?:\\\\.[^"\\\\]*+)*+"';
+        /** @var string $sql */
+        $sql = preg_replace_callback('/(\(([\w\s,`]+)\)\s*VALUES\s*\()((?:' . $literal . '|[^\'"()])*+)\)/i',
+            static function (array $match) use ($name, $literal): string {
+                $secrets = preg_grep('/^' . $name . '$/i', array_map('trim', explode(',', $match[2])));
+                $position = 0;
+                return $match[1] . preg_replace_callback('/' . $literal . '|[^,\s]+/',
+                    static function (array $value) use ($secrets, &$position): string {
+                        return isset($secrets[$position++]) ? "'***'" : $value[0];
+                    }, $match[3]) . ')';
+            }, $sql);
+        /** @var string */
+        return preg_replace('/(' . $name . '\s*(?:=|!=|<>|(?:NOT\s+)?LIKE)\s*)(?:' . $literal . '|\d+\b)/i', "\$1'***'", $sql);
     }
 
     private static function queriesWord(int $count): string
