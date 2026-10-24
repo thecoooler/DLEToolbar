@@ -538,8 +538,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
             .query-filter.query-tinted[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--surface); }
             .query-copy-buffer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; font-size: 16px; }
-            .query-row-fast { opacity: .7; }
-            .query-row-fast:hover { opacity: 1; }
+            .query-row-fast .query-text { opacity: .7; }
+            .query-row-fast:hover .query-text { opacity: 1; }
             .query-fold {
                 background: var(--row-stripe);
                 cursor: pointer;

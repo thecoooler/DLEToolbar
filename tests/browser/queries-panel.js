@@ -93,6 +93,11 @@
             && bar(rows[0][0]) === 'rgba(0, 0, 0, 0)', 'Plain rows and folded groups do not tint the left bar');
         assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
             'Source label takes its initiator colour');
+        const fastRow = panel.querySelector('[data-fast-row]');
+        assert(getComputedStyle(fastRow).opacity === '1',
+            'Fast rows keep full opacity so ancestor styling does not dilute contrast');
+        assert(getComputedStyle(fastRow.querySelector('.query-text')).opacity === '0.7',
+            'Fast SQL text is dimmed without fading the initiator label');
         const slowRow = panel.querySelector('.query-row-slow');
         slowRow.classList.add('query-tinted');
         slowRow.style.setProperty('--query-hue', '145');

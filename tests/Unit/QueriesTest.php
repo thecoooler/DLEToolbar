@@ -207,6 +207,26 @@ it('tints slow rows and numeric initiator names without losing the slow marking'
         ->toMatch('/<div class="query-row query-row-slow query-tinted" data-initiator="123" style="--query-hue: 145">.*?SELECT numeric/s');
 });
 
+it('keeps assigning distinct hues outside the slow red for more than 15 initiators', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [['query' => 'SELECT core', 'time' => .002, 'num' => 1, 'source' => 'engine/init.php:1']];
+    for ($index = 1; $index <= 24; $index++) {
+        $GLOBALS['db']->query_list[] = [
+            'query' => 'SELECT ' . $index, 'time' => $index * .001, 'num' => $index + 1,
+            'source' => 'engine/modules/module' . $index . '/run.php:1',
+        ];
+    }
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    preg_match_all('/data-query-filter="([^"]*)" style="--query-hue: (\d+)"/', $panel, $filters);
+    $hues = array_map('intval', $filters[2]);
+
+    expect($filters[1])->toHaveCount(25)
+        ->and(array_unique($hues))->toHaveCount(25)
+        ->and(array_filter($hues, static fn (int $hue): bool => $hue < 75 || $hue > 345))->toBe([]);
+});
+
 it('escapes initiator names in filters and row attributes', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_list = [
