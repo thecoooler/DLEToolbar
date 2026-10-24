@@ -14,38 +14,6 @@ function get_folder_list(string $folder): array
     return $GLOBALS['dletoolbar_test_skins'];
 }
 
-namespace iCooLER\DLEToolbar\Components\Entry;
-
-/**
- * Emulate DLE's functions.php xfieldsload($profile = true) reading xprofile.txt,
- * which dleplugin's test stub hardcodes to an empty array.
- *
- * @param bool $profile
- * @return array<int, array<int, string>>
- */
-function xfieldsload(bool $profile = false): array
-{
-    if ($profile) {
-        $path = ENGINE_DIR . '/data/xprofile.txt';
-        if (!file_exists($path)) {
-            return [];
-        }
-        $lines = file($path);
-        if (!is_array($lines) || !count($lines)) {
-            return [];
-        }
-        $fields = [];
-        foreach ($lines as $value) {
-            $value = trim($value);
-            if ($value !== '') {
-                $fields[] = explode('|', $value);
-            }
-        }
-        return $fields;
-    }
-    return \xfieldsload($profile);
-}
-
 namespace iCooLER\DLEToolbar;
 
 require_once __DIR__ . '/Support/DleAdminFunctions.php';

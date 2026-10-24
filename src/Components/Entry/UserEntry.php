@@ -15,11 +15,12 @@ final class UserEntry
      */
     public static function build(array $row): array
     {
-        global $config, $user_group, $member_id, $is_logged;
+        global $config, $user_group, $member_id, $is_logged, $xfields;
         /** @var array{version_id: string} $config */
         /** @var array<int, array{group_name: string, admin_editusers?: int|string}> $user_group */
         /** @var array{user_id: int|string, user_group: int|string} $member_id */
         /** @var bool $is_logged */
+        /** @var array<int, array{0: string, 5: int|string}> $xfields Profile definitions loaded by profile.php. */
 
         $name = (string) $row['name'];
         $group = (int) $row['user_group'];
@@ -66,7 +67,7 @@ final class UserEntry
         /** @var array<array-key, array{name: string, private: bool|int|string}> $definitions */
         $definitions = $modernFields ? \DLEUserXFields::GETFields() : array_map(static fn (array $field): array => [
             'name' => $field[0], 'private' => $field[5],
-        ], xfieldsload(true));
+        ], $xfields);
         // DLE 19+ uses the edit-users permission; older versions reserve private fields for group 1.
         $isOwn = $is_logged && ((int) $member_id['user_id'] === (int) $row['user_id']
             || ($modernFields ? !empty($user_group[$member_id['user_group']]['admin_editusers']) : (int) $member_id['user_group'] === 1));
