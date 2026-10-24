@@ -8,6 +8,7 @@ use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Components\Skin\Skin;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
+use iCooLER\DLEToolbar\Components\Entry\Entry;
 use iCooLER\DLEToolbar\Components\Link\Link;
 
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
@@ -23,6 +24,7 @@ final class ComponentRegistry
         'queries' => Queries::class,
         'skin' => Skin::class,
         'cache' => Cache::class,
+        'entry' => Entry::class,
         'editpost' => EditPost::class,
     ];
 
