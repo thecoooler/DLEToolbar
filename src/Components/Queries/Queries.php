@@ -512,9 +512,6 @@ final class Queries implements ConfigurableComponent, RequestComponent
             :host([data-theme="dark"]) .query-row-slow .query-time { color: #fca5a5; }
             .query-tinted { --query-color: oklch(50% .15 var(--query-hue)); }
             :host([data-theme="dark"]) .query-tinted { --query-color: oklch(76% .13 var(--query-hue)); }
-            .query-row-plain.query-tinted .query-bar,
-            .query-tinted .query-row-plain .query-bar,
-            .query-tinted .query-fold .query-bar { background: var(--query-color); }
             .query-tinted .query-source-label,
             :host([data-theme="dark"]) .query-tinted .query-source-label { color: var(--query-color); font-weight: 600; }
             .query-filter.query-tinted::before {

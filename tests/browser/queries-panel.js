@@ -89,8 +89,8 @@
         const pluginRow = panel.querySelector('.query-list > [data-initiator="Plugin"]');
         assert(!filters[0].classList.contains('query-tinted') && !filters[3].classList.contains('query-tinted')
             && dot(filters[1]) !== dot(filters[2]), 'Every initiator filter gets its own colour dot');
-        assert(bar(pluginRow) === dot(filters[1]) && bar(folds[0]) === dot(filters[2])
-            && bar(rows[0][0]) === dot(filters[2]), 'Rows and folded groups take their initiator colour');
+        assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)' && bar(folds[0]) === 'rgba(0, 0, 0, 0)'
+            && bar(rows[0][0]) === 'rgba(0, 0, 0, 0)', 'Plain rows and folded groups do not tint the left bar');
         assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
             'Source label takes its initiator colour');
         const slowRow = panel.querySelector('.query-row-slow');
@@ -102,9 +102,9 @@
         host.setAttribute('data-theme', 'dark');
         try {
             assert(bar(slowRow) === 'rgb(252, 165, 165)', 'Slow rows keep the red bar in the dark theme');
-            assert(bar(pluginRow) === dot(filters[1])
+            assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)'
                 && getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
-                'Dark theme colours the bar and the source label alike');
+                'Dark theme colours the source label while keeping the plain bar transparent');
         } finally {
             if (theme === null) host.removeAttribute('data-theme');
             else host.setAttribute('data-theme', theme);
