@@ -134,26 +134,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
             return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
         });
-        // Every initiator gets its own hue in filter order: first the palette, then the hue farthest from those taken.
-        // Hues stay within 75–345° like the palette, so none falls into the red band of slow queries.
-        $palette = [255, 145, 310, 75, 195, 345];
-        /** @var array<array-key, int> $hues */
-        $hues = [];
-        foreach (array_keys($initiators) as $index => $name) {
-            if ((string) $name === '') continue;
-            if (isset($palette[$index])) {
-                $hues[$name] = $palette[$index];
-                continue;
-            }
-            $best = -1;
-            $hue = 75;
-            for ($candidate = 75; $candidate <= 345; $candidate++) {
-                $distance = 180;
-                foreach ($hues as $taken) $distance = min($distance, abs($candidate - $taken), 360 - abs($candidate - $taken));
-                if ($distance > $best) [$best, $hue] = [$distance, $candidate];
-            }
-            $hues[$name] = $hue;
-        }
+        $hues = self::initiatorHues($initiators);
         $tint = static fn (string $initiator): string => isset($hues[$initiator]) ? ' query-tinted' : '';
         $hueStyle = static fn (string $initiator): string =>
             isset($hues[$initiator]) ? ' style="--query-hue: ' . $hues[$initiator] . '"' : '';
@@ -284,6 +265,38 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
         }
         return $label;
+    }
+
+    /**
+     * Assigns every traced initiator its own hue in filter order: first the palette,
+     * then the hue farthest from those taken. Hues stay within 75–345° like the palette,
+     * so none falls into the red band of slow queries.
+     *
+     * @param array<array-key, mixed> $initiators
+     * @return array<array-key, int>
+     */
+    private static function initiatorHues(array $initiators): array
+    {
+        $palette = [255, 145, 310, 75, 195, 345];
+        /** @var array<array-key, int> $hues */
+        $hues = [];
+        foreach (array_keys($initiators) as $index => $name) {
+            if ((string) $name === '') continue;
+            if (isset($palette[$index])) {
+                $hues[$name] = $palette[$index];
+                continue;
+            }
+            $best = -1;
+            $hue = 75;
+            for ($candidate = 75; $candidate <= 345; $candidate++) {
+                $distance = 180;
+                foreach ($hues as $taken) $distance = min($distance, abs($candidate - $taken), 360 - abs($candidate - $taken));
+                if ($distance > $best) [$best, $hue] = [$distance, $candidate];
+            }
+            $hues[$name] = $hue;
+        }
+
+        return $hues;
     }
 
     private static function queriesWord(int $count): string
