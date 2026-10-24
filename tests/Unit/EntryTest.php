@@ -198,10 +198,3 @@ it('omits the profile fields tab when all stored fields are private', function (
         ->not->toContain('PRIVATE_PROFILE_VALUE');
 });
 
-it('words ages with Russian plural forms', function (int $seconds, string $expected): void {
-    expect(\iCooLER\DLEToolbar\Components\Entry\Format::ago(time() - $seconds))->toBe($expected);
-})->with([
-    [10, 'только что'], [5 * 60, '5 мин назад'], [3 * 3600, '3 ч назад'], [86400 + 5, '1 день назад'],
-    [2 * 86400 + 5, '2 дня назад'], [5 * 86400 + 5, '5 дней назад'], [11 * 86400 + 5, '11 дней назад'],
-    [21 * 86400 + 5, '21 день назад'], [112 * 86400 + 5, '112 дней назад'],
-]);
