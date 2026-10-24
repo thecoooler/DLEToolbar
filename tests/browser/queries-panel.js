@@ -117,10 +117,44 @@
             'Initiator filters show query count and total time');
         assert(filters[0].getAttribute('aria-pressed') === 'true' && entries.every((entry) => !entry.hidden),
             'All initiators are shown at first');
+        const dot = (filter) => getComputedStyle(filter, '::before').backgroundColor;
+        const bar = (row) => getComputedStyle(row.querySelector('.query-bar')).backgroundColor;
+        const pluginRow = panel.querySelector('.query-list > [data-initiator="Plugin"]');
+        assert(!filters[0].classList.contains('query-tinted') && !filters[3].classList.contains('query-tinted')
+            && dot(filters[1]) !== dot(filters[2]), 'Every initiator filter gets its own colour dot');
+        assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)' && bar(folds[0]) === 'rgba(0, 0, 0, 0)'
+            && bar(rows[0][0]) === 'rgba(0, 0, 0, 0)', 'Plain rows and folded groups do not tint the left bar');
+        assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+            'Source label takes its initiator colour');
+        const fastRow = panel.querySelector('[data-fast-row]');
+        assert(getComputedStyle(fastRow).opacity === '1',
+            'Fast rows keep full opacity so ancestor styling does not dilute contrast');
+        assert(getComputedStyle(fastRow.querySelector('.query-text')).opacity === '0.7',
+            'Fast SQL text is dimmed without fading the initiator label');
+        const slowRow = panel.querySelector('.query-row-slow');
+        slowRow.classList.add('query-tinted');
+        slowRow.style.setProperty('--query-hue', '145');
+        assert(bar(slowRow) === 'rgb(185, 28, 28)', 'Slow rows keep the red bar with an initiator colour');
+        const host = root.host;
+        const theme = host.getAttribute('data-theme');
+        host.setAttribute('data-theme', 'dark');
+        try {
+            assert(bar(slowRow) === 'rgb(252, 165, 165)', 'Slow rows keep the red bar in the dark theme');
+            assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)'
+                && getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+                'Dark theme colours the source label while keeping the plain bar transparent');
+        } finally {
+            if (theme === null) host.removeAttribute('data-theme');
+            else host.setAttribute('data-theme', theme);
+            slowRow.classList.remove('query-tinted');
+            slowRow.style.removeProperty('--query-hue');
+        }
         filters[2].click();
         assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
         assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',
             'Pressed filter is announced');
+        assert(getComputedStyle(filters[2], '::before').boxShadow !== 'none'
+            && getComputedStyle(filters[1], '::before').boxShadow === 'none', 'Pressed filter rings its colour dot');
         filters[3].click();
         assert(JSON.stringify(visible()) === '["",""]', 'Filter without call site shows untraced rows');
         assert(rows[1].every((row) => !row.hidden), 'Filtering keeps the expanded fold state');

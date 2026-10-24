@@ -60,7 +60,18 @@ try {
     http_response_code(500);
     error_log('[DLEToolbar] admin: ' . $error);
     unset($_SESSION['dletoolbar_settings_notice']);
-    $content = '<div class="alert alert-danger" role="alert">Не удалось загрузить или сохранить настройки панели.</div>';
+    // The page is open to administrators only, so the cause may be shown in full.
+    $details = [];
+    for ($cause = $error; $cause !== null; $cause = $cause->getPrevious()) {
+        $details[] = get_class($cause) . ': ' . $cause->getMessage() . "\n"
+            . $cause->getFile() . ':' . $cause->getLine() . "\n"
+            . $cause->getTraceAsString();
+    }
+    $details = str_replace(ROOT_DIR . DIRECTORY_SEPARATOR, '', implode("\n\nПредыдущее исключение:\n", $details));
+    $content = '<div class="alert alert-danger" role="alert">Не удалось загрузить или сохранить настройки панели.'
+        . '<details class="mt-10"><summary>Подробности</summary>'
+        . '<pre class="mt-10" style="white-space: pre-wrap;">' . htmlspecialchars($details, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>'
+        . '</details></div>';
 }
 
 echoheader(

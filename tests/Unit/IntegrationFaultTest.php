@@ -112,3 +112,63 @@ it('leaves no stale marker in the page when rendering fails', function (): void 
     $state = runRequest([]);
     expect($state['html'])->not->toContain('<!-- DLEToolbar');
 });
+
+/** Renders the admin page as DLE would include it; returns its output and the PHP log. */
+function runAdminPage(string $method = 'GET', array $post = []): array
+{
+    $globals = [$_SERVER['REQUEST_METHOD'] ?? null, $_POST, $_SESSION ?? null];
+    $_SERVER['REQUEST_METHOD'] = $method;
+    $_POST = $post;
+    $_SESSION = [];
+    $previous = ini_set('error_log', $log = tempnam(sys_get_temp_dir(), 'dletoolbar'));
+    ob_start();
+    try {
+        require ENGINE_DIR . '/inc/dletoolbar.php';
+        return ['html' => ob_get_contents(), 'log' => file_get_contents($log)];
+    } finally {
+        ob_end_clean();
+        ini_set('error_log', $previous === false ? '' : $previous);
+        unlink($log);
+        [$_SERVER['REQUEST_METHOD'], $_POST, $_SESSION] = $globals;
+    }
+}
+
+it('shows the cause of an admin page failure under a collapsed spoiler', function (): void {
+    $GLOBALS['dletoolbar_native_db']->query('INSERT INTO `' . PREFIX . '_dletoolbar_settings` (setting_key, setting_value) VALUES (\'access\', \'{broken\')');
+    $page = runAdminPage();
+    expect(http_response_code())->toBe(500)
+        ->and($page['log'])->toContain('[DLEToolbar] admin: JsonException')
+        ->and($page['html'])->toContain('Не удалось загрузить или сохранить настройки панели.')
+        ->and($page['html'])->toContain('<details class="mt-10"><summary>Подробности</summary>')
+        ->and($page['html'])->not->toContain('<details open')
+        ->and($page['html'])->toContain('JsonException: Syntax error')
+        ->and($page['html'])->toContain('ToolbarPreferences.php:')
+        ->and($page['html'])->toContain('#0 ')
+        ->and($page['html'])->not->toContain(ROOT_DIR . DIRECTORY_SEPARATOR);
+});
+
+it('lists the previous exceptions of an admin page failure and escapes them', function (): void {
+    $GLOBALS['db']->failQuery = 'SELECT setting_key';
+    $GLOBALS['db']->failWith = new \RuntimeException('Outer <b>failure</b>', 0, new \LogicException('Inner "cause"'));
+    $page = runAdminPage();
+    expect($page['html'])->toContain('RuntimeException: Outer &lt;b&gt;failure&lt;/b&gt;')
+        ->and($page['html'])->toContain("Предыдущее исключение:\nLogicException: Inner &quot;cause&quot;")
+        ->and($page['html'])->not->toContain('<b>failure</b>')
+        ->and(strpos($page['html'], 'RuntimeException'))->toBeLessThan(strpos($page['html'], 'LogicException'))
+        ->and($page['log'])->toContain('Outer <b>failure</b>');
+});
+
+it('keeps the admin failure details when a message is not valid UTF-8', function (): void {
+    $GLOBALS['db']->failQuery = 'SELECT setting_key';
+    $GLOBALS['db']->failWith = new \RuntimeException("Broken \xFF byte");
+    $page = runAdminPage();
+    expect($page['html'])->toContain("RuntimeException: Broken \u{FFFD} byte")
+        ->and($page['html'])->toContain('#0 ');
+});
+
+it('shows the cause of a failed settings save', function (): void {
+    $GLOBALS['db']->failQuery = 'INSERT';
+    $page = runAdminPage('POST', ['user_hash' => 'test-user-hash']);
+    expect(http_response_code())->toBe(500)
+        ->and($page['html'])->toContain('RuntimeException: Failed to save toolbar settings.');
+});
