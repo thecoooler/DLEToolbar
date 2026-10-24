@@ -274,8 +274,8 @@ final class Entry implements Component
                 font: 11.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             }
             .entry-list > dt code { color: var(--muted); }
-            .entry-list a, .entry-facts a { color: inherit; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
-            .entry-list a:hover, .entry-facts a:hover { text-decoration-color: currentColor; }
+            .entry-list a { color: inherit; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
+            .entry-list a:hover { text-decoration-color: currentColor; }
             .entry-empty, .entry-muted { color: var(--muted); }
             .entry-flag { color: var(--muted); }
             .entry-flag[data-on="true"] { color: var(--foreground); }
@@ -327,16 +327,9 @@ final class Entry implements Component
                 .entry-tabs { padding: 0 6px; }
                 .entry-body { padding: 2px 12px 8px; }
                 .entry-list { grid-template-columns: minmax(0, 1fr); }
-                .entry-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
-                .entry-facts > dd { margin-bottom: 4px; }
                 .entry-list > dt { padding-bottom: 0; border-bottom: 0; }
                 .entry-list > dd { padding-top: 2px; }
                 .entry-list > dt:nth-last-child(2) { border-bottom: 0; }
-                .entry-hero-grid { grid-template-columns: minmax(0, 1fr); }
-                .entry-hero-meta { flex-direction: column; align-items: flex-start; gap: 4px; }
-                .entry-hero-sep { display: none; }
-                .entry-timeline-strip { flex-wrap: wrap; }
-                .entry-timeline-stat { min-width: calc(50% - 4px); }
             }
             @media (prefers-reduced-motion: reduce) {
                 .entry-panel { animation: none; }

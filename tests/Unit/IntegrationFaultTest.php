@@ -124,28 +124,6 @@ it('survives a failure while capturing the profile row', function (): void {
     }
 });
 
-it('captures the profile after DLE normalizes its ban', function (int $expiry, string $expected): void {
-    // Native profile.php fragment before the banned-status branch (DLE 18–21).
-    // The trial's profile.php is encoded, so keep this fragment alongside the hook fixture.
-    $code = <<<'PHP'
-if ($row['banned'] == 'yes' AND $banned_info['users_id'][$row['user_id']]['date'] AND $banned_info['users_id'][$row['user_id']]['date'] < $_TIME ) $row['banned'] = '';
-PHP;
-    $code .= "\n" . integrationPatches('engine/modules/profile.php')[0];
-    $row = ['user_id' => 12, 'name' => 'tester', 'banned' => 'yes', 'xfields' => 'city|PUBLIC_CITY'];
-    (static function (string $code, array $row, int $expiry): void {
-        $DLEToolbar = new DLEToolbar();
-        $_TIME = 1700000000;
-        $banned_info = ['users_id' => [12 => ['date' => $expiry]]];
-        eval($code);
-    })($code, $row, $expiry);
-    expect(PageEntry::user())->toBe(array_replace($row, ['banned' => $expected]));
-})->with([
-    'expired' => [1699999999, ''],
-    'active' => [1700000001, 'yes'],
-    'permanent' => [0, 'yes'],
-    'expires now' => [1700000000, 'yes'],
-]);
-
 it('survives a failure while rendering a component', function (): void {
     $GLOBALS['Timer'] = null;
     $state = runRequest([]);

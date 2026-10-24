@@ -43,39 +43,6 @@ final class Format
         return (int) $value > 0 ? self::escape(langdate('d.m.Y H:i', (int) $value)) : self::empty();
     }
 
-    /** "5 мин назад", "3 дня назад", "через 2 дня"; the age of a unix timestamp. */
-    public static function ago(int $timestamp): string
-    {
-        $diff = time() - $timestamp;
-        $future = $diff < 0;
-        $diff = abs($diff);
-        if ($diff < 60) return $future ? 'сейчас' : 'только что';
-        if ($diff < 3600) $text = intdiv($diff, 60) . ' мин';
-        elseif ($diff < 86400) $text = intdiv($diff, 3600) . ' ч';
-        else {
-            $days = intdiv($diff, 86400);
-            $text = $days . ' ' . self::plural($days, ['день', 'дня', 'дней']);
-        }
-        return $future ? 'через ' . $text : $text . ' назад';
-    }
-
-    /** @param array{0: string, 1: string, 2: string} $forms for 1, 2 and 5 */
-    public static function plural(int $count, array $forms): string
-    {
-        $tail = $count % 100;
-        if ($tail >= 11 && $tail <= 14) return $forms[2];
-        $last = $count % 10;
-        return $last === 1 ? $forms[0] : ($last >= 2 && $last <= 4 ? $forms[1] : $forms[2]);
-    }
-
-    /** @param scalar|null $value Unix timestamp. */
-    public static function dateAgo($value): string
-    {
-        return (int) $value > 0
-            ? self::date($value) . ' <span class="entry-muted">· ' . self::escape(self::ago((int) $value)) . '</span>'
-            : self::empty();
-    }
-
     /** @param scalar|null $value */
     public static function flag($value): string
     {
