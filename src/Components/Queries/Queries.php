@@ -519,7 +519,6 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold {
                 background: var(--row-stripe);
                 cursor: pointer;
-                font-style: italic;
                 opacity: .55;
                 transition: opacity 140ms ease, background-color 140ms ease;
             }
@@ -529,13 +528,6 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold .query-sql,
             .query-fold .query-num,
             .query-fold .query-time { color: var(--muted); }
-            .query-fold[data-open="true"] { opacity: 1; background: var(--hover); }
-            .query-fold[data-open="true"] .query-sql {
-                color: var(--foreground);
-                font-style: normal;
-            }
-            .query-fold[data-open="true"] .query-num,
-            .query-fold[data-open="true"] .query-time { color: var(--foreground); }
             .query-empty {
                 display: grid;
                 min-height: 100%;
