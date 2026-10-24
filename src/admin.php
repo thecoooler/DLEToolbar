@@ -70,7 +70,7 @@ try {
     $details = str_replace(ROOT_DIR . DIRECTORY_SEPARATOR, '', implode("\n\nПредыдущее исключение:\n", $details));
     $content = '<div class="alert alert-danger" role="alert">Не удалось загрузить или сохранить настройки панели.'
         . '<details class="mt-10"><summary>Подробности</summary>'
-        . '<pre class="mt-10" style="white-space: pre-wrap;">' . htmlspecialchars($details, ENT_QUOTES, 'UTF-8') . '</pre>'
+        . '<pre class="mt-10" style="white-space: pre-wrap;">' . htmlspecialchars($details, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>'
         . '</details></div>';
 }
 

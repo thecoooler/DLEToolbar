@@ -116,6 +116,7 @@ it('leaves no stale marker in the page when rendering fails', function (): void 
 /** Renders the admin page as DLE would include it; returns its output and the PHP log. */
 function runAdminPage(string $method = 'GET', array $post = []): array
 {
+    $globals = [$_SERVER['REQUEST_METHOD'] ?? null, $_POST, $_SESSION ?? null];
     $_SERVER['REQUEST_METHOD'] = $method;
     $_POST = $post;
     $_SESSION = [];
@@ -128,7 +129,7 @@ function runAdminPage(string $method = 'GET', array $post = []): array
         ob_end_clean();
         ini_set('error_log', $previous === false ? '' : $previous);
         unlink($log);
-        $_POST = [];
+        [$_SERVER['REQUEST_METHOD'], $_POST, $_SESSION] = $globals;
     }
 }
 
@@ -155,6 +156,14 @@ it('lists the previous exceptions of an admin page failure and escapes them', fu
         ->and($page['html'])->not->toContain('<b>failure</b>')
         ->and(strpos($page['html'], 'RuntimeException'))->toBeLessThan(strpos($page['html'], 'LogicException'))
         ->and($page['log'])->toContain('Outer <b>failure</b>');
+});
+
+it('keeps the admin failure details when a message is not valid UTF-8', function (): void {
+    $GLOBALS['db']->failQuery = 'SELECT setting_key';
+    $GLOBALS['db']->failWith = new \RuntimeException("Broken \xFF byte");
+    $page = runAdminPage();
+    expect($page['html'])->toContain("RuntimeException: Broken \u{FFFD} byte")
+        ->and($page['html'])->toContain('#0 ');
 });
 
 it('shows the cause of a failed settings save', function (): void {
