@@ -1,0 +1,18 @@
+name: Вопрос
+description: Вопрос по установке, настройке или работе плагина.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: Сначала загляните в README, особенно в раздел «Если что-то не работает».
+  - type: textarea
+    id: question
+    attributes:
+      label: Вопрос
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Версии DLEToolbar, DLE и PHP
+      placeholder: DLEToolbar 0.3.0, DLE 19.0, PHP 8.3
