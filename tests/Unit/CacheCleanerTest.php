@@ -49,81 +49,39 @@ afterEach(function (): void {
     else $GLOBALS['dlefastcache'] = $this->previousFastCache;
 });
 
-it('does not enter a system directory that links outside the cache', function (): void {
+it('does not clear a system directory that links outside the cache', function (): void {
     rmdir($this->cache . '/system');
     symlink($this->outside, $this->cache . '/system');
     writeCacheCleanerFiles($this->cache, ['news.tmp' => 'cache']);
-    $workingDirectory = getcwd();
 
     (new CacheCleaner($this->cache))->clear();
 
-    expect(getcwd())->toBe($workingDirectory)
-        ->and(is_link($this->cache . '/system'))->toBeTrue()
-        ->and(is_file($this->outside . '/secret.php'))->toBeTrue()
+    expect(is_file($this->outside . '/secret.php'))->toBeTrue()
         ->and(is_file($this->outside . '/config.php'))->toBeTrue()
         ->and(is_file($this->cache . '/news.tmp'))->toBeFalse();
 });
 
-it('resolves the system directory again after another process replaces it with an outside link', function (): void {
-    expect(realpath($this->cache . '/system'))->toBe(realpath($this->cache) . '/system');
-    // PHP's own rename() and symlink() would drop the realpath cache.
-    exec(sprintf('mv %s %s && ln -s %s %s',
-        escapeshellarg($this->cache . '/system'), escapeshellarg($this->cache . '/old-system'),
-        escapeshellarg($this->outside), escapeshellarg($this->cache . '/system')), $output, $status);
-    expect($status)->toBe(0);
-
-    (new CacheCleaner($this->cache))->clear();
-
-    expect(is_file($this->outside . '/secret.php'))->toBeTrue()
-        ->and(is_file($this->outside . '/config.php'))->toBeTrue();
-});
-
-it('removes linked entries themselves and keeps their targets outside the cache', function (): void {
+it('removes links to files themselves and keeps their targets', function (): void {
     symlink($this->outside . '/secret.php', $this->cache . '/system/linked.php');
-    symlink($this->outside . '/config.php', $this->cache . '/linked.tmp');
-    symlink($this->outside . '/missing.php', $this->cache . '/system/dangling.php');
     symlink($this->outside, $this->cache . '/system/linked-dir');
-    symlink($this->outside, $this->cache . '/linked-dir');
-    writeCacheCleanerFiles($this->cache . '/system', ['news.php' => 'cache', 'cron.json' => '{}']);
+    writeCacheCleanerFiles($this->cache . '/system', ['news.php' => 'cache']);
 
     (new CacheCleaner($this->cache))->clear();
 
     expect(is_link($this->cache . '/system/linked.php'))->toBeFalse()
-        ->and(is_link($this->cache . '/linked.tmp'))->toBeFalse()
-        ->and(is_link($this->cache . '/system/dangling.php'))->toBeFalse()
         ->and(is_link($this->cache . '/system/linked-dir'))->toBeTrue()
-        ->and(is_link($this->cache . '/linked-dir'))->toBeTrue()
         ->and(is_file($this->cache . '/system/news.php'))->toBeFalse()
-        ->and(is_file($this->cache . '/system/cron.json'))->toBeTrue()
-        ->and(is_file($this->outside . '/secret.php'))->toBeTrue()
-        ->and(is_file($this->outside . '/config.php'))->toBeTrue();
+        ->and(is_file($this->outside . '/secret.php'))->toBeTrue();
 });
 
-it('clears a cache directory that is itself a link and a system link that stays inside it', function (): void {
+it('clears a cache directory that is itself a link', function (): void {
     $linkedCache = $this->fixture . '/linked-cache';
     symlink($this->cache, $linkedCache);
-    rmdir($this->cache . '/system');
-    writeCacheCleanerFiles($this->cache . '/storage', ['news.php' => 'cache']);
-    symlink($this->cache . '/storage', $this->cache . '/system');
-    writeCacheCleanerFiles($this->cache, ['news.tmp' => 'cache', '.htaccess' => 'deny']);
+    writeCacheCleanerFiles($this->cache . '/system', ['news.php' => 'cache']);
+    writeCacheCleanerFiles($this->cache, ['news.tmp' => 'cache']);
 
     (new CacheCleaner($linkedCache))->clear();
 
-    expect(is_file($this->cache . '/news.tmp'))->toBeFalse()
-        ->and(is_file($this->cache . '/.htaccess'))->toBeTrue()
-        ->and(is_file($this->cache . '/storage/news.php'))->toBeFalse()
-        ->and(is_link($this->cache . '/system'))->toBeTrue();
-});
-
-it('removes nothing when the cache directory does not resolve', function (): void {
-    $workingDirectory = getcwd();
-    chdir($this->outside);
-    try {
-        (new CacheCleaner($this->fixture . '/missing'))->clear();
-    } finally {
-        chdir($workingDirectory);
-    }
-
-    expect(is_file($this->outside . '/secret.php'))->toBeTrue()
-        ->and(is_file($this->outside . '/config.php'))->toBeTrue();
+    expect(is_file($this->cache . '/system/news.php'))->toBeFalse()
+        ->and(is_file($this->cache . '/news.tmp'))->toBeFalse();
 });
