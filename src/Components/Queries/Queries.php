@@ -154,9 +154,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $rows .= '<div class="query-group' . $tint($initiator) . '" data-query-group' . $initiatorAttribute . '>'
                     . '<div class="query-row query-fold" data-fold role="button" tabindex="0" aria-expanded="false">'
                     . '<span class="query-bar"></span>'
-                    . '<span class="query-num">···</span>'
+                    . '<span class="query-num" data-fold-marker aria-hidden="true">···</span>'
                     . '<span class="query-sql">№' . $items[0]['number'] . '–' . $items[count($items) - 1]['number']
-                    . ' · <span data-fold-verb></span>' . count($items) . ' быстрых'
+                    . ' · ' . count($items) . ' быстрых'
                     . ($initiator === '' ? '' : ' · ' . $escape($initiator)) . '</span>'
                     . '<span class="query-time"></span>'
                     . '</div>';
@@ -164,7 +164,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 foreach ($items as $item) {
                     $rows .= '<div class="query-row query-row-plain query-row-fast" data-fast-row hidden>'
                         . '<span class="query-bar"></span>'
-                        . '<span class="query-num">·</span>'
+                        . '<span class="query-num">#' . $item['number'] . '</span>'
                         . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
                         . $this->renderSource($item['source']) . '</span>'
                         . '<span class="query-time"></span>'
@@ -230,7 +230,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . '<button class="query-close" data-query-close type="button" aria-label="Закрыть список запросов">'
             . self::icon('close') . '</button></header>'
             . $filters
-            . '<div class="query-list">' . $rows . '</div>'
+            . '<div class="query-scroll-area"><div class="query-list" role="region"' . ($number > 0 ? ' tabindex="0"' : '')
+            . ' aria-label="Список SQL-запросов" style="--query-number-chars: ' . max(3, strlen((string) $number) + 1) . '">' . $rows . '</div>'
+            . '<div class="query-scrollbar" data-query-scrollbar aria-hidden="true" hidden><div class="query-scroll-thumb"></div></div></div>'
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
     }
 
@@ -432,17 +434,47 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
             .query-filter[aria-pressed="true"] .query-filter-stats { color: inherit; opacity: .75; }
             .query-group[hidden] { display: none; }
-            .query-list {
+            .query-scroll-area {
+                position: relative;
                 flex: 1 1 auto;
                 min-height: 0;
+                overflow: hidden;
+            }
+            .query-list {
+                height: 100%;
                 padding: 2px 0;
                 overflow: auto;
+                scrollbar-width: none;
                 overscroll-behavior: contain;
             }
+            .query-list::-webkit-scrollbar { display: none; }
+            .query-list:focus-visible { outline: 2px solid var(--muted); outline-offset: -2px; }
+            .query-scrollbar {
+                position: absolute;
+                top: 3px;
+                right: 0;
+                bottom: 3px;
+                width: 10px;
+                cursor: pointer;
+                touch-action: none;
+                user-select: none;
+            }
+            .query-scrollbar[hidden] { display: none; }
+            .query-scroll-thumb {
+                position: absolute;
+                top: 0;
+                right: 2px;
+                width: 4px;
+                border-radius: 4px;
+                background: var(--muted);
+                opacity: .4;
+            }
+            .query-scrollbar:hover .query-scroll-thumb,
+            .query-scrollbar[data-dragging] .query-scroll-thumb { width: 6px; opacity: .8; }
             .query-row {
                 --query-gap: 10px;
                 display: grid;
-                grid-template-columns: 3px max-content minmax(0, 1fr) 60px 28px;
+                grid-template-columns: 3px calc(24px + var(--query-number-chars) * 1ch) minmax(0, 1fr) 60px 28px;
                 align-items: center;
                 gap: 0;
                 padding: 4px 14px 4px 0;
@@ -543,7 +575,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold {
                 background: var(--row-stripe);
                 cursor: pointer;
-                font-style: italic;
+                -webkit-user-select: none;
+                user-select: none;
                 opacity: .55;
                 transition: opacity 140ms ease, background-color 140ms ease;
             }
@@ -553,13 +586,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold .query-sql,
             .query-fold .query-num,
             .query-fold .query-time { color: var(--muted); }
-            .query-fold[data-open="true"] { opacity: 1; background: var(--hover); }
-            .query-fold[data-open="true"] .query-sql {
-                color: var(--foreground);
-                font-style: normal;
-            }
-            .query-fold[data-open="true"] .query-num,
-            .query-fold[data-open="true"] .query-time { color: var(--foreground); }
+            .query-fold[data-open="true"] .query-num { font-size: 18px; }
             .query-empty {
                 display: grid;
                 min-height: 100%;
@@ -576,7 +603,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 .query-stats { display: none; }
                 .query-row {
                     --query-gap: 8px;
-                    grid-template-columns: 3px max-content minmax(0, 1fr) 52px 28px;
+                    grid-template-columns: 3px calc(18px + var(--query-number-chars) * 1ch) minmax(0, 1fr) 52px 28px;
                     padding-right: 10px;
                     font-size: 11px;
                 }
@@ -599,6 +626,50 @@ HTML;
         const queryPanel = root.querySelector('[data-query-panel]');
         const dock = root.querySelector('.dock');
         const copyStatus = queryPanel.querySelector('[data-copy-status]');
+        const queryList = queryPanel.querySelector('.query-list');
+        const scrollbar = queryPanel.querySelector('[data-query-scrollbar]');
+        const scrollThumb = scrollbar.firstElementChild;
+        const updateScrollbar = () => {
+            const maxScroll = queryList.scrollHeight - queryList.clientHeight;
+            scrollbar.hidden = queryList.clientHeight === 0 || maxScroll <= 0;
+            if (scrollbar.hidden) return;
+            const trackHeight = scrollbar.clientHeight;
+            const thumbHeight = Math.min(trackHeight, Math.max(24, trackHeight * queryList.clientHeight / queryList.scrollHeight));
+            scrollThumb.style.height = thumbHeight + 'px';
+            scrollThumb.style.transform = 'translateY(' + (trackHeight - thumbHeight) * queryList.scrollTop / maxScroll + 'px)';
+        };
+        queryList.addEventListener('scroll', updateScrollbar, { passive: true });
+        scrollbar.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? queryList.clientHeight : 1;
+            queryList.scrollTop += event.deltaY * unit;
+        }, { passive: false });
+        const scrollResizeObserver = new ResizeObserver(updateScrollbar);
+        scrollResizeObserver.observe(queryList);
+        [...queryList.children].forEach((entry) => scrollResizeObserver.observe(entry));
+        let dragOffset = 0;
+        const scrollToPointer = (event) => {
+            const travel = scrollbar.clientHeight - scrollThumb.offsetHeight;
+            if (travel <= 0) return;
+            queryList.scrollTop = (event.clientY - scrollbar.getBoundingClientRect().top - dragOffset)
+                / travel * (queryList.scrollHeight - queryList.clientHeight);
+        };
+        scrollbar.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            dragOffset = event.target === scrollThumb
+                ? event.clientY - scrollThumb.getBoundingClientRect().top : scrollThumb.offsetHeight / 2;
+            scrollbar.dataset.dragging = 'true';
+            scrollbar.setPointerCapture(event.pointerId);
+            scrollToPointer(event);
+        });
+        scrollbar.addEventListener('pointermove', (event) => {
+            if (scrollbar.hasPointerCapture(event.pointerId)) scrollToPointer(event);
+        });
+        scrollbar.addEventListener('pointerup', (event) => {
+            if (scrollbar.hasPointerCapture(event.pointerId)) scrollbar.releasePointerCapture(event.pointerId);
+        });
+        scrollbar.addEventListener('lostpointercapture', () => delete scrollbar.dataset.dragging);
         queryPanel.querySelectorAll('[data-copy-query]').forEach((button) => {
             button.addEventListener('click', () => {
                 copyStatus.textContent = '';
@@ -651,7 +722,7 @@ HTML;
             });
             fold.dataset.open = expanded ? 'true' : 'false';
             fold.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            fold.querySelector('[data-fold-verb]').textContent = expanded ? 'Скрыть ' : '';
+            fold.querySelector('[data-fold-marker]').textContent = expanded ? '×' : '···';
         };
         const toggleFold = (fold) => {
             setFold(fold, fold.dataset.open !== 'true');

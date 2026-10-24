@@ -61,6 +61,15 @@
         assert(!tooltip.dataset.open, 'Opening SQL dismisses shared tooltip');
         assert(trigger.getAttribute('aria-label').includes('Закрыть список запросов'), 'Open trigger label');
 
+        const queryList = panel.querySelector('.query-list');
+        const scrollArea = panel.querySelector('.query-scroll-area');
+        const scrollbar = panel.querySelector('[data-query-scrollbar]');
+        const listWidth = queryList.clientWidth;
+        const foldLabel = folds[0].querySelector('.query-sql').textContent;
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '···', 'Collapsed group shows dots');
+        assert(queryList.getAttribute('role') === 'region' && queryList.getAttribute('aria-label'),
+            'Focusable query list has an accessible region name');
+
         // A non-query sibling must not break the group association.
         folds[0].after(document.createElement('span'));
         folds[0].click();
@@ -69,9 +78,33 @@
             'Expanded fast rows show call sites');
         assert(rows[1].every((row) => row.hidden), 'First group leaves second group collapsed');
         assert(folds[0].getAttribute('aria-expanded') === 'true', 'Fold announces expansion');
-        assert(folds[0].textContent.includes('Скрыть'), 'Expanded fold label');
+        assert(folds[0].querySelector('.query-sql').textContent === foldLabel, 'Expanding keeps the group label unchanged');
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '×', 'Expanded group shows a close mark');
+        assert(queryList.clientWidth === listWidth, 'Expanding queries preserves content width');
+        scrollArea.style.flex = '0 0 60px';
+        await wait(50);
+        assert(!scrollbar.hidden, 'Overlay scrollbar appears for overflowing queries');
+        for (const deltaMode of [0, 1, 2]) {
+            queryList.scrollTop = 0;
+            const wheel = new WheelEvent('wheel', { deltaY: 1, deltaMode, cancelable: true, bubbles: true });
+            scrollbar.dispatchEvent(wheel);
+            assert(wheel.defaultPrevented && queryList.scrollTop > 0,
+                'Wheel over scrollbar scrolls the list and prevents page scrolling, mode ' + deltaMode);
+        }
+        queryList.scrollTop = 0;
+        await wait(50);
+        const thumb = scrollbar.firstElementChild;
+        const thumbTop = thumb.getBoundingClientRect().top;
+        queryList.scrollTop = queryList.scrollHeight;
+        await wait(50);
+        assert(thumb.getBoundingClientRect().top > thumbTop, 'Overlay thumb follows native scrolling');
+        assert(thumb.getBoundingClientRect().bottom <= scrollbar.getBoundingClientRect().bottom + 1,
+            'Overlay thumb stays within track');
+        queryList.scrollTop = 0;
+        scrollArea.style.flex = '';
         key(folds[0], ' ');
         assert(rows[0].every((row) => row.hidden), 'Space collapses first group');
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '···', 'Collapsing restores dots');
         key(folds[1], 'Enter');
         assert(rows[1].every((row) => !row.hidden), 'Enter expands second group');
         assert(rows[0].every((row) => row.hidden), 'Second group leaves first collapsed');

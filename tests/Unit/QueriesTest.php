@@ -20,6 +20,7 @@ it('keeps the DLE counter distinct from filtered SQL rows and respects time thre
     ]));
     expect($rendered['controls'])->toContain('Количество запросов MySQL: 9')
         ->and($rendered['panels'])->toContain('<b>4 запроса</b> · 42 мс')
+        ->toContain('class="query-list" role="region" tabindex="0" aria-label="Список SQL-запросов"')
         ->toContain('query-stats-alert">⚠ 1')
         ->not->toContain('Connection with MySQL Server')
         ->not->toContain('data-fold')
@@ -63,10 +64,12 @@ it('explains that DLE 13.x keeps no SQL list instead of reporting an empty page'
         expect($render())->toContain('Список SQL-запросов не показывается в DLE 13.0–13.3: эти версии его не сохраняют. Всего запросов: 7.')
             ->not->toContain('SQL-запросов на этой странице нет.')
             ->not->toContain('class="query-stats"');
+        expect($render())->not->toContain('class="query-list" role="region" tabindex="0"');
     }
 
     $GLOBALS['config']['version_id'] = '14.0';
     expect($render())->toContain('SQL-запросов на этой странице нет.')
+        ->not->toContain('class="query-list" role="region" tabindex="0"')
         ->not->toContain('DLE 13.0–13.3');
 });
 
@@ -162,7 +165,7 @@ it('filters SQL rows by initiator with per-initiator count and total time', func
             . '<span class="query-filter-name">Без источника</span><span class="query-filter-stats">1 · 3 мс</span></button>',
     ])
         ->and($panel)->toContain('<div class="query-group query-tinted" data-query-group data-initiator="DLE" style="--query-hue: 255">')
-        ->toContain('№2–3 · <span data-fold-verb></span>2 быстрых · DLE</span>')
+        ->toContain('№2–3 · 2 быстрых · DLE</span>')
         ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="shop" style="--query-hue: 310">.*?SELECT shop_fast/s')
         ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="Plugin" style="--query-hue: 145">.*?SELECT plugin/s')
         ->toMatch('/<div class="query-row query-row-plain" data-initiator="">.*?SELECT before_toolbar/s')
