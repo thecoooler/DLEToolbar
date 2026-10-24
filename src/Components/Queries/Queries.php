@@ -141,9 +141,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $rows .= '<div class="query-group" data-query-group' . $initiatorAttribute . '>'
                     . '<div class="query-row query-fold" data-fold role="button" tabindex="0" aria-expanded="false">'
                     . '<span class="query-bar"></span>'
-                    . '<span class="query-num">···</span>'
+                    . '<span class="query-num" data-fold-marker aria-hidden="true">···</span>'
                     . '<span class="query-sql">№' . $items[0]['number'] . '–' . $items[count($items) - 1]['number']
-                    . ' · <span data-fold-verb></span>' . count($items) . ' быстрых'
+                    . ' · ' . count($items) . ' быстрых'
                     . ($initiator === '' ? '' : ' · ' . $escape($initiator)) . '</span>'
                     . '<span class="query-time"></span>'
                     . '</div>';
@@ -221,7 +221,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . '<button class="query-close" data-query-close type="button" aria-label="Закрыть список запросов">'
             . self::icon('close') . '</button></header>'
             . $filters
-            . '<div class="query-scroll-area"><div class="query-list" tabindex="0" aria-label="Список SQL-запросов" style="--query-number-chars: ' . max(3, strlen((string) $number) + 1) . '">' . $rows . '</div>'
+            . '<div class="query-scroll-area"><div class="query-list" role="region"' . ($number > 0 ? ' tabindex="0"' : '')
+            . ' aria-label="Список SQL-запросов" style="--query-number-chars: ' . max(3, strlen((string) $number) + 1) . '">' . $rows . '</div>'
             . '<div class="query-scrollbar" data-query-scrollbar aria-hidden="true" hidden><div class="query-scroll-thumb"></div></div></div>'
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
     }
@@ -519,6 +520,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold {
                 background: var(--row-stripe);
                 cursor: pointer;
+                -webkit-user-select: none;
+                user-select: none;
                 opacity: .55;
                 transition: opacity 140ms ease, background-color 140ms ease;
             }
@@ -528,6 +531,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             .query-fold .query-sql,
             .query-fold .query-num,
             .query-fold .query-time { color: var(--muted); }
+            .query-fold[data-open="true"] .query-num { font-size: 18px; }
             .query-empty {
                 display: grid;
                 min-height: 100%;
@@ -580,6 +584,11 @@ HTML;
             scrollThumb.style.transform = 'translateY(' + (trackHeight - thumbHeight) * queryList.scrollTop / maxScroll + 'px)';
         };
         queryList.addEventListener('scroll', updateScrollbar, { passive: true });
+        scrollbar.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? queryList.clientHeight : 1;
+            queryList.scrollTop += event.deltaY * unit;
+        }, { passive: false });
         const scrollResizeObserver = new ResizeObserver(updateScrollbar);
         scrollResizeObserver.observe(queryList);
         [...queryList.children].forEach((entry) => scrollResizeObserver.observe(entry));
@@ -658,7 +667,7 @@ HTML;
             });
             fold.dataset.open = expanded ? 'true' : 'false';
             fold.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            fold.querySelector('[data-fold-verb]').textContent = expanded ? 'Скрыть ' : '';
+            fold.querySelector('[data-fold-marker]').textContent = expanded ? '×' : '···';
         };
         const toggleFold = (fold) => {
             setFold(fold, fold.dataset.open !== 'true');
