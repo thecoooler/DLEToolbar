@@ -61,6 +61,11 @@
         assert(!tooltip.dataset.open, 'Opening SQL dismisses shared tooltip');
         assert(trigger.getAttribute('aria-label').includes('Закрыть список запросов'), 'Open trigger label');
 
+        const queryList = panel.querySelector('.query-list');
+        const scrollArea = panel.querySelector('.query-scroll-area');
+        const scrollbar = panel.querySelector('[data-query-scrollbar]');
+        const listWidth = queryList.clientWidth;
+
         // A non-query sibling must not break the group association.
         folds[0].after(document.createElement('span'));
         folds[0].click();
@@ -70,6 +75,20 @@
         assert(rows[1].every((row) => row.hidden), 'First group leaves second group collapsed');
         assert(folds[0].getAttribute('aria-expanded') === 'true', 'Fold announces expansion');
         assert(folds[0].textContent.includes('Скрыть'), 'Expanded fold label');
+        assert(queryList.clientWidth === listWidth, 'Expanding queries preserves content width');
+        assert(queryList.offsetWidth === queryList.clientWidth, 'Scrollbar takes no content space');
+        scrollArea.style.flex = '0 0 60px';
+        await wait(50);
+        assert(!scrollbar.hidden, 'Overlay scrollbar appears for overflowing queries');
+        const thumb = scrollbar.firstElementChild;
+        const thumbTop = thumb.getBoundingClientRect().top;
+        queryList.scrollTop = queryList.scrollHeight;
+        await wait(50);
+        assert(thumb.getBoundingClientRect().top > thumbTop, 'Overlay thumb follows native scrolling');
+        assert(thumb.getBoundingClientRect().bottom <= scrollbar.getBoundingClientRect().bottom + 1,
+            'Overlay thumb stays within track');
+        queryList.scrollTop = 0;
+        scrollArea.style.flex = '';
         key(folds[0], ' ');
         assert(rows[0].every((row) => row.hidden), 'Space collapses first group');
         key(folds[1], 'Enter');
