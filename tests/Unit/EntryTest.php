@@ -39,6 +39,17 @@ function renderEntry(): ?array
     return (new Entry())->render();
 }
 
+/** @param list<array{0: string, 1: int|string}> $fields */
+function setLegacyProfileFields(array $fields): void
+{
+    @mkdir(ENGINE_DIR . '/data', 0777, true);
+    $lines = [];
+    foreach ($fields as [$name, $private]) {
+        $lines[] = "{$name}|{$name}||text||{$private}";
+    }
+    file_put_contents(ENGINE_DIR . '/data/xprofile.txt', implode("\n", $lines));
+}
+
 it('is hidden outside news, category and profile pages', function (string $module): void {
     $GLOBALS['dle_module'] = $module;
     $GLOBALS['news_found'] = false;
@@ -129,37 +140,43 @@ it('shows the viewed category with its parent, children and settings', function 
 
 it('shows the viewed profile without account secrets', function (): void {
     $GLOBALS['dle_module'] = 'userinfo';
-    $GLOBALS['xfields'] = [[0 => 'city', 5 => '0'], [0 => 'site', 5 => '0']];
-    PageEntry::captureUser([
-        'user_id' => 12, 'name' => 'tester', 'email' => 'tester@example.test', 'user_group' => 3, 'banned' => 'yes',
-        'restricted' => 2, 'reg_date' => 1700000000, 'lastdate' => 1700003600, 'news_num' => 2, 'comm_num' => 10,
-        'info' => "Строка 1\nСтрока 2", 'favorites' => '1,2,3', 'xfields' => 'city|Москва||site|', 'time_limit' => '',
-        'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH', 'twofactor_secret' => 'TOTP_SECRET', 'logged_ip' => '127.0.0.1',
-    ]);
-    $panel = renderEntry()['panel'];
-    expect($panel)->toContain('<p class="entry-kind">Пользователь <span>ID 12</span></p>')
-        ->toContain('<dt>Группа</dt><dd>Журналисты</dd>')
-        ->toContain('data-tone="danger">Заблокирован')
-        ->toContain('<dt>Ограничение</dt><dd>Комментарии</dd>')
-        ->toContain('<dt><code>city</code></dt><dd>Москва</dd>')
-        ->toContain('<dt>В избранном</dt><dd>3</dd>')
-        ->toContain('<details class="entry-spoiler">')
-        ->not->toContain('PASSWORD_HASH')
-        ->not->toContain('SESSION_HASH')
-        ->not->toContain('TOTP_SECRET')
-        ->not->toContain('mod=editusers');
+    setLegacyProfileFields([['city', 0], ['site', 0]]);
+    try {
+        PageEntry::captureUser([
+            'user_id' => 12, 'name' => 'tester', 'email' => 'tester@example.test', 'user_group' => 3, 'banned' => 'yes',
+            'restricted' => 2, 'reg_date' => 1700000000, 'lastdate' => 1700003600, 'news_num' => 2, 'comm_num' => 10,
+            'info' => "Строка 1\nСтрока 2", 'favorites' => '1,2,3', 'xfields' => 'city|Москва||site|', 'time_limit' => '',
+            'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH', 'twofactor_secret' => 'TOTP_SECRET', 'logged_ip' => '127.0.0.1',
+        ]);
+        $panel = renderEntry()['panel'];
+        expect($panel)->toContain('<p class="entry-kind">Пользователь <span>ID 12</span></p>')
+            ->toContain('<dt>Группа</dt><dd>Журналисты</dd>')
+            ->toContain('data-tone="danger">Заблокирован')
+            ->toContain('<dt>Ограничение</dt><dd>Комментарии</dd>')
+            ->toContain('<dt><code>city</code></dt><dd>Москва</dd>')
+            ->toContain('<dt>В избранном</dt><dd>3</dd>')
+            ->toContain('<details class="entry-spoiler">')
+            ->not->toContain('PASSWORD_HASH')
+            ->not->toContain('SESSION_HASH')
+            ->not->toContain('TOTP_SECRET')
+            ->not->toContain('mod=editusers');
+    } finally {
+        @unlink(ENGINE_DIR . '/data/xprofile.txt');
+    }
 });
 
 it('applies native profile field privacy across DLE versions', function (string $version, int $viewer, int $group, bool $editor, bool $loggedIn, bool $visible): void {
     require_once \DLEPlugins::Check(ENGINE_DIR . '/classes/userxfields.class.php');
     $previous = \DLEUserXFields::$fields;
+    setLegacyProfileFields([['city', 0], ['private', 1]]);
     try {
         $GLOBALS['dle_module'] = 'userinfo';
         $GLOBALS['config']['version_id'] = $version;
         $GLOBALS['is_logged'] = $loggedIn;
         $GLOBALS['member_id'] = ['user_id' => $viewer, 'user_group' => $group];
         $GLOBALS['user_group'][$group]['admin_editusers'] = (int) $editor;
-        $GLOBALS['xfields'] = [[0 => 'city', 5 => '0'], [0 => 'private', 5 => '1']];
+        // Global $xfields can be overwritten by other modules (e.g. topnews); profile definitions must come from xprofile.txt.
+        $GLOBALS['xfields'] = [[0 => 'news_field', 5 => '0']];
         \DLEUserXFields::$fields = ['fields' => [
             'city' => ['name' => 'city', 'private' => 0],
             'private' => ['name' => 'private', 'private' => 1],
@@ -169,11 +186,13 @@ it('applies native profile field privacy across DLE versions', function (string 
         $panel = renderEntry()['panel'];
         expect($panel)->toContain('PUBLIC_CITY')
             ->not->toContain('UNDEFINED_PROFILE_VALUE')
-            ->not->toContain('<code>xfields</code>');
+            ->not->toContain('<code>xfields</code>')
+            ->not->toContain('news_field');
         if ($visible) expect($panel)->toContain('PRIVATE_PROFILE_VALUE');
         else expect($panel)->not->toContain('PRIVATE_PROFILE_VALUE');
     } finally {
         \DLEUserXFields::$fields = $previous;
+        @unlink(ENGINE_DIR . '/data/xprofile.txt');
     }
 })->with([
     'legacy other profile' => ['18.0', 9, 3, false, true, false],
@@ -191,12 +210,58 @@ it('applies native profile field privacy across DLE versions', function (string 
 it('omits the profile fields tab when all stored fields are private', function (): void {
     $GLOBALS['dle_module'] = 'userinfo';
     $GLOBALS['member_id'] = ['user_id' => 9, 'user_group' => 3];
-    $GLOBALS['xfields'] = [[0 => 'private', 5 => '1']];
-    PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
-        'xfields' => 'private|PRIVATE_PROFILE_VALUE']);
-    expect(renderEntry()['panel'])->not->toContain('data-entry-tab="fields"')
-        ->not->toContain('PRIVATE_PROFILE_VALUE');
+    setLegacyProfileFields([['private', 1]]);
+    try {
+        PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
+            'xfields' => 'private|PRIVATE_PROFILE_VALUE']);
+        expect(renderEntry()['panel'])->not->toContain('data-entry-tab="fields"')
+            ->not->toContain('PRIVATE_PROFILE_VALUE');
+    } finally {
+        @unlink(ENGINE_DIR . '/data/xprofile.txt');
+    }
 });
+
+it('reads profile definitions from xprofile.txt even when global xfields is overwritten', function (): void {
+    $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['config']['version_id'] = '18.0';
+    $GLOBALS['is_logged'] = false;
+    // Simulate topnews.php overwriting $xfields global with news fields.
+    $GLOBALS['xfields'] = [[0 => 'news_field', 5 => '0']];
+    setLegacyProfileFields([['city', 0], ['private', 1]]);
+    try {
+        PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
+            'xfields' => 'city|Moscow||private|Secret']);
+        $panel = renderEntry()['panel'];
+        expect($panel)->toContain('Moscow')
+            ->not->toContain('Secret')
+            ->not->toContain('news_field');
+    } finally {
+        @unlink(ENGINE_DIR . '/data/xprofile.txt');
+    }
+});
+
+it('normalizes expired user bans to unbanned', function (string $banned, int $until, string $tone, string $text): void {
+    $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['config']['version_id'] = '21.0';
+    $bannedInfo = ['users_id' => [12 => ['date' => $until]]];
+    $row = ['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => $banned, 'restricted' => 0];
+    if ($row['banned'] === 'yes' && !empty($bannedInfo['users_id'][$row['user_id']]['date']) && $bannedInfo['users_id'][$row['user_id']]['date'] < time()) {
+        $row['banned'] = '';
+    }
+    PageEntry::captureUser($row);
+    $panel = renderEntry()['panel'];
+    if ($tone !== '') {
+        expect($panel)->toContain('data-tone="' . $tone . '">' . $text);
+    } else {
+        expect($panel)->not->toContain('Заблокирован')
+            ->not->toContain('data-tone="danger"');
+    }
+})->with([
+    'expired ban' => ['yes', time() - 3600, '', ''],
+    'active ban' => ['yes', time() + 3600, 'danger', 'Заблокирован'],
+    'permanent ban' => ['yes', 0, 'danger', 'Заблокирован'],
+    'expiring now' => ['yes', time(), 'danger', 'Заблокирован'],
+]);
 
 it('words ages with Russian plural forms', function (int $seconds, string $expected): void {
     expect(\iCooLER\DLEToolbar\Components\Entry\Format::ago(time() - $seconds))->toBe($expected);
