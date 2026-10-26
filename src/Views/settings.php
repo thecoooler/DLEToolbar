@@ -6,7 +6,7 @@ if (!defined('DATALIFEENGINE')) {
 }
 
 /** @var \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences $preferences */
-/** @var \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences $savedPreferences */
+/** @var string|null $savedState */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $components */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $templates */
 /** @var array<string, array<string, array{message: string, value: string}>> $errors */
@@ -33,7 +33,8 @@ if (!defined('DATALIFEENGINE')) {
     </div>
 <?php endif; ?>
 
-<form method="post" action="<?= $escape($actionUrl) ?>" id="dlt-settings-form">
+<form method="post" action="<?= $escape($actionUrl) ?>" id="dlt-settings-form"<?= $errors !== [] ? ' data-validation-failed' : '' ?>>
+    <input type="hidden" name="dlt_saved_state" value="<?= $escape($savedState ?? '') ?>">
     <input type="hidden" name="instances" value="">
     <input type="hidden" name="user_hash" value="<?= $escape($dle_login_hash) ?>">
     <div class="panel panel-default">
@@ -101,33 +102,6 @@ if (!defined('DATALIFEENGINE')) {
         </template>
     <?php endforeach; ?>
 </form>
-<?php if ($errors !== []): ?>
-    <template id="dlt-saved-settings">
-        <form>
-            <input type="hidden" name="instances" value="">
-            <input type="hidden" name="user_hash" value="<?= $escape($dle_login_hash) ?>">
-            <?php foreach ($savedPreferences->itemOrder() as $savedId): ?>
-                <input type="hidden" name="toolbar[items][]" value="<?= $escape($savedId) ?>">
-                <?php if ($savedPreferences->isEnabled($savedId)): ?>
-                    <input type="hidden" name="toolbar[enabled][]" value="<?= $escape($savedId) ?>">
-                <?php endif; ?>
-                <?php if (isset($savedPreferences->componentInstances()[$savedId])): ?>
-                    <input type="hidden" name="instances[<?= $escape($savedId) ?>]" value="<?= $escape($savedPreferences->componentInstances()[$savedId]) ?>">
-                <?php endif; ?>
-            <?php endforeach; ?>
-            <?php foreach ($groups as $groupId => $group): ?>
-                <?php if ($savedPreferences->allowsGroup((int) $groupId)): ?>
-                    <input type="hidden" name="access[groups][]" value="<?= (int) $groupId ?>">
-                <?php endif; ?>
-            <?php endforeach; ?>
-            <?php foreach (\iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry::parameters($savedPreferences->componentInstances()) as $savedId => $savedParameters): ?>
-                <?php foreach ($savedParameters as $name => $parameter): ?>
-                    <?= $parameter->renderControl('components[' . $savedId . '][' . $name . ']', 'dlt-saved-' . $savedId . '-' . $name, $savedPreferences->componentParameters($savedId)[$name]) ?>
-                <?php endforeach; ?>
-            <?php endforeach; ?>
-        </form>
-    </template>
-<?php endif; ?>
 <style>
     #dlt-settings-form .dlt-component-label { overflow-wrap: anywhere; }
     #dlt-settings-form .ui-dialog-title { display: block; padding-right: 24px; overflow-wrap: anywhere; }

@@ -188,7 +188,7 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
     $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
     $previousScripts = $GLOBALS['js_array'] ?? [];
     $_SERVER['REQUEST_METHOD'] = 'POST';
-    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'],
+    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'], 'dlt_saved_state' => 'saved&value="test"',
         'instances' => [$a => 'link', $b => 'link'],
         'access' => ['groups' => [2, 3]],
         'toolbar' => ['items' => [$b, 'queries', $a], 'enabled' => [$b, 'queries']],
@@ -225,10 +225,8 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
         expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $a . '" and @checked]')->length)->toBe(0)
             ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $b . '" and @checked]')->length)->toBe(1)
             ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="components[queries][fold_fast]" and @type="checkbox" and @checked]')->length)->toBe(0);
-        // The retry form keeps submitted values; the inert baseline keeps stored values.
-        expect($xpath->query('//template[@id="dlt-saved-settings"]//input[@name="components[' . $a . '][url]" and @value="/old"]')->length)->toBe(1)
-            ->and($xpath->query('//template[@id="dlt-saved-settings"]//input[@name="instances[' . $removed . ']"]')->length)->toBe(1)
-            ->and($xpath->query('//template[@id="dlt-saved-settings"]//input[@name="instances[' . $b . ']"]')->length)->toBe(0);
+        expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="dlt_saved_state"]')->item(0)->getAttribute('value'))
+            ->toBe('saved&value="test"');
         ToolbarPreferences::resetRequestCache();
         expect(ToolbarPreferences::load()->toConfig())->toBe($old->toConfig());
     } finally {

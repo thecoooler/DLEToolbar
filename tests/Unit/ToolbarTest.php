@@ -198,7 +198,7 @@ it('renders settings without a success notice', function (): void {
         ->toContain('class="tab-pane active" id="dlt-components-tab"')
         ->toContain('<option value="1" selected>Администраторы</option>')
         ->toContain('id="dlt-unsaved-notice" role="status" hidden')
-        ->and($html)->not->toContain('alert-success', 'id="dlt-saved-settings"');
+        ->and($html)->not->toContain('alert-success', 'data-validation-failed');
 });
 
 it('renders installed templates with the current selection and keeps skin visibility configurable', function (): void {

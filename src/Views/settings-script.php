@@ -17,16 +17,18 @@ if (!defined('DATALIFEENGINE')) {
         const list = document.getElementById('dlt-component-list');
         const rowFor = (id) => list.querySelector('[data-id="' + id + '"]');
         const unsavedNotice = document.getElementById('dlt-unsaved-notice');
-        const formState = (source = form) => {
-            const state = new URLSearchParams(new FormData(source));
+        const savedInput = form.querySelector('[name="dlt_saved_state"]');
+        const formState = () => {
+            const state = new URLSearchParams(new FormData(form));
+            state.delete('dlt_saved_state');
             // Field order outside array values has no effect on saved settings.
             state.sort();
             return state.toString();
         };
-        const savedTemplate = document.getElementById('dlt-saved-settings');
-        const savedState = savedTemplate
-            ? formState(savedTemplate.content.querySelector('form'))
+        const savedState = form.hasAttribute('data-validation-failed')
+            ? savedInput.value || null
             : formState();
+        savedInput.value = savedState || '';
         const updateUnsaved = () => {
             const unsaved = formState() !== savedState;
             unsavedNotice.hidden = !unsaved;
