@@ -9,6 +9,7 @@ use iCooLER\DLEToolbar\Components\Skin\Skin;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Link\Link;
+use iCooLER\DLEToolbar\Components\Notes\Notes;
 
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
@@ -24,6 +25,7 @@ final class ComponentRegistry
         'skin' => Skin::class,
         'cache' => Cache::class,
         'editpost' => EditPost::class,
+        'notes' => Notes::class,
     ];
 
     /** @var array<string, class-string<ConfigurableComponent>> */
