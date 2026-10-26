@@ -39,7 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 try {
-    $preferences = ToolbarPreferences::load();
+    $savedPreferences = ToolbarPreferences::load();
+    $preferences = $savedPreferences;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $preferences = ToolbarPreferences::fromRequest($_POST, $preferences);
         if ($preferences->parameterErrors() === []) {
@@ -55,7 +56,7 @@ try {
     $notice = $_SESSION['dletoolbar_settings_notice'] ?? null;
     /** @var string|null $notice */
     unset($_SESSION['dletoolbar_settings_notice']);
-    $content = (new ToolbarSettingsPage($preferences, $actionUrl, $notice))->render();
+    $content = (new ToolbarSettingsPage($preferences, $actionUrl, $notice, $savedPreferences))->render();
 } catch (\Throwable $error) {
     http_response_code(500);
     error_log('[DLEToolbar] admin: ' . $error);

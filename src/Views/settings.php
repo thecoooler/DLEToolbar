@@ -6,6 +6,7 @@ if (!defined('DATALIFEENGINE')) {
 }
 
 /** @var \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences $preferences */
+/** @var \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences $savedPreferences */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $components */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $templates */
 /** @var array<string, array<string, array{message: string, value: string}>> $errors */
@@ -85,6 +86,7 @@ if (!defined('DATALIFEENGINE')) {
         </div>
         <div class="panel-footer">
             <button type="submit" class="btn bg-teal btn-sm btn-raised"><i class="fa fa-floppy-o position-left"></i>Сохранить</button>
+            <span class="text-warning text-semibold position-right" id="dlt-unsaved-notice" role="status" hidden><i class="fa fa-exclamation-triangle position-left" aria-hidden="true"></i>Есть несохранённые изменения. Нажмите «Сохранить».</span>
         </div>
     </div>
     <?php foreach ($components as $id => $component): ?>
@@ -99,6 +101,33 @@ if (!defined('DATALIFEENGINE')) {
         </template>
     <?php endforeach; ?>
 </form>
+<?php if ($errors !== []): ?>
+    <template id="dlt-saved-settings">
+        <form>
+            <input type="hidden" name="instances" value="">
+            <input type="hidden" name="user_hash" value="<?= $escape($dle_login_hash) ?>">
+            <?php foreach ($savedPreferences->itemOrder() as $savedId): ?>
+                <input type="hidden" name="toolbar[items][]" value="<?= $escape($savedId) ?>">
+                <?php if ($savedPreferences->isEnabled($savedId)): ?>
+                    <input type="hidden" name="toolbar[enabled][]" value="<?= $escape($savedId) ?>">
+                <?php endif; ?>
+                <?php if (isset($savedPreferences->componentInstances()[$savedId])): ?>
+                    <input type="hidden" name="instances[<?= $escape($savedId) ?>]" value="<?= $escape($savedPreferences->componentInstances()[$savedId]) ?>">
+                <?php endif; ?>
+            <?php endforeach; ?>
+            <?php foreach ($groups as $groupId => $group): ?>
+                <?php if ($savedPreferences->allowsGroup((int) $groupId)): ?>
+                    <input type="hidden" name="access[groups][]" value="<?= (int) $groupId ?>">
+                <?php endif; ?>
+            <?php endforeach; ?>
+            <?php foreach (\iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry::parameters($savedPreferences->componentInstances()) as $savedId => $savedParameters): ?>
+                <?php foreach ($savedParameters as $name => $parameter): ?>
+                    <?= $parameter->renderControl('components[' . $savedId . '][' . $name . ']', 'dlt-saved-' . $savedId . '-' . $name, $savedPreferences->componentParameters($savedId)[$name]) ?>
+                <?php endforeach; ?>
+            <?php endforeach; ?>
+        </form>
+    </template>
+<?php endif; ?>
 <style>
     #dlt-settings-form .dlt-component-label { overflow-wrap: anywhere; }
     #dlt-settings-form .ui-dialog-title { display: block; padding-right: 24px; overflow-wrap: anywhere; }
@@ -109,6 +138,7 @@ if (!defined('DATALIFEENGINE')) {
     #dlt-settings-form .dlt-actions-cell { width: 1%; white-space: nowrap; }
     #dlt-settings-form .dlt-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
     #dlt-settings-form .dlt-actions > * { flex-shrink: 0; }
+    #dlt-settings-form.dlt-dirty .panel-footer { position: sticky; bottom: 0; z-index: 2; }
     #dlt-settings-form .dlt-disabled td:nth-child(2) { opacity: .55; }
     #dlt-settings-form .dlt-icon-list { display: flex; flex-wrap: wrap; gap: 6px; }
     #dlt-settings-form .dlt-icon-choice { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 10px; margin: 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: normal; text-align: center; }
