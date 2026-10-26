@@ -27,26 +27,91 @@ final class Clock implements ConfigurableComponent
 
     public function render(): array
     {
+        $numbers = [];
+        foreach (['hour', 'minute', 'second'] as $part) {
+            $numbers[$part] = '<span class="clock-number" data-clock-part="' . $part . '">'
+                . '<span data-clock-current></span><span class="clock-previous" data-clock-previous aria-hidden="true" hidden></span></span>';
+        }
+
         return [
             'control' => '<span class="control metric clock" data-component="clock" role="group" tabindex="0"'
                 . ' aria-label="Текущее время (часовой пояс браузера)">'
                 . '<time class="metric-value" data-clock data-show-seconds="' . ($this->showSeconds ? 'true' : 'false')
-                . '" role="timer" aria-live="off"></time></span>',
+                . '" role="timer" aria-live="off">'
+                . $numbers['hour'] . ':' . $numbers['minute']
+                . ($this->showSeconds ? ':<span data-clock-part="second"></span>' : '')
+                . '</time><template data-tooltip-content><time class="clock-tooltip" data-clock-tooltip role="timer" aria-live="off">'
+                . $numbers['hour'] . ':' . $numbers['minute'] . ':' . $numbers['second']
+                . '</time></template></span>',
             'styles' => <<<'CSS'
             .clock .metric-value { min-width: 8ch; }
             .clock [data-show-seconds="false"] { min-width: 5ch; }
+            .clock-tooltip { font-variant-numeric: tabular-nums; }
+            .clock-number { display: inline-grid; width: 2ch; perspective: 120px; vertical-align: bottom; }
+            .clock-number > span { grid-area: 1 / 1; backface-visibility: hidden; }
+            .clock-previous[hidden] { display: none; }
 CSS,
             'script' => <<<'JS'
     {
         const clock = root.querySelector('[data-clock]');
+        const control = clock.parentElement;
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const formatter = new Intl.DateTimeFormat('ru-RU', {
             hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
             second: clock.dataset.showSeconds === 'true' ? '2-digit' : undefined,
         });
+        const fullTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+        });
+        const updateNumbers = (container, parts) => {
+            container.querySelectorAll('.clock-number').forEach((number) => {
+                const part = number.dataset.clockPart;
+                const current = number.querySelector('[data-clock-current]');
+                const previous = number.querySelector('[data-clock-previous]');
+                const value = parts[part];
+                if (current.textContent === value) return;
+                const oldValue = current.textContent;
+                current.getAnimations().forEach((animation) => animation.cancel());
+                previous.getAnimations().forEach((animation) => animation.cancel());
+                current.textContent = value;
+                previous.hidden = true;
+                previous.textContent = '';
+                if (!oldValue || reducedMotion.matches) return;
+
+                previous.textContent = oldValue;
+                previous.hidden = false;
+                const outgoing = previous.animate([
+                    { transform: 'rotateX(0deg)', opacity: 1 },
+                    { transform: 'rotateX(-90deg)', opacity: 0, offset: .5 },
+                    { transform: 'rotateX(-90deg)', opacity: 0 },
+                ], { duration: 320, easing: 'ease-in-out' });
+                outgoing.onfinish = () => {
+                    previous.hidden = true;
+                    previous.textContent = '';
+                };
+                current.animate([
+                    { transform: 'rotateX(90deg)', opacity: 0 },
+                    { transform: 'rotateX(90deg)', opacity: 0, offset: .5 },
+                    { transform: 'rotateX(0deg)', opacity: 1 },
+                ], { duration: 320, easing: 'ease-in-out' });
+            });
+        };
+        const timeParts = (now) => Object.fromEntries(fullTimeFormatter.formatToParts(now)
+            .map(({ type, value }) => [type, value]));
+        const seconds = clock.querySelector('[data-clock-part="second"]');
+        control.addEventListener('dle-toolbar-tooltip-render', ({ detail }) => {
+            const tooltipClock = detail.querySelector('[data-clock-tooltip]');
+            const now = new Date();
+            updateNumbers(tooltipClock, timeParts(now));
+            tooltipClock.dateTime = fullTimeFormatter.format(now);
+        });
         const updateClock = () => {
-            const value = formatter.format(new Date());
-            clock.textContent = value;
-            clock.dateTime = value;
+            const now = new Date();
+            const parts = timeParts(now);
+            updateNumbers(clock, parts);
+            if (seconds) seconds.textContent = parts.second;
+            clock.dateTime = formatter.format(now);
+            control.setAttribute('aria-label', fullTimeFormatter.format(now));
         };
         updateClock();
         window.setInterval(updateClock, 1000);
