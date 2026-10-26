@@ -47,8 +47,8 @@ final class Clock implements ConfigurableComponent
             .clock .metric-value { min-width: 8ch; }
             .clock [data-show-seconds="false"] { min-width: 5ch; }
             .clock-tooltip { font-variant-numeric: tabular-nums; }
-            .clock-number { display: inline-grid; width: 2ch; perspective: 120px; vertical-align: bottom; }
-            .clock-number > span { grid-area: 1 / 1; backface-visibility: hidden; }
+            .clock-number { display: inline-grid; width: 2ch; overflow: hidden; vertical-align: bottom; }
+            .clock-number > span { grid-area: 1 / 1; }
             .clock-previous[hidden] { display: none; }
 CSS,
             'script' => <<<'JS'
@@ -81,18 +81,16 @@ CSS,
                 previous.textContent = oldValue;
                 previous.hidden = false;
                 const outgoing = previous.animate([
-                    { transform: 'rotateX(0deg)', opacity: 1 },
-                    { transform: 'rotateX(-90deg)', opacity: 0, offset: .5 },
-                    { transform: 'rotateX(-90deg)', opacity: 0 },
+                    { transform: 'translateY(0)' },
+                    { transform: 'translateY(100%)' },
                 ], { duration: 320, easing: 'ease-in-out' });
                 outgoing.onfinish = () => {
                     previous.hidden = true;
                     previous.textContent = '';
                 };
                 current.animate([
-                    { transform: 'rotateX(90deg)', opacity: 0 },
-                    { transform: 'rotateX(90deg)', opacity: 0, offset: .5 },
-                    { transform: 'rotateX(0deg)', opacity: 1 },
+                    { transform: 'translateY(-100%)' },
+                    { transform: 'translateY(0)' },
                 ], { duration: 320, easing: 'ease-in-out' });
             });
         };

@@ -65,6 +65,27 @@ export async function testClock(browser, url) {
             assert.equal(midnight.tooltipWidth, hovered.tooltipWidth, 'Tooltip width stays fixed during flips');
             assert.equal(midnight.width, initial.width, 'Flipping preserves clock width');
 
+            if (reducedMotion !== 'reduce') {
+                const positions = await control.evaluate((element) => [...element.getRootNode()
+                    .querySelectorAll('.clock-number')].map((number) => {
+                    number.getAnimations({ subtree: true }).forEach((animation) => {
+                        animation.pause();
+                        animation.currentTime = 160;
+                    });
+                    const slot = number.getBoundingClientRect();
+                    const current = number.querySelector('[data-clock-current]').getBoundingClientRect();
+                    const previous = number.querySelector('[data-clock-previous]').getBoundingClientRect();
+                    return {
+                        oldBelow: previous.top > slot.top && previous.bottom > slot.bottom,
+                        newAbove: current.top < slot.top && current.bottom < slot.bottom,
+                        clipped: getComputedStyle(number).overflow === 'hidden',
+                    };
+                }));
+                assert.equal(positions.length, 5);
+                assert.ok(positions.every(({ oldBelow, newAbove, clipped }) => oldBelow && newAbove && clipped),
+                    'In the clock and tooltip, old numbers fall below while new numbers enter from above');
+            }
+
             await control.evaluate((element) => element.getRootNode().querySelectorAll('.clock-number').forEach((number) => {
                 number.getAnimations({ subtree: true }).forEach((animation) => animation.finish());
             }));
