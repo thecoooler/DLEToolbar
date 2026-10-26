@@ -4,6 +4,7 @@ namespace iCooLER\DLEToolbar\ComponentFramework;
 
 use iCooLER\DLEToolbar\Components\Response\Response;
 use iCooLER\DLEToolbar\Components\Time\Time;
+use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Components\Skin\Skin;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
@@ -24,6 +25,7 @@ final class ComponentRegistry
         'skin' => Skin::class,
         'cache' => Cache::class,
         'editpost' => EditPost::class,
+        'clock' => Clock::class,
     ];
 
     /** @var array<string, class-string<ConfigurableComponent>> */
