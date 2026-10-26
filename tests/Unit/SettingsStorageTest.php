@@ -41,6 +41,21 @@ it('loads only once and holds a request snapshot until the next request', functi
     expect(ToolbarPreferences::load()->allowedGroups())->toBe([3]);
 });
 
+it('enables default components added after the settings were saved', function (): void {
+    ToolbarPreferences::fromConfig(['toolbar' => ['items' => ['time', 'queries'], 'enabled' => ['queries']]])->save();
+    $GLOBALS['dletoolbar_native_db']->query('UPDATE `' . PREFIX . '_dletoolbar_settings` SET setting_value = \'{"items":["time","queries","skin"],"enabled":["queries"]}\' WHERE setting_key = \'toolbar\'');
+    ToolbarPreferences::resetRequestCache();
+    $preferences = ToolbarPreferences::load();
+
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'editpost', 'clock'])
+        ->and($preferences->isEnabled('time'))->toBeFalse()
+        ->and($preferences->isEnabled('skin'))->toBeFalse();
+
+    ToolbarPreferences::fromRequest(['toolbar' => ['items' => $preferences->itemOrder(), 'enabled' => ['queries']]], $preferences)->save();
+    ToolbarPreferences::resetRequestCache();
+    expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries']);
+});
+
 it('skips the settings query for users, guests and missing groups', function (): void {
     ToolbarPreferences::fromConfig(['access' => ['groups' => [1, 2]]])->save();
     ToolbarPreferences::resetRequestCache();
