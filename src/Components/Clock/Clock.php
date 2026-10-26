@@ -30,7 +30,6 @@ final class Clock implements ConfigurableComponent
         return [
             'control' => '<span class="control metric clock" data-component="clock" role="group" tabindex="0"'
                 . ' aria-label="Текущее время (часовой пояс браузера)">'
-                . '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
                 . '<time class="metric-value" data-clock data-show-seconds="' . ($this->showSeconds ? 'true' : 'false')
                 . '" role="timer" aria-live="off"></time></span>',
             'styles' => <<<'CSS'
