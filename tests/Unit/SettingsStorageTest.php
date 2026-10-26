@@ -2,6 +2,7 @@
 
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -79,7 +80,7 @@ it('keeps stored settings and the request snapshot when the write fails', functi
     $old->save();
     $new = ToolbarPreferences::fromRequest(['access' => ['groups' => [3]], 'toolbar' => ['enabled' => ['queries']]], $old);
     $GLOBALS['db']->failQuery = 'INSERT';
-    expect(fn () => $new->save())->toThrow(RuntimeException::class, 'Failed to save toolbar settings.')
+    expect(fn() => $new->save())->toThrow(RuntimeException::class, 'Failed to save toolbar settings.')
         ->and(ToolbarPreferences::load())->toBe($old);
     ToolbarPreferences::resetRequestCache();
     expect(ToolbarPreferences::load()->toConfig())->toBe($old->toConfig());
@@ -111,20 +112,23 @@ it('shows a failed save in the admin page without a success notice and keeps sto
         ob_end_clean();
         $_POST = $previousPost;
         $_SESSION = $previousSession;
-        if ($previousMethod === null) unset($_SERVER['REQUEST_METHOD']);
-        else $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
         http_response_code(200);
     }
 });
 
 it('throws when the settings query fails', function (): void {
     $GLOBALS['db']->failQuery = 'SELECT';
-    expect(fn () => ToolbarPreferences::load())->toThrow(RuntimeException::class, 'Failed to load toolbar settings.');
+    expect(fn() => ToolbarPreferences::load())->toThrow(RuntimeException::class, 'Failed to load toolbar settings.');
 });
 
 it('throws when stored JSON is invalid', function (): void {
     ToolbarPreferences::fromConfig([])->save();
     $GLOBALS['dletoolbar_native_db']->query('UPDATE `' . PREFIX . '_dletoolbar_settings` SET setting_value = \'broken\' WHERE setting_key = \'access\'');
     ToolbarPreferences::resetRequestCache();
-    expect(fn () => ToolbarPreferences::load())->toThrow(JsonException::class);
+    expect(fn() => ToolbarPreferences::load())->toThrow(JsonException::class);
 });

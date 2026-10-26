@@ -2,17 +2,16 @@
 
 namespace iCooLER\DLEToolbar\ComponentFramework;
 
-use iCooLER\DLEToolbar\Components\Response\Response;
-use iCooLER\DLEToolbar\Components\Time\Time;
-use iCooLER\DLEToolbar\Components\Clock\Clock;
-use iCooLER\DLEToolbar\Components\Queries\Queries;
-use iCooLER\DLEToolbar\Components\Skin\Skin;
+use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
+use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Link\Link;
-
+use iCooLER\DLEToolbar\Components\Queries\Queries;
+use iCooLER\DLEToolbar\Components\Response\Response;
+use iCooLER\DLEToolbar\Components\Skin\Skin;
+use iCooLER\DLEToolbar\Components\Time\Time;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
-use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 
 /** @phpstan-import-type ComponentId from ToolbarPreferences */
 final class ComponentRegistry
@@ -64,9 +63,15 @@ final class ComponentRegistry
         foreach ($preferences->visibleItems() as $id) {
             $component = $this->createComponent($id, $classes[$id], $preferences);
             $rendered = $component->render();
-            if ($rendered === null) continue;
-            if ($rendered['control'] !== '') $controls[] = $rendered['control'];
-            if (isset($rendered['hint'])) $hints[] = $rendered['hint'];
+            if ($rendered === null) {
+                continue;
+            }
+            if ($rendered['control'] !== '') {
+                $controls[] = $rendered['control'];
+            }
+            if (isset($rendered['hint'])) {
+                $hints[] = $rendered['hint'];
+            }
             $styles[] = $rendered['styles'] ?? '';
             $panels[] = $rendered['panel'] ?? '';
             $scripts[] = $rendered['script'] ?? '';

@@ -2,6 +2,7 @@
 
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -51,7 +52,10 @@ it('initializes cache behavior only when the control is visible', function (bool
         $registry->initialize($preferences);
         expect($GLOBALS['config']['allow_cache'])->toBe(!$visible);
     } finally {
-        if ($previousCookie === null) unset($_COOKIE['dle_toolbar_clear_cache']);
-        else $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        if ($previousCookie === null) {
+            unset($_COOKIE['dle_toolbar_clear_cache']);
+        } else {
+            $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        }
     }
 })->with(['visible' => true, 'hidden' => false]);

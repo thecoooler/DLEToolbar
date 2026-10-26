@@ -1,9 +1,10 @@
 <?php
 
-use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
+use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {

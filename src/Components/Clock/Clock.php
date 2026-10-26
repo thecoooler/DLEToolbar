@@ -11,8 +11,11 @@ final class Clock implements ConfigurableComponent
 
     public static function parameters(): array
     {
-        return ['show_seconds' => Parameter::boolean('Показывать секунды', true,
-            'Выключите, чтобы показывать время в формате ЧЧ:ММ.')];
+        return ['show_seconds' => Parameter::boolean(
+            'Показывать секунды',
+            true,
+            'Выключите, чтобы показывать время в формате ЧЧ:ММ.',
+        )];
     }
 
     public function __construct(array $values)

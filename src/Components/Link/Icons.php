@@ -25,14 +25,16 @@ final class Icons
     /** @return array<IconName, string> */
     public static function choices(): array
     {
-        return array_map(static fn (array $icon): string => $icon[0], self::DEFINITIONS);
+        return array_map(static fn(array $icon): string => $icon[0], self::DEFINITIONS);
     }
 
     /** @return array<IconName, string> */
     public static function previews(): array
     {
         $previews = [];
-        foreach (self::choices() as $name => $label) $previews[$name] = self::render($name);
+        foreach (self::choices() as $name => $label) {
+            $previews[$name] = self::render($name);
+        }
         return $previews;
     }
 

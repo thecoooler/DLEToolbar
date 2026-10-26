@@ -76,7 +76,7 @@ try {
 
 echoheader(
     '<i class="fa fa-sliders position-left"></i><span class="text-semibold">DLEToolbar</span>',
-    'Настройки плагина'
+    'Настройки плагина',
 );
 if (version_compare($config['version_id'], '13.1', '<')) {
     require \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Views/sortable.php');

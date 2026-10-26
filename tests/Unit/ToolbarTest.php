@@ -4,6 +4,7 @@ use iCooLER\DLEToolbar\AdminUI\ToolbarSettingsPage;
 use iCooLER\DLEToolbar\Components\Cache\CacheCleaner;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -83,8 +84,11 @@ it('persists selected groups and restricts toolbar and cache access to them', fu
     } finally {
         $GLOBALS['member_id'] = $previousMember;
         $GLOBALS['config'] = $previousSiteConfig;
-        if ($previousCookie === null) unset($_COOKIE['dle_toolbar_clear_cache']);
-        else $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        if ($previousCookie === null) {
+            unset($_COOKIE['dle_toolbar_clear_cache']);
+        } else {
+            $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        }
     }
 });
 
@@ -130,7 +134,10 @@ it('persists visibility and order and renders current DLE metrics', function ():
         ]])->save();
 
         $GLOBALS['Timer'] = new class {
-            public function get(): float { return .125; }
+            public function get(): float
+            {
+                return .125;
+            }
         };
         $GLOBALS['db'] = new \iCooLER\DLEToolbar\ToolbarTestDatabase($GLOBALS['dletoolbar_native_db'], [
             'query_num' => 17,
@@ -265,8 +272,11 @@ it('renders installed templates with the current selection and keeps skin visibi
     } finally {
         $GLOBALS['config'] = $previousSiteConfig;
         $GLOBALS['dletoolbar_test_skins'] = $previousSkins;
-        if ($previousSkinCookie === null) unset($_COOKIE['dle_skin']);
-        else $_COOKIE['dle_skin'] = $previousSkinCookie;
+        if ($previousSkinCookie === null) {
+            unset($_COOKIE['dle_skin']);
+        } else {
+            $_COOKIE['dle_skin'] = $previousSkinCookie;
+        }
     }
 });
 
@@ -280,7 +290,7 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
         $_COOKIE['dle_skin'] = 'Air';
         $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Chronicle', 'token' => $GLOBALS['dle_login_hash']]);
         $_SERVER['REQUEST_URI'] = '/news/?page=2';
-        expect(fn () => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
+        expect(fn() => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
         expect($GLOBALS['dletoolbar_skin_redirect'])->toBe(['Location: /news/?page=2', 303]);
         expect($_COOKIE['dle_skin'])->toBe('Chronicle')
             ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
@@ -293,7 +303,7 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
         $GLOBALS['config']['skin'] = 'Air';
         $toolbar = new DLEToolbar();
         $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
-        expect(fn () => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
+        expect(fn() => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
         expect(isset($_COOKIE['dle_skin']))->toBeFalse()
             ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
             ->and($toolbar->render())->toContain('data-overridden="false"')
@@ -366,8 +376,11 @@ it('selects templates with numeric folder names', function (): void {
     } finally {
         $GLOBALS['config'] = $previousSiteConfig;
         $GLOBALS['dletoolbar_test_skins'] = $previousSkins;
-        if ($previousSkinCookie === null) unset($_COOKIE['dle_skin']);
-        else $_COOKIE['dle_skin'] = $previousSkinCookie;
+        if ($previousSkinCookie === null) {
+            unset($_COOKIE['dle_skin']);
+        } else {
+            $_COOKIE['dle_skin'] = $previousSkinCookie;
+        }
     }
 });
 
@@ -381,7 +394,7 @@ it('lists template folders by directory name before DLE 14.3', function (): void
         ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['skin'], 'enabled' => ['skin']]])->save();
         $folders = array_values(array_filter(
             scandir(ROOT_DIR . '/templates'),
-            static fn (string $name): bool => $name !== '.' && $name !== '..' && is_dir(ROOT_DIR . '/templates/' . $name),
+            static fn(string $name): bool => $name !== '.' && $name !== '..' && is_dir(ROOT_DIR . '/templates/' . $name),
         ));
 
         $html = (new DLEToolbar())->render();
@@ -540,7 +553,9 @@ it('clears DLE cache files while retaining system directories and protected file
 
     try {
         foreach ($paths as $path) {
-            if (!is_dir(dirname($path))) mkdir(dirname($path), 0777, true);
+            if (!is_dir(dirname($path))) {
+                mkdir(dirname($path), 0777, true);
+            }
             file_put_contents($path, 'fixture');
         }
         $lock = fopen($systemRoot . '/coverage-newsletter.lock', 'c');
@@ -550,8 +565,12 @@ it('clears DLE cache files while retaining system directories and protected file
 
         (new CacheCleaner())->clear();
 
-        foreach (array_slice($paths, 0, 3) as $path) expect(is_file($path))->toBeTrue();
-        foreach (array_slice($paths, 4, 3) as $path) expect(is_file($path))->toBeTrue();
+        foreach (array_slice($paths, 0, 3) as $path) {
+            expect(is_file($path))->toBeTrue();
+        }
+        foreach (array_slice($paths, 4, 3) as $path) {
+            expect(is_file($path))->toBeTrue();
+        }
         expect(is_file($systemRoot . '/temporary.cache'))->toBeFalse()
             ->and(is_file($cacheRoot . '/coverage-cache-fixture.tmp'))->toBeFalse()
             ->and(is_file($cacheRoot . '/.htaccess'))->toBeTrue()
@@ -576,13 +595,20 @@ it('clears DLE cache files while retaining system directories and protected file
             rename($systemBackup, $systemRoot);
         }
     } finally {
-        if (isset($lock)) fclose($lock);
+        if (isset($lock)) {
+            fclose($lock);
+        }
         foreach (array_merge(array_slice($paths, 0, 3), array_slice($paths, 9)) as $path) {
-            if (is_file($path)) unlink($path);
+            if (is_file($path)) {
+                unlink($path);
+            }
         }
         $GLOBALS['config'] = $previousConfig;
-        if ($previousFastCache === null) unset($GLOBALS['dlefastcache']);
-        else $GLOBALS['dlefastcache'] = $previousFastCache;
+        if ($previousFastCache === null) {
+            unset($GLOBALS['dlefastcache']);
+        } else {
+            $GLOBALS['dlefastcache'] = $previousFastCache;
+        }
     }
 });
 
@@ -593,7 +619,8 @@ it('clears the connected DLE fast cache even when caching is disabled for the re
         public $connection = 1;
         public $cleared = false;
 
-        public function clear($areas = false): void {
+        public function clear($areas = false): void
+        {
             $this->cleared = $areas === false;
         }
     };
@@ -608,8 +635,11 @@ it('clears the connected DLE fast cache even when caching is disabled for the re
         expect($fastCache->cleared)->toBeTrue();
     } finally {
         $GLOBALS['config'] = $previousConfig;
-        if ($previousFastCache === null) unset($GLOBALS['dlefastcache']);
-        else $GLOBALS['dlefastcache'] = $previousFastCache;
+        if ($previousFastCache === null) {
+            unset($GLOBALS['dlefastcache']);
+        } else {
+            $GLOBALS['dlefastcache'] = $previousFastCache;
+        }
     }
 });
 
@@ -647,9 +677,14 @@ it('handles cache reset cookies only for administrators with the login hash', fu
         expect($GLOBALS['config']['allow_cache'])->toBeFalse()
             ->and(is_file($cachedFile))->toBeFalse();
     } finally {
-        if (is_file($cachedFile)) unlink($cachedFile);
-        if ($previousCookie === null) unset($_COOKIE['dle_toolbar_clear_cache']);
-        else $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        if (is_file($cachedFile)) {
+            unlink($cachedFile);
+        }
+        if ($previousCookie === null) {
+            unset($_COOKIE['dle_toolbar_clear_cache']);
+        } else {
+            $_COOKIE['dle_toolbar_clear_cache'] = $previousCookie;
+        }
         $GLOBALS['config'] = $previousConfig;
         $GLOBALS['member_id'] = $previousMemberId;
     }
@@ -668,10 +703,16 @@ it('injects the rendered toolbar into the main template result', function (): vo
             ->and(substr_count($GLOBALS['tpl']->result['main'], 'data-dle-toolbar'))->toBe(1);
         expect($GLOBALS['DLEToolbar'])->toBeInstanceOf(DLEToolbar::class);
     } finally {
-        if ($previousTemplate === null) unset($GLOBALS['tpl']);
-        else $GLOBALS['tpl'] = $previousTemplate;
-        if ($previousToolbar === null) unset($GLOBALS['DLEToolbar']);
-        else $GLOBALS['DLEToolbar'] = $previousToolbar;
+        if ($previousTemplate === null) {
+            unset($GLOBALS['tpl']);
+        } else {
+            $GLOBALS['tpl'] = $previousTemplate;
+        }
+        if ($previousToolbar === null) {
+            unset($GLOBALS['DLEToolbar']);
+        } else {
+            $GLOBALS['DLEToolbar'] = $previousToolbar;
+        }
     }
 });
 
@@ -701,14 +742,25 @@ it('renders the admin settings page and consumes its saved notice', function (st
             ->and($GLOBALS['js_array'])->toBe($scripts)
             ->and(isset($_SESSION['dletoolbar_settings_notice']))->toBeFalse();
     } finally {
-        if ($bufferOpen) ob_end_clean();
-        if ($previousMethod === null) unset($_SERVER['REQUEST_METHOD']);
-        else $_SERVER['REQUEST_METHOD'] = $previousMethod;
-        if ($previousHash === null) unset($GLOBALS['dle_login_hash']);
-        else $GLOBALS['dle_login_hash'] = $previousHash;
+        if ($bufferOpen) {
+            ob_end_clean();
+        }
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
+        if ($previousHash === null) {
+            unset($GLOBALS['dle_login_hash']);
+        } else {
+            $GLOBALS['dle_login_hash'] = $previousHash;
+        }
         $GLOBALS['js_array'] = $previousJsArray;
-        if ($previousNotice === null) unset($_SESSION['dletoolbar_settings_notice']);
-        else $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        if ($previousNotice === null) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+        } else {
+            $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        }
     }
 })->with([
     ['13.0', [], true],

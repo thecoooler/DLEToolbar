@@ -27,7 +27,10 @@ $user_group = [1 => ['group_name' => 'Администраторы', 'allow_admi
 $dle_module = 'main';
 $news_found = false;
 $Timer = new class {
-    public function get(): float { return .125; }
+    public function get(): float
+    {
+        return .125;
+    }
 };
 define('PREFIX', 'dle');
 $db = new class {
@@ -41,9 +44,13 @@ $db = new class {
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
         ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],
     ];
-    public function query($sql, $showError = true) { return true; }
+    public function query($sql, $showError = true)
+    {
+        return true;
+    }
     private int $settingsRead = 0;
-    public function get_row($result = null) {
+    public function get_row($result = null)
+    {
         $rows = [
             ['setting_key' => 'toolbar', 'setting_value' => json_encode([
                 'items' => ['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'],

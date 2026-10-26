@@ -11,7 +11,8 @@ final class Cache implements RequestComponent
         return ['label' => 'Обновить страницу со сбросом кэша', 'description' => 'Очищает кэш DLE и перезагружает текущую страницу.'];
     }
 
-    public function initialize(): void {
+    public function initialize(): void
+    {
         if (!isset($_COOKIE['dle_toolbar_clear_cache'])) {
             return;
         }

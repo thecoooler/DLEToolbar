@@ -5,21 +5,25 @@ namespace iCooLER\DLEToolbar\Toolbar;
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\PopupLifecycle;
 
-class DLEToolbar {
+class DLEToolbar
+{
     private ComponentRegistry $components;
     private string $marker;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->components = new ComponentRegistry();
         $this->marker = '<!-- DLEToolbar ' . bin2hex(random_bytes(16)) . ' -->';
     }
 
     /** Per-request placeholder: page content cannot predict it and place the toolbar elsewhere. */
-    public function marker(): string {
+    public function marker(): string
+    {
         return $this->marker;
     }
 
-    public function isHasAccess(): bool {
+    public function isHasAccess(): bool
+    {
         global $member_id;
         /** @var array{user_group: int|string} $member_id */
         $group = (int) $member_id['user_group'];
@@ -29,15 +33,21 @@ class DLEToolbar {
             && ToolbarPreferences::load()->allowsGroup($group);
     }
 
-    public function init(): void {
-        if (!$this->isHasAccess()) return;
+    public function init(): void
+    {
+        if (!$this->isHasAccess()) {
+            return;
+        }
 
         $this->components->initialize(ToolbarPreferences::load());
     }
 
-    public function render(): string {
+    public function render(): string
+    {
         $rendered = $this->components->render(ToolbarPreferences::load());
-        if ($rendered['controls'] === '' && $rendered['hints'] === '') return '';
+        if ($rendered['controls'] === '' && $rendered['hints'] === '') {
+            return '';
+        }
 
         // Native CSS inspired by shadcn/ui; inline icons from Tabler Icons (MIT).
         return strtr(<<<'HTML'

@@ -23,14 +23,16 @@ final class NewsFields
             $loaded = \DLEXFields::$fields;
             $definitions = $loaded['fields'];
         } else {
-            $definitions = array_map(static fn (array $field): array => [
+            $definitions = array_map(static fn(array $field): array => [
                 'name' => $field[0], 'type' => $field[3], 'allow_view_usergroups' => $field[20],
             ], $xfields);
         }
         foreach ($definitions as $field) {
             $value = $data[$field['name']] ?? '';
             $groups = explode(',', $field['allow_view_usergroups']);
-            if ($groups[0] && !in_array($member_id['user_group'], $groups)) continue;
+            if ($groups[0] && !in_array($member_id['user_group'], $groups)) {
+                continue;
+            }
             $given = $modernFields ? (bool) $value : $value !== '';
             if ($field['type'] === 'yesorno') {
                 $given = (bool) intval($value);

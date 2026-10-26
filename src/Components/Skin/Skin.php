@@ -22,7 +22,9 @@ final class Skin implements RequestComponent
 
     public function initialize(): void
     {
-        if (!isset($_COOKIE['dle_toolbar_skin'])) return;
+        if (!isset($_COOKIE['dle_toolbar_skin'])) {
+            return;
+        }
 
         $cookie = $_COOKIE['dle_toolbar_skin'];
         setcookie('dle_toolbar_skin', '', time() - 3600, '/');
@@ -31,12 +33,16 @@ final class Skin implements RequestComponent
         global $dle_login_hash;
         /** @var string $dle_login_hash */
         if (!is_array($request) || !is_string($request['token'] ?? null)
-            || !hash_equals($dle_login_hash, $request['token']) || !is_string($request['skin'] ?? null)) return;
+            || !hash_equals($dle_login_hash, $request['token']) || !is_string($request['skin'] ?? null)) {
+            return;
+        }
 
         /** @var string $skin */
         $skin = totranslit($request['skin'], false, false);
         $skin = trim($skin);
-        if ($skin === '' || $skin !== $request['skin'] || !is_dir(ROOT_DIR . '/templates/' . $skin)) return;
+        if ($skin === '' || $skin !== $request['skin'] || !is_dir(ROOT_DIR . '/templates/' . $skin)) {
+            return;
+        }
 
         // Authentication finishes after DLE selects its template. Apply the cookie on a fresh GET.
         if ($skin === $this->defaultSkin) {
@@ -249,7 +255,8 @@ CSS,
 JS];
     }
 
-    private function renderControl(): string {
+    private function renderControl(): string
+    {
         global $config, $dle_login_hash;
         /** @var array{skin: string, version_id: string} $config */
         /** @var string $dle_login_hash */
@@ -263,7 +270,7 @@ JS];
             ? get_folder_list('templates')
             : self::templateFolders();
 
-        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $options = '';
         foreach ($skins as $name => $metadata) {
             // PHP turns numeric folder names such as "2024" into integer array keys.

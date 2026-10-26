@@ -3,6 +3,7 @@
 use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Components\Link\NewsFields;
 use iCooLER\DLEToolbar\Components\Link\UrlTemplate;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {

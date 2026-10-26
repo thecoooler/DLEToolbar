@@ -87,18 +87,26 @@ final class Parameter
     public function normalize($value)
     {
         if ($this->type === 'boolean') {
-            if (in_array($value, [true, 1, '1'], true)) return true;
-            if (in_array($value, [false, 0, '0'], true)) return false;
+            if (in_array($value, [true, 1, '1'], true)) {
+                return true;
+            }
+            if (in_array($value, [false, 0, '0'], true)) {
+                return false;
+            }
             return $this->default;
         }
         if ($this->type === 'text') {
-            if (!is_string($value)) return $this->default;
+            if (!is_string($value)) {
+                return $this->default;
+            }
             return $this->normalizer !== null ? ($this->normalizer)(trim($value)) : trim($value);
         }
         if ($this->type === 'select' || $this->type === 'icon') {
             return is_string($value) && isset($this->choices[$value]) ? $value : $this->default;
         }
-        if (is_string($value)) $value = trim($value);
+        if (is_string($value)) {
+            $value = trim($value);
+        }
         if ((!is_int($value) && !is_float($value) && !is_string($value)) || !is_numeric($value)) {
             return $this->default;
         }
@@ -112,9 +120,13 @@ final class Parameter
      */
     public function validationError($value): ?string
     {
-        if ($this->type !== 'text') return null;
+        if ($this->type !== 'text') {
+            return null;
+        }
         $text = is_string($value) ? trim($value) : '';
-        if ($text === '') return $this->required ? 'Заполните поле «' . $this->label . '».' : null;
+        if ($text === '') {
+            return $this->required ? 'Заполните поле «' . $this->label . '».' : null;
+        }
         return $this->normalize($text) === '' ? 'Недопустимое значение поля «' . $this->label . '».' : null;
     }
 
