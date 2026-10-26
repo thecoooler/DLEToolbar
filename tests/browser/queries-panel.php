@@ -46,7 +46,7 @@ $db = new class {
     public function get_row($result = null) {
         if ($this->settingsRead) return null;
         $this->settingsRead = true;
-        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin']])];
+        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['items' => ['response', 'time', 'queries', 'skin', 'cache', 'editpost'], 'enabled' => ['time', 'queries', 'skin']])];
     }
     public function free($result = null) {}
 };
