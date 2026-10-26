@@ -9,7 +9,6 @@ use iCooLER\DLEToolbar\Components\Skin\Skin;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Link\Link;
-
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 
@@ -62,9 +61,15 @@ final class ComponentRegistry
         foreach ($preferences->visibleItems() as $id) {
             $component = $this->createComponent($id, $classes[$id], $preferences);
             $rendered = $component->render();
-            if ($rendered === null) continue;
-            if ($rendered['control'] !== '') $controls[] = $rendered['control'];
-            if (isset($rendered['hint'])) $hints[] = $rendered['hint'];
+            if ($rendered === null) {
+                continue;
+            }
+            if ($rendered['control'] !== '') {
+                $controls[] = $rendered['control'];
+            }
+            if (isset($rendered['hint'])) {
+                $hints[] = $rendered['hint'];
+            }
             $styles[] = $rendered['styles'] ?? '';
             $panels[] = $rendered['panel'] ?? '';
             $scripts[] = $rendered['script'] ?? '';

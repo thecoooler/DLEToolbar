@@ -11,11 +11,17 @@ final class UrlTemplate
     {
         $template = trim($template);
         $plain = self::conditions($template, [], true);
-        if ($plain === null) return '';
+        if ($plain === null) {
+            return '';
+        }
         /** @var string $candidate */
         $candidate = preg_replace(self::VALUE, 'value', $plain);
-        if (stripos($candidate, '[xf') !== false || stripos($candidate, '[/xf') !== false) return '';
-        if (preg_match('~^\[xfvalue_[a-z0-9_-]+\]$~i', $plain)) return $template;
+        if (stripos($candidate, '[xf') !== false || stripos($candidate, '[/xf') !== false) {
+            return '';
+        }
+        if (preg_match('~^\[xfvalue_[a-z0-9_-]+\]$~i', $plain)) {
+            return $template;
+        }
         return self::normalizeUrl($candidate) !== '' ? $template : '';
     }
 
@@ -23,10 +29,16 @@ final class UrlTemplate
     public static function resolve(string $template, bool $isNews, array $fields): string
     {
         $hasTags = preg_match('~\[/?xf(?:value|given)_~i', $template);
-        if (!$hasTags) return self::normalizeUrl($template);
-        if (!$isNews) return '';
+        if (!$hasTags) {
+            return self::normalizeUrl($template);
+        }
+        if (!$isNews) {
+            return '';
+        }
         $plain = self::conditions($template, $fields);
-        if ($plain === null) return '';
+        if ($plain === null) {
+            return '';
+        }
         $wholeValue = preg_match('~^\[xfvalue_[a-z0-9_-]+\]$~i', $plain);
         $missingValue = false;
         /** @var string $url */
@@ -47,9 +59,14 @@ final class UrlTemplate
     {
         do {
             /** @var string $template */
-            $template = preg_replace_callback(self::GIVEN, static fn (array $match): string =>
-                $validate || ($fields[strtolower($match[1])]['given'] ?? false) ? $match[2] : '',
-                $template, -1, $count);
+            $template = preg_replace_callback(
+                self::GIVEN,
+                static fn(array $match): string
+                => $validate || ($fields[strtolower($match[1])]['given'] ?? false) ? $match[2] : '',
+                $template,
+                -1,
+                $count,
+            );
         } while ($count > 0);
         return preg_match('~\[/?xfgiven_~i', $template) ? null : $template;
     }
@@ -58,8 +75,12 @@ final class UrlTemplate
     private static function normalizeUrl(string $url): string
     {
         $url = trim($url);
-        if (preg_match('/[\x00-\x20\x7f\\\\]/', $url)) return '';
-        if (strpos($url, '/') === 0 && strpos($url, '//') !== 0) return $url;
+        if (preg_match('/[\x00-\x20\x7f\\\\]/', $url)) {
+            return '';
+        }
+        if (strpos($url, '/') === 0 && strpos($url, '//') !== 0) {
+            return $url;
+        }
         return preg_match('~^https?://~i', $url) && filter_var($url, FILTER_VALIDATE_URL) !== false
             ? $url : '';
     }

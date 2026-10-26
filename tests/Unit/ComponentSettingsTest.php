@@ -5,6 +5,7 @@ use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -86,8 +87,11 @@ it('uses the configured tab for news editing', function (string $target): void {
     $html = $registry->render($preferences)['controls'];
     expect($html)->toContain('target="' . $target . '"')
         ->toContain('id=42');
-    if ($target === '_blank') expect($html)->toContain('rel="noopener"');
-    else expect($html)->not->toContain('rel="noopener"');
+    if ($target === '_blank') {
+        expect($html)->toContain('rel="noopener"');
+    } else {
+        expect($html)->not->toContain('rel="noopener"');
+    }
 })->with(['_self', '_blank']);
 
 it('uses the slow query threshold at its exact boundary and can disable fast folding', function (): void {

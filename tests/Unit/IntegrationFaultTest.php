@@ -2,6 +2,7 @@
 
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 require_once __DIR__ . '/../Support/RandomBytesFault.php';

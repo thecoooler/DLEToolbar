@@ -50,17 +50,21 @@ final class ToolbarPreferences
         global $user_group;
         /** @var array<int, array{group_name: string, allow_admin: mixed}> $user_group */
 
-        return array_filter($user_group, static fn (array $group): bool => (bool) $group['allow_admin']);
+        return array_filter($user_group, static fn(array $group): bool => (bool) $group['allow_admin']);
     }
 
     public static function load(): self
     {
-        if (self::$loaded !== null) return self::$loaded;
+        if (self::$loaded !== null) {
+            return self::$loaded;
+        }
 
         global $db;
         /** @var \db $db */
         $result = $db->query('SELECT setting_key, setting_value FROM `' . PREFIX . '_dletoolbar_settings`', false);
-        if ($result === false) throw new \RuntimeException('Failed to load toolbar settings.');
+        if ($result === false) {
+            throw new \RuntimeException('Failed to load toolbar settings.');
+        }
 
         $values = [];
         while ($row = $db->get_row($result)) {
@@ -180,7 +184,7 @@ final class ToolbarPreferences
     /** @return list<ComponentId> */
     public function visibleItems(): array
     {
-        return array_values(array_filter($this->itemOrder(), fn (string $id): bool => $this->isEnabled($id)));
+        return array_values(array_filter($this->itemOrder(), fn(string $id): bool => $this->isEnabled($id)));
     }
 
     public function save(): void
@@ -199,7 +203,9 @@ final class ToolbarPreferences
         $sql = 'INSERT INTO `' . PREFIX . '_dletoolbar_settings` (setting_key, setting_value, updated_at) VALUES '
             . implode(', ', $rows)
             . ' ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = VALUES(updated_at)';
-        if ($db->query($sql, false) === false) throw new \RuntimeException('Failed to save toolbar settings.');
+        if ($db->query($sql, false) === false) {
+            throw new \RuntimeException('Failed to save toolbar settings.');
+        }
 
         self::$loaded = $this;
     }

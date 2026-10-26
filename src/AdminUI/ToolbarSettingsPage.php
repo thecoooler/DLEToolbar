@@ -40,7 +40,7 @@ final class ToolbarSettingsPage
                 $parameters[$id] ?? [],
                 isset($parameters[$id]) ? $preferences->componentParameters($id) : [],
                 $instances[$id] ?? null,
-                $preferences->isEnabled($id)
+                $preferences->isEnabled($id),
             );
         }
 
@@ -48,12 +48,12 @@ final class ToolbarSettingsPage
         foreach (ComponentRegistry::repeatableDefinitions() as $type => $definition) {
             $templateId = '__COMPONENT_ID__';
             $templateParameters = ComponentRegistry::parameters([$templateId => $type])[$templateId];
-            $defaults = array_map(static fn (Parameter $parameter) => $parameter->default, $templateParameters);
+            $defaults = array_map(static fn(Parameter $parameter) => $parameter->default, $templateParameters);
             $templates[$type] = new ComponentSettings($definition, $templateParameters, $defaults, $type, true);
         }
         $actionUrl = $this->actionUrl;
         $notice = $this->notice;
-        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         ob_start();
         require \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Views/settings.php');

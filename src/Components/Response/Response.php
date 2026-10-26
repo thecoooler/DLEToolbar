@@ -14,7 +14,9 @@ final class Response implements Component
     public function render(): ?array
     {
         $value = (int) http_response_code();
-        if ($value === 200) return null;
+        if ($value === 200) {
+            return null;
+        }
 
         $state = $value >= 400 ? 'error' : ($value >= 300 ? 'redirect' : 'success');
         $reasons = [
