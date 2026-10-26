@@ -42,6 +42,16 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-dleplugin
+      # dleplugin reuses a downloaded DLE trial indefinitely; a daily key
+      # keeps the tests on the current trial release.
+      - id: today
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/dleplugin/test/dle_trial.zip
+            ~/.cache/dleplugin/test/dle-*
+          key: dle-trial-${{ runner.os }}-${{ steps.today.outputs.date }}
       - run: dleplugin test
   build:
     name: Build plugin
