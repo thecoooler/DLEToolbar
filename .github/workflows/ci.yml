@@ -64,7 +64,7 @@ jobs:
             ~/.cache/dleplugin/test/dle_trial.zip
             ~/.cache/dleplugin/test/dle-*
           key: dle-trial-${{ runner.os }}-${{ steps.today.outputs.date }}
-      - run: dleplugin test
+      - run: dleplugin test --coverage-min 97
   build:
     name: Build plugin
     runs-on: ubuntu-24.04
