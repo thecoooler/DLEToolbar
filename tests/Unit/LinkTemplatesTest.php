@@ -48,6 +48,15 @@ it('encodes embedded fields and decodes stored HTML entities', function (): void
     ]))->toBe('/search?q=' . rawurlencode('Тест & a/b?x="y"'));
 });
 
+it('hides links with malformed saved conditions even when their fields are available', function (string $template): void {
+    expect(UrlTemplate::resolve($template, true, [
+        'url' => ['value' => 'https://example.test/', 'given' => true],
+    ]))->toBe('');
+})->with([
+    'unclosed condition' => ['[xfgiven_url][xfvalue_url]'],
+    'mismatched condition' => ['[xfgiven_url][xfvalue_url][/xfgiven_other]'],
+]);
+
 it('resolves nested given blocks and omits empty optional fields', function (): void {
     $fields = ['code' => ['value' => 'abc', 'given' => true], 'other' => ['value' => '', 'given' => false]];
     expect(UrlTemplate::resolve('/search?[xfgiven_code]q=[xfvalue_code][xfgiven_other]&extra=[xfvalue_other][/xfgiven_other][/xfgiven_code]', true, $fields))
