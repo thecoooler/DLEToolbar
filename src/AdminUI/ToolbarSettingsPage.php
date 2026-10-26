@@ -2,9 +2,9 @@
 
 namespace iCooLER\DLEToolbar\AdminUI;
 
-use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
+use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 
 final class ToolbarSettingsPage
 {

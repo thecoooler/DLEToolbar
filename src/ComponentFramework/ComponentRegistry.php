@@ -2,15 +2,15 @@
 
 namespace iCooLER\DLEToolbar\ComponentFramework;
 
-use iCooLER\DLEToolbar\Components\Response\Response;
-use iCooLER\DLEToolbar\Components\Time\Time;
-use iCooLER\DLEToolbar\Components\Queries\Queries;
-use iCooLER\DLEToolbar\Components\Skin\Skin;
+use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Link\Link;
+use iCooLER\DLEToolbar\Components\Queries\Queries;
+use iCooLER\DLEToolbar\Components\Response\Response;
+use iCooLER\DLEToolbar\Components\Skin\Skin;
+use iCooLER\DLEToolbar\Components\Time\Time;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
-use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 
 /** @phpstan-import-type ComponentId from ToolbarPreferences */
 final class ComponentRegistry

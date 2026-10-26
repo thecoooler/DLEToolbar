@@ -3,8 +3,8 @@
 namespace iCooLER\DLEToolbar\Components\Queries;
 
 use iCooLER\DLEToolbar\ComponentFramework\ConfigurableComponent;
-use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
+use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 
 /**
  * Owns the SQL control and panel inside the toolbar's shadow root.

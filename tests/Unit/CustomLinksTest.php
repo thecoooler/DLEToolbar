@@ -1,8 +1,8 @@
 <?php
 
 use iCooLER\DLEToolbar\AdminUI\ToolbarSettingsPage;
-use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
+use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 
