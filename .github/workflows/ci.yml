@@ -54,6 +54,16 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-dleplugin
+      # dleplugin reuses a downloaded DLE trial indefinitely; a daily key
+      # keeps the tests on the current trial release.
+      - id: today
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/dleplugin/test/dle_trial.zip
+            ~/.cache/dleplugin/test/dle-*
+          key: dle-trial-${{ runner.os }}-${{ steps.today.outputs.date }}
       - run: dleplugin test
   build:
     name: Build plugin
@@ -73,6 +83,8 @@ jobs:
     name: Browser regression
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      PLAYWRIGHT_VERSION: 1.64.1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -84,10 +96,17 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      # The browser revision is fixed by the Playwright version.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+      # Downloads occasionally hang; fail fast so a rerun can retry them.
       - name: Install Playwright
+        timeout-minutes: 3
         run: |
-          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.64.1
-          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" "playwright@$PLAYWRIGHT_VERSION"
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps --only-shell chromium
       - name: Run browser regression
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -322,8 +322,14 @@ class DLEToolbar
         const viewportRight = viewport.left + viewport.width;
         const viewportBottom = viewport.top + viewport.height;
 
+        const content = control.querySelector('template[data-tooltip-content]');
+        if (content) {
+            if (tooltipControl !== control) tooltip.replaceChildren(content.content.cloneNode(true));
+        } else {
+            tooltip.textContent = label;
+        }
         tooltipControl = control;
-        tooltip.textContent = label;
+        control.dispatchEvent(new CustomEvent('dle-toolbar-tooltip-render', { detail: tooltip }));
         tooltip.style.maxWidth = Math.max(0, viewport.width - padding * 2) + 'px';
         const controlRect = control.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
@@ -403,6 +409,12 @@ class DLEToolbar
             restoreTooltip();
         });
     });
+
+    new MutationObserver((changes) => {
+        if (tooltipControl && changes.some((change) => change.target === tooltipControl)) {
+            positionTooltip(tooltipControl);
+        }
+    }).observe(dock, { attributes: true, subtree: true, attributeFilter: ['aria-label'] });
 
     setTheme();
     setTabStop(controls[0]);

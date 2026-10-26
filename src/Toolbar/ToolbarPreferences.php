@@ -73,6 +73,18 @@ final class ToolbarPreferences
         }
         $db->free($result);
 
+        // Saved item order lists every component known at save time; default components added by a later plugin version start enabled.
+        if (isset($values['toolbar'])) {
+            /** @var array{items: list<string>, enabled: list<string>} $toolbar */
+            $toolbar = $values['toolbar'];
+            foreach (self::defaults()['toolbar']['enabled'] as $id) {
+                if (!in_array($id, $toolbar['items'], true)) {
+                    $toolbar['enabled'][] = $id;
+                }
+            }
+            $values['toolbar'] = $toolbar;
+        }
+
         /** @var RawSettings $values */
         return self::$loaded = self::fromConfig($values);
     }

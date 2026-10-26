@@ -17,12 +17,12 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
         'enabled' => ['time', 'queries', 'unknown', ['response']],
     ]]);
 
-    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'editpost'])
+    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'editpost', 'clock'])
         ->and($preferences->visibleItems())->toBe(['queries', 'time']);
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,9 +113,9 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
         ->toBe([]);
 });
@@ -129,8 +129,8 @@ it('persists visibility and order and renders current DLE metrics', function ():
 
     try {
         ToolbarPreferences::fromRequest(['toolbar' => [
-            'items' => ['queries', 'response', 'time'],
-            'enabled' => ['queries', 'response', 'time'],
+            'items' => ['queries', 'clock', 'response', 'time'],
+            'enabled' => ['queries', 'clock', 'response', 'time'],
         ]])->save();
 
         $GLOBALS['Timer'] = new class {
@@ -146,13 +146,14 @@ it('persists visibility and order and renders current DLE metrics', function ():
         ]);
         http_response_code(404);
 
-        expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries', 'response', 'time']);
+        expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries', 'clock', 'response', 'time']);
         $html = (new DLEToolbar())->render();
         preg_match_all('/data-component="([^"]+)"/', $html, $matches);
-        expect($matches[1])->toBe(['response', 'queries', 'time'])
+        expect($matches[1])->toBe(['response', 'queries', 'clock', 'time'])
             ->and($html)->toContain('Количество запросов MySQL: 17')
             ->toContain('HTTP-код ответа: 404')
             ->toContain('data-state="error"')
+            ->toContain('Текущее время (часовой пояс браузера)')
             ->toContain('Время генерации страницы: 125 мс, быстро');
 
         ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['queries', 'response', 'time']]])->save();
@@ -179,7 +180,7 @@ it('renders saved settings with escaped form values and visibility switches', fu
         preg_match('/<tbody id="dlt-component-list">(.*?)<\/tbody>/s', $html, $list);
         preg_match_all('/name="toolbar\[items\]\[\]" value="([^"]+)"/', $list[1], $matches);
 
-        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'editpost'])
+        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'editpost', 'clock'])
             ->and($html)->toContain('action="?mod=dletoolbar&amp;view=&quot;settings&quot;"')
             ->toContain('name="user_hash" value="&lt;token&gt;"')
             ->toContain('Сохранено &lt;успешно&gt;')

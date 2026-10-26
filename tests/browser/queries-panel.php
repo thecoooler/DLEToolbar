@@ -48,14 +48,19 @@ $db = new class {
     {
         return true;
     }
-    private bool $settingsRead = false;
+    private int $settingsRead = 0;
     public function get_row($result = null)
     {
-        if ($this->settingsRead) {
-            return null;
-        }
-        $this->settingsRead = true;
-        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin']])];
+        $rows = [
+            ['setting_key' => 'toolbar', 'setting_value' => json_encode([
+                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'],
+                'enabled' => isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin'],
+            ])],
+            ['setting_key' => 'components', 'setting_value' => json_encode([
+                'clock' => ['show_seconds' => ($_GET['clock'] ?? 'seconds') !== 'minutes'],
+            ])],
+        ];
+        return $rows[$this->settingsRead++] ?? null;
     }
     public function free($result = null) {}
 };
@@ -68,6 +73,8 @@ http_response_code(200);
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
 <?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
+<?php if (!isset($_GET['clock'])): ?>
 <script src="queries-panel.js"></script>
+<?php endif; ?>
 </body>
 </html>
