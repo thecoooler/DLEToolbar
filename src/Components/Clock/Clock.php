@@ -109,7 +109,7 @@ CSS,
             updateNumbers(clock, parts);
             if (seconds) seconds.textContent = parts.second;
             clock.dateTime = formatter.format(now);
-            control.setAttribute('aria-label', fullTimeFormatter.format(now));
+            control.setAttribute('aria-label', 'Текущее время: ' + fullTimeFormatter.format(now));
         };
         updateClock();
         window.setInterval(updateClock, 1000);

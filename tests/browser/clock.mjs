@@ -37,6 +37,8 @@ export async function testClock(browser, url) {
             });
             const initial = await snapshot();
             assert.equal(initial.time, mode === 'seconds' ? '23:59:58' : '23:59');
+            assert.equal(await page.getByRole('group', { name: 'Текущее время: 23:59:58', exact: true }).count(), 1,
+                'Accessible name explains the clock and includes seconds in both display modes');
             assert.deepEqual(initial.animations, [0, 0], 'Initial render has no flip');
             assert.equal(initial.icons, 0, 'Clock has no icon');
             await page.clock.runFor(1000);
@@ -57,7 +59,8 @@ export async function testClock(browser, url) {
             assert.deepEqual(midnight.animations.map((count) => count > 0),
                 reducedMotion === 'reduce' ? [false, false] : [true, true]);
             assert.equal(midnight.tooltipOpen, true);
-            assert.equal(midnight.tooltip, midnight.label, 'Open tooltip updates with the clock');
+            assert.equal(midnight.label, 'Текущее время: ' + midnight.tooltip,
+                'Accessible name updates while the visible tooltip contains only time');
             assert.equal(midnight.tooltip, '00:00:00');
             assert.equal(midnight.tooltipText, '00:00:00');
             assert.deepEqual(midnight.tooltipAnimations.map((count) => count > 0),
@@ -110,7 +113,7 @@ export async function testClock(browser, url) {
             await page.keyboard.press('Tab');
             const focused = await snapshot();
             assert.equal(focused.tooltipOpen, true, 'Keyboard focus opens the time tooltip');
-            assert.equal(focused.tooltip, focused.label);
+            assert.equal(focused.label, 'Текущее время: ' + focused.tooltip);
             console.log(`PASS: clock ${mode}, motion ${reducedMotion}, rollover and animated time tooltip`);
         } finally {
             await page.close();
