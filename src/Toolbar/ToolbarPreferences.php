@@ -74,8 +74,9 @@ final class ToolbarPreferences
             /** @var array{items: list<string>, enabled: list<string>} $toolbar */
             $toolbar = $values['toolbar'];
             foreach (self::defaults()['toolbar']['enabled'] as $id) {
-                if (!in_array($id, $toolbar['items'], true)) $values['toolbar']['enabled'][] = $id;
+                if (!in_array($id, $toolbar['items'], true)) $toolbar['enabled'][] = $id;
             }
+            $values['toolbar'] = $toolbar;
         }
 
         /** @var RawSettings $values */
