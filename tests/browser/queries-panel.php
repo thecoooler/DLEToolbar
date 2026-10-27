@@ -28,7 +28,10 @@ $user_group = [1 => ['group_name' => 'Администраторы', 'allow_admi
 $dle_module = 'main';
 $news_found = false;
 $Timer = new class {
-    public function get(): float { return .125; }
+    public function get(): float
+    {
+        return .125;
+    }
 };
 define('PREFIX', 'dle');
 $db = new class {
@@ -42,12 +45,23 @@ $db = new class {
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
         ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],
     ];
-    public function query($sql, $showError = true) { return true; }
-    private bool $settingsRead = false;
-    public function get_row($result = null) {
-        if ($this->settingsRead) return null;
-        $this->settingsRead = true;
-        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin', 'files']])];
+    public function query($sql, $showError = true)
+    {
+        return true;
+    }
+    private int $settingsRead = 0;
+    public function get_row($result = null)
+    {
+        $rows = [
+            ['setting_key' => 'toolbar', 'setting_value' => json_encode([
+                'items' => ['response', 'time', 'queries', 'files', 'skin', 'cache', 'editpost', 'clock'],
+                'enabled' => isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin', 'files'],
+            ])],
+            ['setting_key' => 'components', 'setting_value' => json_encode([
+                'clock' => ['show_seconds' => ($_GET['clock'] ?? 'seconds') !== 'minutes'],
+            ])],
+        ];
+        return $rows[$this->settingsRead++] ?? null;
     }
     public function free($result = null) {}
 };
@@ -65,6 +79,8 @@ $toolbar->init();
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
 <?= $toolbar->render() ?>
+<?php if (!isset($_GET['clock'])): ?>
 <script src="queries-panel.js"></script>
+<?php endif; ?>
 </body>
 </html>

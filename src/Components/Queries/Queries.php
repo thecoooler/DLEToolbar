@@ -3,8 +3,8 @@
 namespace iCooLER\DLEToolbar\Components\Queries;
 
 use iCooLER\DLEToolbar\ComponentFramework\ConfigurableComponent;
-use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
+use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
 
 /**
  * Owns the SQL control and panel inside the toolbar's shadow root.
@@ -20,12 +20,23 @@ final class Queries implements ConfigurableComponent, RequestComponent
     public static function parameters(): array
     {
         return [
-            'slow_threshold_ms' => Parameter::number('Порог долгого запроса, мс', 20, 0.1, 0.1,
-                'Запросы с длительностью не меньше порога подсвечиваются как долгие.'),
-            'fold_fast' => Parameter::boolean('Сворачивать быстрые запросы', true,
-                'Объединять соседние запросы быстрее 1 мс. Долгие запросы остаются видимыми.'),
-            'trace_sources' => Parameter::boolean('Показывать источник запросов (экспериментально)', false,
-                'Экспериментальная функция для DLE 14.0 и новее: показывает файл, строку вызова и модуль или плагин для запросов после инициализации панели. Заменяет журнал запросов $db->query_list на время обработки страницы; сторонний код, работающий с ним как с массивом, может перестать работать.'),
+            'slow_threshold_ms' => Parameter::number(
+                'Порог долгого запроса, мс',
+                20,
+                0.1,
+                0.1,
+                'Запросы с длительностью не меньше порога подсвечиваются как долгие.',
+            ),
+            'fold_fast' => Parameter::boolean(
+                'Сворачивать быстрые запросы',
+                true,
+                'Объединять соседние запросы быстрее 1 мс. Долгие запросы остаются видимыми.',
+            ),
+            'trace_sources' => Parameter::boolean(
+                'Показывать источник запросов (экспериментально)',
+                false,
+                'Экспериментальная функция для DLE 14.0 и новее: показывает файл, строку вызова и модуль или плагин для запросов после инициализации панели. Заменяет журнал запросов $db->query_list на время обработки страницы; сторонний код, работающий с ним как с массивом, может перестать работать.',
+            ),
         ];
     }
 
@@ -61,7 +72,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
         ];
     }
 
-    private function renderControl(): string {
+    private function renderControl(): string
+    {
         global $db;
         /** @var \db $db */
 
@@ -78,7 +90,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . '</button>';
     }
 
-    private function renderPanel(): string {
+    private function renderPanel(): string
+    {
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
@@ -87,7 +100,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
         /** @var int $queryCount */
         $queryCount = $db->query_num;
 
-        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $format = static function (float $seconds): string {
             $milliseconds = $seconds * 1000;
 
@@ -131,13 +144,13 @@ final class Queries implements ConfigurableComponent, RequestComponent
         }
         // DLE goes first, plugins and modules follow by total time, queries without a call site go last.
         uksort($initiators, static function ($a, $b) use ($initiators): int {
-            $rank = static fn (string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
+            $rank = static fn(string $name): int => $name === 'DLE' ? 0 : ($name === '' ? 2 : 1);
             return [$rank((string) $a), $initiators[$b]['time']] <=> [$rank((string) $b), $initiators[$a]['time']];
         });
         $hues = self::initiatorHues($initiators);
-        $tint = static fn (string $initiator): string => isset($hues[$initiator]) ? ' query-tinted' : '';
-        $hueStyle = static fn (string $initiator): string =>
-            isset($hues[$initiator]) ? ' style="--query-hue: ' . $hues[$initiator] . '"' : '';
+        $tint = static fn(string $initiator): string => isset($hues[$initiator]) ? ' query-tinted' : '';
+        $hueStyle = static fn(string $initiator): string
+            => isset($hues[$initiator]) ? ' style="--query-hue: ' . $hues[$initiator] . '"' : '';
 
         $rows = '';
         $slowCount = 0;
@@ -206,8 +219,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
 
             // Initiators are known only when source tracing recorded call sites.
             if (array_keys($initiators) !== ['']) {
-                $filter = static fn (string $attribute, string $name, int $count, float $time, bool $pressed, string $initiator = ''): string =>
-                    '<button class="query-filter' . $tint($initiator) . '" type="button" ' . $attribute . $hueStyle($initiator)
+                $filter = static fn(string $attribute, string $name, int $count, float $time, bool $pressed, string $initiator = ''): string
+                    => '<button class="query-filter' . $tint($initiator) . '" type="button" ' . $attribute . $hueStyle($initiator)
                     . ' aria-pressed="' . ($pressed ? 'true' : 'false') . '"'
                     . ' title="' . $count . ' ' . self::queriesWord($count) . ', ' . $format($time) . '">'
                     . '<span class="query-filter-name">' . $escape($name) . '</span>'
@@ -216,8 +229,14 @@ final class Queries implements ConfigurableComponent, RequestComponent
                     . $filter('data-query-filter-all', 'Все', $number, $totalTime, true);
                 foreach ($initiators as $name => $total) {
                     $name = (string) $name;
-                    $filters .= $filter('data-query-filter="' . $escape($name) . '"', $name === '' ? 'Без источника' : $name,
-                        $total['count'], $total['time'], false, $name);
+                    $filters .= $filter(
+                        'data-query-filter="' . $escape($name) . '"',
+                        $name === '' ? 'Без источника' : $name,
+                        $total['count'],
+                        $total['time'],
+                        false,
+                        $name,
+                    );
                 }
                 $filters .= '</div>';
             }
@@ -238,9 +257,11 @@ final class Queries implements ConfigurableComponent, RequestComponent
 
     private function renderSource(string $source): string
     {
-        if ($source === '') return '';
+        if ($source === '') {
+            return '';
+        }
 
-        $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return '<span class="query-source"><span class="query-source-label">' . $escape(self::initiator($source)) . '</span>'
             . ' · ' . $escape($source) . '</span>';
     }
@@ -260,8 +281,11 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 'profile_innews', 'register', 'rssinform', 'search', 'show.custom', 'show.full', 'show.related',
                 'show.short', 'sitelogin', 'social', 'static', 'stats', 'tagscloud', 'topnews', 'vote'];
             if ($parts[1] === 'modules') {
-                if (count($parts) >= 4) $label = $parts[2];
-                elseif (!in_array(basename($parts[2], '.php'), $nativeModules, true)) $label = basename($parts[2], '.php');
+                if (count($parts) >= 4) {
+                    $label = $parts[2];
+                } elseif (!in_array(basename($parts[2], '.php'), $nativeModules, true)) {
+                    $label = basename($parts[2], '.php');
+                }
             } elseif (!in_array($parts[1], $nativeDirectories, true)) {
                 $label = count($parts) >= 4 ? $parts[2] : $parts[1];
             }
@@ -283,7 +307,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
         /** @var array<array-key, int> $hues */
         $hues = [];
         foreach (array_keys($initiators) as $index => $name) {
-            if ((string) $name === '') continue;
+            if ((string) $name === '') {
+                continue;
+            }
             if (isset($palette[$index])) {
                 $hues[$name] = $palette[$index];
                 continue;
@@ -292,8 +318,12 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $hue = 75;
             for ($candidate = 75; $candidate <= 345; $candidate++) {
                 $distance = 180;
-                foreach ($hues as $taken) $distance = min($distance, abs($candidate - $taken), 360 - abs($candidate - $taken));
-                if ($distance > $best) [$best, $hue] = [$distance, $candidate];
+                foreach ($hues as $taken) {
+                    $distance = min($distance, abs($candidate - $taken), 360 - abs($candidate - $taken));
+                }
+                if ($distance > $best) {
+                    [$best, $hue] = [$distance, $candidate];
+                }
             }
             $hues[$name] = $hue;
         }
@@ -308,7 +338,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
         return $remainder >= 11 && $remainder <= 14 ? 'запросов' : ($words[$count % 10] ?? 'запросов');
     }
 
-    private function renderQueryCopyButton(): string {
+    private function renderQueryCopyButton(): string
+    {
         return '<button class="query-copy" data-copy-query type="button" title="Скопировать SQL-запрос" aria-label="Скопировать SQL-запрос">'
             . self::icon('copy')
             . '</button>';

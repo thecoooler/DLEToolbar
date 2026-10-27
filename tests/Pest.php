@@ -37,7 +37,10 @@ function setupDleToolbarTestEnvironment(): void
         'version_id' => '18.0',
     ];
     $GLOBALS['Timer'] = new class {
-        public function get(): float { return .125; }
+        public function get(): float
+        {
+            return .125;
+        }
     };
     $GLOBALS['db'] = new ToolbarTestDatabase($GLOBALS['dletoolbar_native_db']);
     $GLOBALS['dle_module'] = 'main';

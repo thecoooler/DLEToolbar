@@ -59,9 +59,13 @@ final class Link implements ConfigurableComponent
             || ($this->scope === 'main' && $dle_module === 'main')
             || ($this->scope === 'category' && $dle_module === 'cat')
             || ($this->scope === 'news' && $isNews);
-        if (!$visible) return null;
+        if (!$visible) {
+            return null;
+        }
         $resolved = UrlTemplate::resolve($this->url, $isNews, NewsFields::values());
-        if ($resolved === '') return null;
+        if ($resolved === '') {
+            return null;
+        }
         $url = htmlspecialchars($resolved, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $label = htmlspecialchars($this->name !== '' ? $this->name : $resolved, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return ['control' => '<a class="control" data-component="link" href="' . $url

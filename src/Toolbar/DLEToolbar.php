@@ -6,21 +6,25 @@ use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\PopupLifecycle;
 use iCooLER\DLEToolbar\Components\Files\FileTimeline;
 
-class DLEToolbar {
+class DLEToolbar
+{
     private ComponentRegistry $components;
     private string $marker;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->components = new ComponentRegistry();
         $this->marker = '<!-- DLEToolbar ' . bin2hex(random_bytes(16)) . ' -->';
     }
 
     /** Per-request placeholder: page content cannot predict it and place the toolbar elsewhere. */
-    public function marker(): string {
+    public function marker(): string
+    {
         return $this->marker;
     }
 
-    public function isHasAccess(): bool {
+    public function isHasAccess(): bool
+    {
         global $member_id;
         /** @var array{user_group: int|string} $member_id */
         $group = (int) $member_id['user_group'];
@@ -30,16 +34,22 @@ class DLEToolbar {
             && ToolbarPreferences::load()->allowsGroup($group);
     }
 
-    public function init(): void {
-        if (!$this->isHasAccess()) return;
+    public function init(): void
+    {
+        if (!$this->isHasAccess()) {
+            return;
+        }
 
         $this->components->initialize(ToolbarPreferences::load());
     }
 
-    public function render(): string {
+    public function render(): string
+    {
         FileTimeline::finish();
         $rendered = $this->components->render(ToolbarPreferences::load());
-        if ($rendered['controls'] === '' && $rendered['hints'] === '') return '';
+        if ($rendered['controls'] === '' && $rendered['hints'] === '') {
+            return '';
+        }
 
         // Native CSS inspired by shadcn/ui; inline icons from Tabler Icons (MIT).
         return strtr(<<<'HTML'
@@ -314,8 +324,14 @@ class DLEToolbar {
         const viewportRight = viewport.left + viewport.width;
         const viewportBottom = viewport.top + viewport.height;
 
+        const content = control.querySelector('template[data-tooltip-content]');
+        if (content) {
+            if (tooltipControl !== control) tooltip.replaceChildren(content.content.cloneNode(true));
+        } else {
+            tooltip.textContent = label;
+        }
         tooltipControl = control;
-        tooltip.textContent = label;
+        control.dispatchEvent(new CustomEvent('dle-toolbar-tooltip-render', { detail: tooltip }));
         tooltip.style.maxWidth = Math.max(0, viewport.width - padding * 2) + 'px';
         const controlRect = control.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
@@ -395,6 +411,12 @@ class DLEToolbar {
             restoreTooltip();
         });
     });
+
+    new MutationObserver((changes) => {
+        if (tooltipControl && changes.some((change) => change.target === tooltipControl)) {
+            positionTooltip(tooltipControl);
+        }
+    }).observe(dock, { attributes: true, subtree: true, attributeFilter: ['aria-label'] });
 
     setTheme();
     setTabStop(controls[0]);

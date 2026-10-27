@@ -5,6 +5,7 @@ use iCooLER\DLEToolbar\Components\Files\Files;
 use iCooLER\DLEToolbar\Components\Files\FileTimeline;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -71,7 +72,7 @@ it('renders escaped executed paths and stage timings without inventing individua
         FileTimeline::checkpoint('Этап <test>');
         FileTimeline::finish();
         $snapshot = FileTimeline::snapshot();
-        $count = count($snapshot['before']) + array_sum(array_map(static fn (array $stage): int => count($stage['files']), $snapshot['stages']));
+        $count = count($snapshot['before']) + array_sum(array_map(static fn(array $stage): int => count($stage['files']), $snapshot['stages']));
         $rendered = $registry->render($preferences);
         expect($rendered['controls'])->toContain('data-component="files"')
             ->toContain('<span class="metric-value">' . $count . '</span>')

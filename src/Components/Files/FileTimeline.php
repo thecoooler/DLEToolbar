@@ -30,7 +30,9 @@ final class FileTimeline
     public static function checkpoint(string $label): void
     {
         $current = self::$current;
-        if ($current === null || $current->finished) return;
+        if ($current === null || $current->finished) {
+            return;
+        }
 
         $now = (float) hrtime(true);
         $files = get_included_files();
@@ -48,7 +50,9 @@ final class FileTimeline
     public static function finish(): void
     {
         self::checkpoint('Сборка main.tpl до вывода панели');
-        if (self::$current !== null) self::$current->finished = true;
+        if (self::$current !== null) {
+            self::$current->finished = true;
+        }
     }
 
     /** @return array{before: list<string>, stages: list<array{label: string, start: float, duration: float, files: list<string>}>} */

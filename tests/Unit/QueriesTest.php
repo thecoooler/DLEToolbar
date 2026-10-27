@@ -2,6 +2,7 @@
 
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 it('keeps the DLE counter distinct from filtered SQL rows and respects time thresholds', function (): void {
@@ -55,7 +56,7 @@ it('explains that DLE 13.x keeps no SQL list instead of reporting an empty page'
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_num = 7;
     $GLOBALS['db']->query_list = [];
-    $render = fn (): string => (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+    $render = fn(): string => (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
 
@@ -187,7 +188,9 @@ it('gives every initiator its own hue away from other hues and the slow-query re
     $hues = array_map('intval', $filters[2]);
     $distances = [];
     foreach ($hues as $index => $hue) {
-        foreach (array_slice($hues, $index + 1) as $other) $distances[] = min(abs($hue - $other), 360 - abs($hue - $other));
+        foreach (array_slice($hues, $index + 1) as $other) {
+            $distances[] = min(abs($hue - $other), 360 - abs($hue - $other));
+        }
     }
 
     expect($filters[1])->toHaveCount(15)
@@ -227,7 +230,7 @@ it('keeps assigning distinct hues outside the slow red for more than 15 initiato
 
     expect($filters[1])->toHaveCount(25)
         ->and(array_unique($hues))->toHaveCount(25)
-        ->and(array_filter($hues, static fn (int $hue): bool => $hue < 75 || $hue > 345))->toBe([]);
+        ->and(array_filter($hues, static fn(int $hue): bool => $hue < 75 || $hue > 345))->toBe([]);
 });
 
 it('escapes initiator names in filters and row attributes', function (): void {

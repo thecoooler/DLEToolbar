@@ -28,7 +28,9 @@ final class EditPost implements ConfigurableComponent
 
     public function render(): ?array
     {
-        if (!$this->canEditPost()) return null;
+        if (!$this->canEditPost()) {
+            return null;
+        }
         global $config;
         /** @var array{http_home_url: string, admin_path: string} $config */
         /** @var positive-int $newsId */
@@ -41,7 +43,8 @@ final class EditPost implements ConfigurableComponent
             . ' aria-label="Редактировать новость">' . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4l4 4M4 20l4 -1L20 7a2.828 2.828 0 0 0 -4 -4L4 15l-1 5z"/></svg>' . '</a>'];
     }
 
-    private function canEditPost(): bool {
+    private function canEditPost(): bool
+    {
         global $dle_module, $news_found, $user_group, $member_id;
         /** @var string $dle_module */
         /** @var bool $news_found */

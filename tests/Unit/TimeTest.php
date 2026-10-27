@@ -1,6 +1,7 @@
 <?php
 
 use iCooLER\DLEToolbar\Components\Time\Time;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -8,10 +9,16 @@ beforeEach(function (): void {
 });
 
 it('keeps the speed indicator consistent with the rounded time at unit and colour boundaries', function (float $ms, string $value, string $unit, string $speed): void {
-    $GLOBALS['Timer'] = new class($ms) {
+    $GLOBALS['Timer'] = new class ($ms) {
         private float $ms;
-        public function __construct(float $ms) { $this->ms = $ms; }
-        public function get(): float { return $this->ms / 1000; }
+        public function __construct(float $ms)
+        {
+            $this->ms = $ms;
+        }
+        public function get(): float
+        {
+            return $this->ms / 1000;
+        }
     };
     $control = (new Time())->render()['control'];
     expect($control)->toContain('data-speed="' . $speed . '"')

@@ -16,6 +16,24 @@ if (!defined('DATALIFEENGINE')) {
         const form = document.getElementById('dlt-settings-form');
         const list = document.getElementById('dlt-component-list');
         const rowFor = (id) => list.querySelector('[data-id="' + id + '"]');
+        const unsavedNotice = document.getElementById('dlt-unsaved-notice');
+        const savedInput = form.querySelector('[name="dlt_saved_state"]');
+        const formState = () => {
+            const state = new URLSearchParams(new FormData(form));
+            state.delete('dlt_saved_state');
+            // Field order outside array values has no effect on saved settings.
+            state.sort();
+            return state.toString();
+        };
+        const savedState = form.hasAttribute('data-validation-failed')
+            ? savedInput.value || null
+            : formState();
+        savedInput.value = savedState || '';
+        const updateUnsaved = () => {
+            const unsaved = formState() !== savedState;
+            unsavedNotice.hidden = !unsaved;
+            form.classList.toggle('dlt-dirty', unsaved);
+        };
         const updateVisibility = (row) => {
             row.classList.toggle('dlt-disabled', !row.querySelector('.switch').checked);
         };
@@ -52,6 +70,7 @@ if (!defined('DATALIFEENGINE')) {
             });
             $(modal).find('select.uniform').selectpicker();
             updateVisibility(row);
+            updateUnsaved();
             $(modal).modal('show');
         };
         const removeComponent = (button) => {
@@ -62,6 +81,7 @@ if (!defined('DATALIFEENGINE')) {
                 $(modal).find('select.uniform').selectpicker('destroy');
                 rowFor(id).remove();
                 $(modal).remove();
+                updateUnsaved();
                 form.querySelector('[data-add-component="' + type + '"]').focus();
             }).modal('hide');
         };
@@ -91,6 +111,8 @@ if (!defined('DATALIFEENGINE')) {
             const remove = event.target.closest('[data-remove-component]');
             if (remove) removeComponent(remove);
         });
+        // Chosen and bootstrap-select report changes as jQuery events only.
+        $(form).on('input change', updateUnsaved);
         list.addEventListener('change', (event) => {
             if (event.target.matches('.switch')) updateVisibility(event.target.closest('tr'));
         });
@@ -98,9 +120,11 @@ if (!defined('DATALIFEENGINE')) {
             animation: 150,
             draggable: '.allow-drag',
             handle: '.dd-handles',
-            ghostClass: 'drop-bg'
+            ghostClass: 'drop-bg',
+            onEnd: updateUnsaved
         });
         [...list.children].forEach(updateVisibility);
+        updateUnsaved();
         const invalidFields = [...form.querySelectorAll('[data-validation-error]')];
         invalidFields.forEach(field => field.setCustomValidity(field.dataset.validationError));
         if (invalidFields.length) invalidFields[0].reportValidity();
