@@ -8,7 +8,7 @@ try {
         [1280, '18.0', '**/engine/ajax/controller.php?mod=dletoolbar_notes'],
         [375, '19.0', '**/index.php?controller=ajax&mod=dletoolbar_notes'],
     ]) {
-        const page = await browser.newPage({ viewport: { width, height: 800 } });
+        const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce' });
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         let notes = [];
@@ -37,6 +37,16 @@ try {
         await page.goto(fixture.href);
         await page.locator('[data-notes-trigger]').click();
         await page.getByText('Заметок пока нет.').waitFor();
+        for (const height of [800, 480]) {
+            await page.setViewportSize({ width, height });
+            const notesBounds = await page.locator('.notes-panel').boundingBox();
+            await page.locator('[data-queries-open]').click();
+            const queryBounds = await page.locator('.query-panel').boundingBox();
+            assert.equal(notesBounds.width, queryBounds.width, `panel widths at ${width}×${height}`);
+            assert.equal(notesBounds.height, queryBounds.height, `panel heights at ${width}×${height}`);
+            await page.locator('[data-notes-trigger]').click();
+        }
+        await page.setViewportSize({ width, height: 800 });
         await page.getByRole('button', { name: 'Добавить', exact: true }).click();
         const title = '<img src=x onerror=alert(1)> ' + 'Длинное название '.repeat(9);
         await page.locator('input[name=title]').fill(title);

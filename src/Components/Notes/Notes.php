@@ -37,7 +37,8 @@ final class Notes implements Component
 </section>
 HTML,
             'styles' => <<<'CSS'
-.notes-panel { pointer-events: auto; width: min(540px, calc(100vw - 24px)); max-height: calc(100dvh - 120px); overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--foreground); box-shadow: var(--shadow); padding: 12px; }
+.notes-panel { pointer-events: auto; width: min(760px, 100%); height: min(560px, calc(100dvh - 96px)); overflow-y: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--foreground); box-shadow: var(--shadow); padding: 12px; }
+@media (max-width: 480px) { .notes-panel { height: min(560px, calc(100dvh - 112px)); border-radius: 12px; } }
 .notes-panel[hidden], .notes-panel [hidden] { display: none; }
 .notes-header, .notes-actions { display: flex; gap: 8px; align-items: center; }
 .notes-header strong { flex: 1; }
