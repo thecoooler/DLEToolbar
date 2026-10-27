@@ -325,6 +325,32 @@
             skinTrigger.removeAttribute('aria-busy');
         }
 
+        const filesButton = root.querySelector('[data-files-open]');
+        const filesPanel = root.querySelector('#dle-toolbar-files-panel');
+        assert(filesPanel.hidden, 'Files panel starts hidden');
+        filesButton.click();
+        assert(!filesPanel.hidden && filesButton.getAttribute('aria-expanded') === 'true', 'Files trigger opens panel');
+        assert(filesPanel.querySelectorAll('details').length === 5, 'Files are grouped before collection and into four stages');
+        assert(filesPanel.textContent.includes('engine/engine.php — подключение'), 'Measured engine inclusion has its own stage');
+        const filesBox = filesPanel.getBoundingClientRect();
+        assert(filesBox.top >= 0 && filesBox.right <= window.innerWidth, 'Files panel fits viewport');
+        const firstGroup = filesPanel.querySelector('details');
+        firstGroup.querySelector('summary').click();
+        assert(firstGroup.open, 'Unmeasured file group can be expanded');
+        filesButton.focus();
+        key(filesButton, 'Escape');
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files Escape closes from trigger and restores focus');
+        filesButton.click();
+        trigger.click();
+        assert(filesPanel.hidden && expanded(), 'SQL opening closes files immediately');
+        filesButton.click();
+        assert(panel.hidden && !filesPanel.hidden, 'Files opening closes SQL immediately');
+        filesPanel.querySelector('[data-files-close]').click();
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files close button restores focus');
+        filesButton.click();
+        document.getElementById('outside').click();
+        assert(filesPanel.hidden, 'Outside click closes files');
+
         window.queriesPanelTestResult = { status: 'PASS', assertions };
         result.textContent = `PASS (${assertions} assertions)`;
     } catch (error) {
