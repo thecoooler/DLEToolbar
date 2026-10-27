@@ -14,9 +14,12 @@ final class Notes implements Component
     public function render(): array
     {
         global $config, $dle_login_hash;
-        /** @var array{http_home_url: string} $config */
+        /** @var array{http_home_url: string, version_id: string} $config */
         /** @var string $dle_login_hash */
-        $endpoint = htmlspecialchars($config['http_home_url'] . 'engine/ajax/controller.php?mod=dletoolbar_notes', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $controller = version_compare($config['version_id'], '19.0', '>=')
+            ? 'index.php?controller=ajax&mod=dletoolbar_notes'
+            : 'engine/ajax/controller.php?mod=dletoolbar_notes';
+        $endpoint = htmlspecialchars($config['http_home_url'] . $controller, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $token = htmlspecialchars($dle_login_hash, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return [
             'control' => '<button type="button" class="control" data-component="notes" data-notes-trigger aria-expanded="false" aria-controls="toolbar-notes" aria-label="Заметки"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8zM16 3v5h5M7 12h10M7 16h6"/></svg></button>',

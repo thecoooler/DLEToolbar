@@ -4,13 +4,16 @@ import assert from 'node:assert/strict';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch({ headless: true });
 try {
-    for (const width of [1280, 375]) {
+    for (const [width, version, endpoint] of [
+        [1280, '18.0', '**/engine/ajax/controller.php?mod=dletoolbar_notes'],
+        [375, '19.0', '**/index.php?controller=ajax&mod=dletoolbar_notes'],
+    ]) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         let notes = [];
         let fail = false;
-        await page.route('**/engine/ajax/controller.php?mod=dletoolbar_notes', async route => {
+        await page.route(endpoint, async route => {
             const input = new URLSearchParams(route.request().postData());
             assert.equal(input.get('user_hash'), 'browser-test-token');
             const action = input.get('action');
@@ -29,7 +32,9 @@ try {
             notes.sort((a, b) => b.pinned - a.pinned || b.id - a.id);
             await route.fulfill({ json: { notes } });
         });
-        await page.goto(process.argv[2] ?? 'http://127.0.0.1:8002/notes-panel.php?test=1#anchor');
+        const fixture = new URL(process.argv[2] ?? 'http://127.0.0.1:8002/notes-panel.php?test=1#anchor');
+        fixture.searchParams.set('dle_version', version);
+        await page.goto(fixture.href);
         await page.locator('[data-notes-trigger]').click();
         await page.getByText('Заметок пока нет.').waitFor();
         await page.getByRole('button', { name: 'Добавить', exact: true }).click();
@@ -43,7 +48,7 @@ try {
         assert.equal(await page.locator('input[name=title]').inputValue(), title);
         await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
         await page.locator('.notes-row').waitFor();
-        assert.equal(notes[0].page_url, '/notes-panel.php?test=1#anchor');
+        assert.equal(notes[0].page_url, fixture.pathname + fixture.search + fixture.hash);
         const row = page.locator('.notes-row');
         const bounds = await row.boundingBox();
         assert.equal(bounds.height, 36);
@@ -67,7 +72,7 @@ try {
         assert.equal(await page.locator('[data-notes-trigger]').getAttribute('aria-expanded'), 'false');
         assert.deepEqual(errors, []);
         await page.close();
-        console.log(`PASS: notes CRUD, pin, binding, retry, escaping, one-line row and Escape at ${width}px`);
+        console.log(`PASS: DLE ${version} notes CRUD, pin, binding, retry, escaping, one-line row and Escape at ${width}px`);
     }
 } finally {
     await browser.close();

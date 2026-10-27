@@ -12,7 +12,7 @@ $user_group = [1 => ['group_name' => 'Администраторы', 'allow_admi
 $preferences = \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['notes']]]);
 $ref = new ReflectionProperty($preferences, 'loaded');
 $ref->setValue(null, $preferences);
-$config = ['skin' => 'Default', 'http_home_url' => '/'];
+$config = ['skin' => 'Default', 'http_home_url' => '/', 'version_id' => $_GET['dle_version'] ?? '18.0'];
 $dle_login_hash = 'browser-test-token';
 ?>
 <!doctype html>

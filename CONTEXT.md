@@ -24,7 +24,8 @@
 `Components/Notes/Notes` выводит компактный список и форму в общем popup панели.
 `NotesActions` обрабатывает список, сохранение, закрепление и удаление через штатный
 `$db`. Точка входа `notes.php` упаковывается в `engine/ajax/dletoolbar_notes.php`
-и вызывается POST-запросом через AJAX-контроллер DLE (`mod=dletoolbar_notes`).
+и вызывается POST-запросом через AJAX-контроллер DLE (`mod=dletoolbar_notes`):
+в DLE 19+ через `index.php?controller=ajax`, в ранних версиях через `engine/ajax/controller.php`.
 Права и видимость компонента проверяются на каждом запросе вместе с CSRF.
 Заметки общие для пользователей панели; схема таблицы добавлена в install и upgrade.
 Текст вставляется в DOM через textContent/value; привязка принимает только локальный

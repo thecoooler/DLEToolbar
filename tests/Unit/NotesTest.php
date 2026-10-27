@@ -59,6 +59,18 @@ it('renders an isolated notes popup without loading notes into page markup', fun
         ->and($render['script'])->toContain('open.title = note.title')->toContain('open = button(note.title')->not->toContain('innerHTML');
 });
 
+it('uses the DLE AJAX controller for the installed version and site directory', function (string $version, string $endpoint): void {
+    $GLOBALS['config']['version_id'] = $version;
+    $GLOBALS['config']['http_home_url'] = 'https://example.test/site/';
+
+    expect((new Notes())->render()['panel'])->toContain('data-endpoint="https://example.test/site/' . $endpoint . '"');
+})->with([
+    'DLE 13' => ['13.0', 'engine/ajax/controller.php?mod=dletoolbar_notes'],
+    'DLE 18' => ['18.0', 'engine/ajax/controller.php?mod=dletoolbar_notes'],
+    'DLE 19' => ['19.0', 'index.php?controller=ajax&amp;mod=dletoolbar_notes'],
+    'DLE 21' => ['21.0', 'index.php?controller=ajax&amp;mod=dletoolbar_notes'],
+]);
+
 it('serves notes through the AJAX entry and reports request and database errors', function (string $method, array $input, ?string $failQuery, int $status, string $key): void {
     $previousPost = $_POST;
     $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
