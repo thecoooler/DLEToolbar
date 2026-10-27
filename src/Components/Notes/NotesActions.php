@@ -49,11 +49,15 @@ final class NotesActions
             } else {
                 $sql = "DELETE FROM $table WHERE id = $id";
             }
-            if ($db->query($sql, false) === false) throw new \RuntimeException('Failed to change toolbar note.');
+            if ($db->query($sql, false) === false) {
+                throw new \RuntimeException('Failed to change toolbar note.');
+            }
         }
 
         $result = $db->query("SELECT id, title, body, page_url, pinned FROM $table ORDER BY pinned DESC, updated_at DESC, id DESC", false);
-        if ($result === false) throw new \RuntimeException('Failed to load toolbar notes.');
+        if ($result === false) {
+            throw new \RuntimeException('Failed to load toolbar notes.');
+        }
         $notes = [];
         while ($row = $db->get_row($result)) {
             /** @var array{id: int|string, title: string, body: string, page_url: string, pinned: int|string} $row */

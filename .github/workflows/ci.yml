@@ -11,6 +11,18 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  format:
+    name: PHP code style
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check formatting
+        run: |
+          docker run --rm -v "$PWD":/code -w /code \
+            ghcr.io/php-cs-fixer/php-cs-fixer:3.95.27-php8.4 check --diff --show-progress=none
   static:
     name: Static analysis (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-24.04
@@ -52,7 +64,7 @@ jobs:
             ~/.cache/dleplugin/test/dle_trial.zip
             ~/.cache/dleplugin/test/dle-*
           key: dle-trial-${{ runner.os }}-${{ steps.today.outputs.date }}
-      - run: dleplugin test
+      - run: dleplugin test --coverage-min 97
   build:
     name: Build plugin
     runs-on: ubuntu-24.04

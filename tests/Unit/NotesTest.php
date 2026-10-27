@@ -3,6 +3,7 @@
 use iCooLER\DLEToolbar\Components\Notes\Notes;
 use iCooLER\DLEToolbar\Components\Notes\NotesActions;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -16,7 +17,7 @@ afterEach(function (): void {
 
 it('creates edits pins and deletes shared notes with optional page links', function (): void {
     $api = new NotesActions();
-    $call = fn (array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
+    $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
     expect($call([])['notes'])->toBe([]);
     $first = $call(['action' => 'save', 'title' => '  Проверить <шапку>  ', 'body' => "Текст\nзаметки", 'page_url' => '/news.html?x=1#header'])['notes'][0];
     expect($first['title'])->toBe('Проверить <шапку>')->and($first['page_url'])->toBe('/news.html?x=1#header');
@@ -57,3 +58,33 @@ it('renders an isolated notes popup without loading notes into page markup', fun
         ->and($render['styles'])->toContain('text-overflow: ellipsis; white-space: nowrap')
         ->and($render['script'])->toContain('open.title = note.title')->toContain('open = button(note.title')->not->toContain('innerHTML');
 });
+
+it('serves notes through the AJAX entry and reports request and database errors', function (string $method, array $input, ?string $failQuery, int $status, string $key): void {
+    $previousPost = $_POST;
+    $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+    $_SERVER['REQUEST_METHOD'] = $method;
+    $_POST = $input;
+    $GLOBALS['db']->failQuery = $failQuery;
+    try {
+        ob_start();
+        require ENGINE_DIR . '/ajax/dletoolbar_notes.php';
+        $response = json_decode(ob_get_clean(), true, 512, JSON_THROW_ON_ERROR);
+        expect(http_response_code())->toBe($status)->and($response)->toHaveKey($key);
+        if ($status === 200) {
+            expect($response['notes'])->toHaveCount(1)->and($response['notes'][0]['title'])->toBe('Через AJAX');
+        }
+    } finally {
+        $_POST = $previousPost;
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
+    }
+})->with([
+    'save' => ['POST', ['user_hash' => 'test-user-hash', 'action' => 'save', 'title' => 'Через AJAX'], null, 200, 'notes'],
+    'invalid token' => ['POST', ['user_hash' => 'wrong'], null, 403, 'error'],
+    'wrong method' => ['GET', [], null, 405, 'error'],
+    'read failure' => ['POST', ['user_hash' => 'test-user-hash'], 'SELECT id, title', 500, 'error'],
+    'write failure' => ['POST', ['user_hash' => 'test-user-hash', 'action' => 'save', 'title' => 'Ошибка'], 'INSERT INTO `' . PREFIX . '_dletoolbar_notes`', 500, 'error'],
+]);

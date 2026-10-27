@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { testClock } from './clock.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -62,6 +63,7 @@ try {
     const printDisplay = await page.evaluate(() => getComputedStyle(document.querySelector('[data-dle-toolbar]')).display);
     console.log(`print display: ${printDisplay}`);
     if (printDisplay !== 'none') process.exitCode = 1;
+    await testClock(browser, url);
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;

@@ -44,6 +44,15 @@ dleplugin static                     # статический анализ дл�
 dleplugin static --php-version 7.4   # статический анализ для PHP 7.4
 ```
 
+PHP-код форматируется [PHP-CS-Fixer](https://cs.symfony.com/) по стандарту
+PER-CS, настройки — в [.php-cs-fixer.dist.php](.php-cs-fixer.dist.php).
+CI проверяет форматирование, поэтому перед коммитом выполните:
+
+```sh
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/code -w /code \
+  ghcr.io/php-cs-fixer/php-cs-fixer:3.95.27-php8.4 fix
+```
+
 Новое поведение покрывайте тестами в `tests/`. Изменения SQL-панели проверяет
 браузерный тест `tests/browser/`. CI запускает все проверки для каждого PR;
 PR сливается только при зелёном CI.
