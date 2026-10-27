@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 export async function testClock(browser, url) {
     for (const [mode, reducedMotion] of [
-        ['seconds', 'no-preference'], ['minutes', 'no-preference'], ['minutes', 'reduce'],
+        ['seconds', 'no-preference'], ['minutes', 'no-preference'], ['minutes', 'reduce'], ['seconds', 'reduce'],
     ]) {
         const page = await browser.newPage({ timezoneId: 'UTC', reducedMotion });
         try {
@@ -21,7 +21,7 @@ export async function testClock(browser, url) {
                     label: element.getAttribute('aria-label'),
                     hours: time.querySelector('[data-clock-part="hour"] [data-clock-current]').textContent,
                     minutes: time.querySelector('[data-clock-part="minute"] [data-clock-current]').textContent,
-                    seconds: time.querySelector('[data-clock-part="second"]')?.textContent,
+                    seconds: time.querySelector('[data-clock-part="second"] [data-clock-current]')?.textContent,
                     animations: [...time.querySelectorAll('.clock-number')]
                         .map((number) => number.getAnimations({ subtree: true }).length),
                     tooltip: root.querySelector('[data-clock-tooltip]')?.dateTime,
@@ -35,14 +35,19 @@ export async function testClock(browser, url) {
                     icons: element.querySelectorAll('svg').length,
                 };
             });
+            await control.evaluate((element) => element.querySelectorAll('.clock-number').forEach((number) => {
+                number.getAnimations({ subtree: true }).forEach((animation) => animation.finish());
+            }));
             const initial = await snapshot();
             assert.equal(initial.time, mode === 'seconds' ? '23:59:58' : '23:59');
             assert.equal(await page.getByRole('group', { name: 'Текущее время: 23:59:58', exact: true }).count(), 1,
                 'Accessible name explains the clock and includes seconds in both display modes');
-            assert.deepEqual(initial.animations, [0, 0], 'Initial render has no flip');
+            assert.deepEqual(initial.animations, mode === 'seconds' ? [0, 0, 0] : [0, 0], 'Initial render has no flip');
             assert.equal(initial.icons, 0, 'Clock has no icon');
             await page.clock.runFor(1000);
-            assert.deepEqual((await snapshot()).animations, [0, 0], 'Second ticks do not flip hours or minutes');
+            assert.deepEqual((await snapshot()).animations.map((count) => count > 0),
+                mode === 'seconds' ? [false, false, reducedMotion !== 'reduce'] : [false, false],
+                'Only visible seconds animate on a second tick');
             await control.hover();
             await page.clock.runFor(350);
             const hovered = await snapshot();
@@ -57,7 +62,7 @@ export async function testClock(browser, url) {
             assert.equal(midnight.minutes, '00');
             assert.equal(midnight.seconds, mode === 'seconds' ? '00' : undefined);
             assert.deepEqual(midnight.animations.map((count) => count > 0),
-                reducedMotion === 'reduce' ? [false, false] : [true, true]);
+                Array(mode === 'seconds' ? 3 : 2).fill(reducedMotion !== 'reduce'));
             assert.equal(midnight.tooltipOpen, true);
             assert.equal(midnight.label, 'Текущее время: ' + midnight.tooltip,
                 'Accessible name updates while the visible tooltip contains only time');
@@ -84,7 +89,7 @@ export async function testClock(browser, url) {
                         clipped: getComputedStyle(number).overflow === 'hidden',
                     };
                 }));
-                assert.equal(positions.length, 5);
+                assert.equal(positions.length, mode === 'seconds' ? 6 : 5);
                 assert.ok(positions.every(({ oldBelow, newAbove, clipped }) => oldBelow && newAbove && clipped),
                     'In the clock and tooltip, old numbers fall below while new numbers enter from above');
             }
@@ -94,6 +99,8 @@ export async function testClock(browser, url) {
             }));
             await page.clock.runFor(1000);
             const second = await snapshot();
+            assert.deepEqual(second.animations.map((count) => count > 0),
+                mode === 'seconds' ? [false, false, reducedMotion !== 'reduce'] : [false, false]);
             assert.equal(second.tooltip, '00:00:01', 'Tooltip seconds advance in both modes');
             assert.deepEqual(second.tooltipAnimations.map((count) => count > 0),
                 reducedMotion === 'reduce' ? [false, false, false] : [false, false, true],
