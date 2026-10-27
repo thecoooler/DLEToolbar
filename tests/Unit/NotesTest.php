@@ -30,6 +30,17 @@ it('creates edits pins and deletes shared notes with optional page links', funct
     expect($call(['action' => 'delete', 'id' => $second['id']])['notes'])->toBe([]);
 });
 
+it('saves pin changes together with the note and keeps existing pin state when omitted', function (): void {
+    $api = new NotesActions();
+    $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
+    $note = $call(['action' => 'save', 'title' => 'Закрепить', 'pinned' => '1'])['notes'][0];
+    expect($note['pinned'])->toBe(1);
+    $note = $call(['action' => 'save', 'id' => $note['id'], 'title' => 'Изменено'])['notes'][0];
+    expect($note['pinned'])->toBe(1);
+    $note = $call(['action' => 'save', 'id' => $note['id'], 'title' => 'Открепить', 'pinned' => '0'])['notes'][0];
+    expect($note['pinned'])->toBe(0);
+});
+
 it('rejects unauthorized requests and hidden components without reading notes', function (): void {
     $api = new NotesActions();
     expect($api->handle(['user_hash' => 'wrong']))->toHaveKey('error');

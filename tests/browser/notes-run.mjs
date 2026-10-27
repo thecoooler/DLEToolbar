@@ -25,7 +25,7 @@ try {
                 const id = Number(input.get('id')) || notes.length + 1;
                 const old = notes.find(note => note.id === id);
                 notes = notes.filter(note => note.id !== id);
-                notes.push({ id, title: input.get('title'), body: input.get('body'), page_url: input.get('page_url'), pinned: old?.pinned || 0 });
+                notes.push({ id, title: input.get('title'), body: input.get('body'), page_url: input.get('page_url'), pinned: Number(input.get('pinned') ?? old?.pinned ?? 0) });
             }
             if (action === 'pin') notes.find(note => note.id === Number(input.get('id'))).pinned = Number(input.get('pinned'));
             if (action === 'delete') notes = notes.filter(note => note.id !== Number(input.get('id')));
@@ -51,7 +51,8 @@ try {
         const title = '<img src=x onerror=alert(1)> ' + 'Длинное название '.repeat(9);
         await page.locator('input[name=title]').fill(title);
         await page.locator('textarea').fill('Текст\nзаметки <script>alert(1)</script>');
-        await page.locator('input[type=checkbox]').check();
+        await page.locator('input[name=bind]').check();
+        await page.locator('input[name=pinned]').check();
         fail = true;
         await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
         await page.getByText('Ошибка сохранения', { exact: true }).waitFor();
@@ -64,16 +65,38 @@ try {
         assert.equal(bounds.height, 36);
         assert(bounds.width <= width - 24);
         assert.equal(await page.locator('.notes-panel img, .notes-panel script').count(), 0);
-        await page.locator('.notes-pin').click();
-        await page.locator('.notes-pin[aria-pressed=true]').waitFor();
+        assert.equal(await row.locator('a, .notes-pin').count(), 0);
+        assert.equal(await row.evaluate(element => getComputedStyle(element).borderBottomWidth), '0px');
+        const firstBorder = await row.evaluate(element => {
+            const extra = element.cloneNode(true);
+            element.parentElement.append(extra);
+            const width = getComputedStyle(element).borderBottomWidth;
+            extra.remove();
+            return width;
+        });
+        assert.equal(firstBorder, '1px');
+        await page.locator('.notes-title').hover();
+        const colors = await row.evaluate(element => ({
+            row: getComputedStyle(element).backgroundColor,
+            title: getComputedStyle(element.querySelector('.notes-title')).backgroundColor,
+            remove: getComputedStyle(element.querySelector('.notes-delete')).backgroundColor,
+        }));
+        assert.equal(colors.row, 'rgb(244, 244, 245)');
+        assert.equal(colors.title, 'rgba(0, 0, 0, 0)');
+        assert.equal(colors.remove, 'rgba(0, 0, 0, 0)');
+        await page.locator('.notes-delete').hover();
+        assert.equal(await row.evaluate(element => getComputedStyle(element).backgroundColor), colors.row);
         await page.locator('.notes-title').click();
         assert.equal(await page.locator('textarea').inputValue(), 'Текст\nзаметки <script>alert(1)</script>');
+        assert.equal(await page.locator('input[name=pinned]').isChecked(), true);
+        assert.equal(await page.locator('.notes-page').getAttribute('href'), fixture.pathname + fixture.search + fixture.hash);
         await page.locator('input[name=title]').fill('Исправлено');
-        await page.locator('input[type=checkbox]').uncheck();
+        await page.locator('input[name=bind]').uncheck();
+        await page.locator('input[name=pinned]').uncheck();
         await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
         await page.getByRole('button', { name: 'Исправлено', exact: true }).waitFor();
         assert.equal(notes[0].page_url, '');
-        assert.equal(notes[0].pinned, 1);
+        assert.equal(notes[0].pinned, 0);
         page.on('dialog', dialog => dialog.accept());
         await page.locator('.notes-delete').click();
         await page.getByText('Заметок пока нет.').waitFor();

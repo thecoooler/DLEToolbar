@@ -42,6 +42,10 @@ final class NotesActions
                 $body = $db->safesql($body);
                 $url = $db->safesql($url);
                 $values = "title = '$title', body = '$body', page_url = '$url', updated_at = CURRENT_TIMESTAMP";
+                if (array_key_exists('pinned', $input)) {
+                    $pinned = $input['pinned'] === '1' ? 1 : 0;
+                    $values .= ", pinned = $pinned";
+                }
                 $sql = $id === 0 ? "INSERT INTO $table SET $values" : "UPDATE $table SET $values WHERE id = $id";
             } elseif ($action === 'pin') {
                 $pinned = ($input['pinned'] ?? '') === '1' ? 1 : 0;

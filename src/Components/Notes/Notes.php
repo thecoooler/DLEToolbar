@@ -30,6 +30,7 @@ final class Notes implements Component
 <form class="notes-form" hidden>
 <label>Название<input name="title" maxlength="200" required autocomplete="off"></label>
 <label>Текст<textarea name="body" rows="6" maxlength="20000"></textarea></label>
+<label class="notes-binding"><input type="checkbox" name="pinned"> Закрепить заметку</label>
 <label class="notes-binding"><input type="checkbox" name="bind"> Привязать к текущей странице</label>
 <a class="notes-page" hidden target="_blank" rel="noopener">Открыть связанную страницу ↗</a>
 <div class="notes-actions"><button type="submit">Сохранить</button><button type="button" data-notes-cancel>Отмена</button></div>
@@ -49,10 +50,11 @@ HTML,
 .notes-status { margin: 8px 0; color: var(--muted); font-size: 12px; }
 .notes-status:empty { display: none; }
 .notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); }
+.notes-row:hover { background: var(--hover); }
+.notes-row:last-child { border-bottom: 0; }
+.notes-panel .notes-row button, .notes-panel .notes-row button:hover { background: transparent; }
 .notes-row .notes-title { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
-.notes-row .notes-pin, .notes-row .notes-delete { flex: 0 0 30px; padding: 4px; border: 0; }
-.notes-pin[aria-pressed="true"] { background: var(--hover); color: var(--foreground); }
-.notes-row a { flex: 0 0 auto; color: var(--muted); text-decoration: none; padding: 4px; }
+.notes-row .notes-delete { flex: 0 0 30px; padding: 4px; border: 0; }
 .notes-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .notes-form label { display: flex; flex-direction: column; gap: 5px; }
 .notes-form input:not([type="checkbox"]), .notes-form textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--foreground); padding: 8px; font: inherit; }
@@ -69,6 +71,7 @@ CSS,
     const title = form.elements.namedItem('title');
     const body = form.elements.namedItem('body');
     const bind = form.elements.namedItem('bind');
+    const pinned = form.elements.namedItem('pinned');
     const page = form.querySelector('.notes-page');
     const status = panel.querySelector('.notes-status');
     const add = panel.querySelector('[data-notes-add]');
@@ -88,6 +91,7 @@ CSS,
         form.reset();
         title.value = note ? note.title : '';
         body.value = note ? note.body : '';
+        pinned.checked = !!(note && note.pinned);
         bind.checked = !!(note && note.page_url);
         bind.parentElement.lastChild.textContent = note && note.page_url ? ' Привязать к странице: ' + note.page_url : ' Привязать к текущей странице';
         page.hidden = !note || !note.page_url;
@@ -111,19 +115,9 @@ CSS,
         notes.forEach((note) => {
             const row = document.createElement('div');
             row.className = 'notes-row';
-            const pin = button('⌖', 'notes-pin', () => request('pin', { id: note.id, pinned: note.pinned ? '0' : '1' }));
-            pin.setAttribute('aria-pressed', note.pinned ? 'true' : 'false');
-            pin.setAttribute('aria-label', (note.pinned ? 'Открепить: ' : 'Закрепить: ') + note.title);
             const open = button(note.title, 'notes-title', () => edit(note));
             open.title = note.title;
-            row.append(pin, open);
-            if (note.page_url) {
-                const link = document.createElement('a');
-                link.href = note.page_url;
-                link.textContent = '↗';
-                link.setAttribute('aria-label', 'Связанная страница: ' + note.page_url);
-                row.append(link);
-            }
+            row.append(open);
             const remove = button('×', 'notes-delete', () => {
                 if (window.confirm('Удалить заметку «' + note.title + '»?')) request('delete', { id: note.id });
             });
@@ -168,7 +162,7 @@ CSS,
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         request('save', { id: editing ? editing.id : 0, title: title.value, body: body.value,
-            page_url: bind.checked ? (editing && editing.page_url ? editing.page_url : currentPage()) : '' });
+            pinned: pinned.checked ? '1' : '0', page_url: bind.checked ? (editing && editing.page_url ? editing.page_url : currentPage()) : '' });
     });
     panel.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') { event.preventDefault(); popup.close({ restoreFocus: true }); }
