@@ -192,7 +192,7 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
     $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
     $previousScripts = $GLOBALS['js_array'] ?? [];
     $_SERVER['REQUEST_METHOD'] = 'POST';
-    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'],
+    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'], 'dlt_saved_state' => 'saved&value="test"',
         'instances' => [$a => 'link', $b => 'link'],
         'access' => ['groups' => [2, 3]],
         'toolbar' => ['items' => [$b, 'queries', $a], 'enabled' => [$b, 'queries']],
@@ -233,9 +233,11 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
         $xpath = new DOMXPath($dom);
         $order = $xpath->query('//tbody[@id="dlt-component-list"]/tr/@data-id');
         expect([$order[0]->value, $order[1]->value, $order[2]->value])->toBe([$b, 'queries', $a]);
-        expect($xpath->query('//input[@name="toolbar[enabled][]" and @value="' . $a . '" and @checked]')->length)->toBe(0)
-            ->and($xpath->query('//input[@name="toolbar[enabled][]" and @value="' . $b . '" and @checked]')->length)->toBe(1)
-            ->and($xpath->query('//input[@name="components[queries][fold_fast]" and @type="checkbox" and @checked]')->length)->toBe(0);
+        expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $a . '" and @checked]')->length)->toBe(0)
+            ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $b . '" and @checked]')->length)->toBe(1)
+            ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="components[queries][fold_fast]" and @type="checkbox" and @checked]')->length)->toBe(0);
+        expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="dlt_saved_state"]')->item(0)->getAttribute('value'))
+            ->toBe('saved&value="test"');
         ToolbarPreferences::resetRequestCache();
         expect(ToolbarPreferences::load()->toConfig())->toBe($old->toConfig());
     } finally {
