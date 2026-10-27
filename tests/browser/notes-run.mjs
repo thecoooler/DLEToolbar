@@ -40,10 +40,25 @@ try {
         for (const height of [800, 480]) {
             await page.setViewportSize({ width, height });
             const notesBounds = await page.locator('.notes-panel').boundingBox();
+            const notesHeader = await page.locator('.notes-header').evaluate(element => {
+                const header = getComputedStyle(element);
+                const title = getComputedStyle(element.querySelector('h2'));
+                const close = getComputedStyle(element.querySelector('[data-notes-close]'));
+                return [header.height, header.padding, header.gap, header.borderBottomWidth,
+                    title.font, title.letterSpacing, close.width, close.height, close.borderRadius];
+            });
             await page.locator('[data-queries-open]').click();
             const queryBounds = await page.locator('.query-panel').boundingBox();
+            const queryHeader = await page.locator('.query-header').evaluate(element => {
+                const header = getComputedStyle(element);
+                const title = getComputedStyle(element.querySelector('h2'));
+                const close = getComputedStyle(element.querySelector('[data-query-close]'));
+                return [header.height, header.padding, header.gap, header.borderBottomWidth,
+                    title.font, title.letterSpacing, close.width, close.height, close.borderRadius];
+            });
             assert.equal(notesBounds.width, queryBounds.width, `panel widths at ${width}×${height}`);
             assert.equal(notesBounds.height, queryBounds.height, `panel heights at ${width}×${height}`);
+            assert.deepEqual(notesHeader, queryHeader, `panel headers at ${width}×${height}`);
             await page.locator('[data-notes-trigger]').click();
         }
         await page.setViewportSize({ width, height: 800 });
@@ -75,6 +90,21 @@ try {
             return width;
         });
         assert.equal(firstBorder, '1px');
+        const scroll = await row.evaluate(element => {
+            const list = element.parentElement;
+            const content = list.closest('.notes-content');
+            const header = content.previousElementSibling;
+            const top = header.getBoundingClientRect().top;
+            const copies = Array.from({ length: 30 }, () => element.cloneNode(true));
+            list.append(...copies);
+            content.scrollTop = content.scrollHeight;
+            const result = { scrollTop: content.scrollTop, headerTop: header.getBoundingClientRect().top, top };
+            copies.forEach(copy => copy.remove());
+            content.scrollTop = 0;
+            return result;
+        });
+        assert(scroll.scrollTop > 0);
+        assert.equal(scroll.headerTop, scroll.top);
         await page.locator('.notes-title').hover();
         const colors = await row.evaluate(element => ({
             row: getComputedStyle(element).backgroundColor,
