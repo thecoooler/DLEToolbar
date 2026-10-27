@@ -53,27 +53,28 @@ HTML,
 .notes-close svg { width: 16px; height: 16px; }
 .notes-panel button:disabled { opacity: .5; cursor: wait; }
 .notes-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
-.notes-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 18px; }
-.notes-status { margin: 8px 0; color: var(--muted); font-size: 12px; }
+.notes-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px; }
+.notes-status { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .notes-status:empty { display: none; }
-.notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); }
+.notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); border-radius: 6px; transition: background-color 140ms ease; }
 .notes-row:hover { background: var(--hover); }
 .notes-row:last-child { border-bottom: 0; }
 .notes-panel .notes-row button, .notes-panel .notes-row button:hover { background: transparent; }
 .notes-row .notes-title { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
 .notes-row .notes-delete { flex: 0 0 30px; padding: 4px; border: 0; }
-.notes-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.notes-form { display: flex; flex-direction: column; gap: 12px; }
 .notes-form label { display: flex; flex-direction: column; gap: 5px; }
 .notes-form input:not([type="checkbox"]), .notes-form textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--foreground); padding: 8px; font: inherit; }
+.notes-form input:not([type="checkbox"]):focus, .notes-form input:not([type="checkbox"]):focus-visible, .notes-form textarea:focus, .notes-form textarea:focus-visible { outline: none; }
 .notes-form textarea { resize: vertical; }
 .notes-form .notes-binding { flex-direction: row; align-items: center; }
 .notes-page { color: var(--foreground); overflow-wrap: anywhere; }
 @media (max-width: 480px) {
     .notes-panel { height: min(560px, calc(100dvh - 112px)); border-radius: 12px; }
     .notes-header { gap: 8px; padding: 11px 12px; }
-    .notes-content { padding-left: 12px; padding-right: 12px; }
+    .notes-content { padding: 12px; }
 }
-@media (prefers-reduced-motion: reduce) { .notes-panel .notes-close { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .notes-panel .notes-close, .notes-row { transition: none; } }
 CSS,
             'script' => <<<'JS'
 (() => {

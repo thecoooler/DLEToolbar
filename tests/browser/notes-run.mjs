@@ -63,6 +63,8 @@ try {
         }
         await page.setViewportSize({ width, height: 800 });
         await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+        assert.equal(await page.locator('input[name=title]').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
+        assert.equal(await page.locator('textarea').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
         const title = '<img src=x onerror=alert(1)> ' + 'Длинное название '.repeat(9);
         await page.locator('input[name=title]').fill(title);
         await page.locator('textarea').fill('Текст\nзаметки <script>alert(1)</script>');
@@ -82,6 +84,14 @@ try {
         assert.equal(await page.locator('.notes-panel img, .notes-panel script').count(), 0);
         assert.equal(await row.locator('a, .notes-pin').count(), 0);
         assert.equal(await row.evaluate(element => getComputedStyle(element).borderBottomWidth), '0px');
+        assert.equal(await row.evaluate(element => getComputedStyle(element).borderRadius), '6px');
+        const contentPadding = await page.locator('.notes-content').evaluate(element => {
+            const style = getComputedStyle(element);
+            return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
+        });
+        assert.equal(contentPadding[0], contentPadding[1]);
+        assert.equal(contentPadding[1], contentPadding[2]);
+        assert.equal(contentPadding[2], contentPadding[3]);
         const firstBorder = await row.evaluate(element => {
             const extra = element.cloneNode(true);
             element.parentElement.append(extra);
