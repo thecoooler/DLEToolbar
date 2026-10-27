@@ -5,6 +5,7 @@
 // Open: http://127.0.0.1:8001/queries-panel.php
 // The page reports PASS/FAIL and exposes window.queriesPanelTestResult.
 
+define('ROOT_DIR', dirname(__DIR__, 2));
 define('ENGINE_DIR', sys_get_temp_dir() . '/dletoolbar-browser-' . getmypid());
 
 spl_autoload_register(static function (string $class): void {
@@ -46,11 +47,16 @@ $db = new class {
     public function get_row($result = null) {
         if ($this->settingsRead) return null;
         $this->settingsRead = true;
-        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin']])];
+        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin', 'files']])];
     }
     public function free($result = null) {}
 };
 http_response_code(200);
+$toolbar = new \iCooLER\DLEToolbar\Toolbar\DLEToolbar();
+$toolbar->init();
+\iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('Подготовка DLE после проверки доступа');
+\iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('engine/engine.php — подключение');
+\iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('Блоки страницы после engine.php');
 ?>
 <!doctype html>
 <html lang="ru">
@@ -58,7 +64,7 @@ http_response_code(200);
 <body>
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
-<?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
+<?= $toolbar->render() ?>
 <script src="queries-panel.js"></script>
 </body>
 </html>

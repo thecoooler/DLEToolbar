@@ -33,10 +33,13 @@ function runRequest(array $vars, ?string $xfields = ''): array
     try {
         $vars = runIntegrationPatch('engine/init.php', 0, $vars);
         $vars = runIntegrationPatch('engine/init.php', 1, $vars);
+        $vars = runIntegrationPatch('engine/init.php', 2, $vars);
         $vars['row'] = ['xfields' => $xfields];
         $vars['GLOBALS_toolbar'] = $vars['DLEToolbar'];
         $GLOBALS['DLEToolbar'] = $vars['DLEToolbar'];
         $vars = runIntegrationPatch('engine/modules/show.full.php', 0, $vars);
+        $vars = runIntegrationPatch('engine/init.php', 3, $vars);
+        $vars = runIntegrationPatch('engine/init.php', 4, $vars);
         $vars['ajax'] = '';
         $vars = runIntegrationPatch('engine/modules/main.php', 0, $vars);
         $GLOBALS['tpl'] = (object) ['result' => ['main' => '<main>' . $vars['ajax'] . '</main>']];
@@ -58,7 +61,7 @@ beforeEach(function (): void {
 });
 
 it('extracts every integration patch from the patch list', function (): void {
-    expect(integrationPatches('engine/init.php'))->toHaveCount(2)
+    expect(integrationPatches('engine/init.php'))->toHaveCount(5)
         ->and(integrationPatches('engine/modules/show.full.php'))->toHaveCount(1)
         ->and(integrationPatches('engine/modules/main.php'))->toHaveCount(2);
 });

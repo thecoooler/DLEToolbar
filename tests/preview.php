@@ -6,6 +6,7 @@
  * Then open http://127.0.0.1:8000/?n=8
  */
 
+define('ROOT_DIR', dirname(__DIR__));
 define('ENGINE_DIR', sys_get_temp_dir() . '/dletoolbar-preview-' . getmypid());
 
 spl_autoload_register(static function (string $class): void {

@@ -20,6 +20,36 @@ try {
   error_log('[DLEToolbar] initialization: ' . $error);
 }
 PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('Подготовка DLE после проверки доступа');
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('engine/engine.php — подключение');
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Files\FileTimeline::checkpoint('Блоки страницы после engine.php');
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
     ],
     'engine/modules/show.full.php' => [
         <<<'PHP'

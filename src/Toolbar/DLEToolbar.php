@@ -4,6 +4,7 @@ namespace iCooLER\DLEToolbar\Toolbar;
 
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\PopupLifecycle;
+use iCooLER\DLEToolbar\Components\Files\FileTimeline;
 
 class DLEToolbar {
     private ComponentRegistry $components;
@@ -36,6 +37,7 @@ class DLEToolbar {
     }
 
     public function render(): string {
+        FileTimeline::finish();
         $rendered = $this->components->render(ToolbarPreferences::load());
         if ($rendered['controls'] === '' && $rendered['hints'] === '') return '';
 
