@@ -73,7 +73,7 @@ http_response_code(200);
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
 <?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
-<?php if (!isset($_GET['clock'])): ?>
+<?php if (!isset($_GET['clock']) && !isset($_GET['navigation-test'])): ?>
 <script src="queries-panel.js"></script>
 <?php endif; ?>
 </body>

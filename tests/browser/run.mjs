@@ -64,6 +64,45 @@ try {
     console.log(`print display: ${printDisplay}`);
     if (printDisplay !== 'none') process.exitCode = 1;
     await testClock(browser, url);
+
+    // Switching after a login response must use GET, even when the URL has a fragment.
+    const loginPage = await browser.newPage();
+    const requests = [];
+    loginPage.on('request', request => {
+        if (request.isNavigationRequest()) requests.push(request);
+    });
+    loginPage.on('dialog', dialog => dialog.dismiss());
+    await loginPage.goto(url);
+    const target = new URL(url);
+    target.search = '?navigation-test=1&item=one&item=two&submit=kept';
+    target.hash = '#section';
+    await Promise.all([
+        loginPage.waitForURL(target.href),
+        loginPage.evaluate(targetUrl => {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = targetUrl;
+            document.body.append(form);
+            form.submit();
+        }, target.href),
+    ]);
+    if (requests.at(-1).method() !== 'POST') throw new Error('Login fixture did not submit POST');
+    await loginPage.locator('[data-skin-trigger]').click();
+    const [switchRequest] = await Promise.all([
+        loginPage.waitForRequest(request => request.isNavigationRequest() && request.method() === 'GET'),
+        loginPage.locator('[data-skin-option][data-skin-value="Studio"]').click(),
+    ]);
+    await loginPage.waitForLoadState('load');
+    if (switchRequest.method() !== 'GET') throw new Error('Template switch repeated the login POST');
+    target.hash = '';
+    if (loginPage.url() !== target.href) throw new Error(`Template switch changed URL: ${loginPage.url()}`);
+    const cookie = (await switchRequest.allHeaders()).cookie ?? '';
+    const temporaryCookie = cookie.split('; ').find(value => value.startsWith('dle_toolbar_skin='));
+    if (!temporaryCookie) throw new Error('Template switch omitted the temporary cookie');
+    const selection = JSON.parse(decodeURIComponent(temporaryCookie.slice('dle_toolbar_skin='.length)));
+    if (selection.skin !== 'Studio' || selection.token !== 'browser-test-user-hash' || selection.fragment !== '#section') throw new Error('Template switch sent an incorrect selection');
+    await loginPage.close();
+    console.log('PASS: template switch after login uses GET and preserves query and passes fragment');
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;

@@ -289,10 +289,10 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
         $GLOBALS['dletoolbar_test_skins'] = ['Air' => ['name' => 'Air'], 'Chronicle' => ['name' => 'Chronicle']];
         $toolbar = new DLEToolbar();
         $_COOKIE['dle_skin'] = 'Air';
-        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Chronicle', 'token' => $GLOBALS['dle_login_hash']]);
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Chronicle', 'token' => $GLOBALS['dle_login_hash'], 'fragment' => '#section']);
         $_SERVER['REQUEST_URI'] = '/news/?page=2';
         expect(fn() => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
-        expect($GLOBALS['dletoolbar_skin_redirect'])->toBe(['Location: /news/?page=2', 303]);
+        expect($GLOBALS['dletoolbar_skin_redirect'])->toBe(['Location: /news/?page=2#section', 303]);
         expect($_COOKIE['dle_skin'])->toBe('Chronicle')
             ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
             ->and($GLOBALS['config']['skin'])->toBe('Air');
@@ -303,8 +303,9 @@ it('consumes a temporary cookie and redirects so DLE applies the persisted skin'
 
         $GLOBALS['config']['skin'] = 'Air';
         $toolbar = new DLEToolbar();
-        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash']]);
+        $_COOKIE['dle_toolbar_skin'] = json_encode(['skin' => 'Air', 'token' => $GLOBALS['dle_login_hash'], 'fragment' => "#section\r\nInjected: value"]);
         expect(fn() => $toolbar->init())->toThrow(RuntimeException::class, 'skin redirect');
+        expect($GLOBALS['dletoolbar_skin_redirect'])->toBe(['Location: /news/?page=2', 303]);
         expect(isset($_COOKIE['dle_skin']))->toBeFalse()
             ->and(isset($_COOKIE['dle_toolbar_skin']))->toBeFalse()
             ->and($toolbar->render())->toContain('data-overridden="false"')
