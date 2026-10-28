@@ -54,7 +54,11 @@ final class Skin implements RequestComponent
         }
         /** @var string $uri */
         $uri = $_SERVER['REQUEST_URI'];
-        header('Location: /' . ltrim($uri, '/'), true, 303);
+        $fragment = $request['fragment'] ?? '';
+        if (!is_string($fragment) || !preg_match('/^#[^\x00-\x20\x7f]*$/D', $fragment)) {
+            $fragment = '';
+        }
+        header('Location: /' . ltrim($uri, '/') . $fragment, true, 303);
         exit;
     }
 
@@ -219,9 +223,16 @@ CSS,
         document.cookie = 'dle_toolbar_skin=' + encodeURIComponent(JSON.stringify({
             skin: option.dataset.skinValue,
             token: skinTrigger.dataset.skinToken,
+            fragment: window.location.hash,
         })) + '; max-age=60; path=/; SameSite=Lax'
             + (window.location.protocol === 'https:' ? '; Secure' : '');
-        requestAnimationFrame(() => requestAnimationFrame(() => window.location.reload()));
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            // Remove the fragment first so navigating to the same address performs a GET.
+            history.replaceState(history.state, '', url.href);
+            window.location.replace(url.href);
+        }));
     });
     skinMenu.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
