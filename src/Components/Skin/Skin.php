@@ -221,12 +221,9 @@ CSS,
             token: skinTrigger.dataset.skinToken,
         })) + '; max-age=60; path=/; SameSite=Lax'
             + (window.location.protocol === 'https:' ? '; Secure' : '');
-        // Reloading a POST response resubmits the form. After login DLE then issues a new login hash
-        // and rejects the token, so the page is requested again with GET.
-        const reload = skinTrigger.dataset.skinResubmit === 'true'
-            ? () => window.location.replace(window.location.href.split('#')[0])
-            : () => window.location.reload();
-        requestAnimationFrame(() => requestAnimationFrame(reload));
+        // reload() resubmits a POST response: after login DLE issues a new login hash and rejects the token.
+        // The fragment is dropped, otherwise the navigation only scrolls to it.
+        requestAnimationFrame(() => requestAnimationFrame(() => window.location.replace(window.location.href.split('#')[0])));
     });
     skinMenu.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
@@ -297,7 +294,6 @@ JS];
         return '<span class="skin-picker" data-component="skin" data-overridden="' . ($overridden ? 'true' : 'false') . '">'
             . '<button class="control skin-trigger" data-skin-trigger type="button" aria-label="' . $escape($label)
             . '" data-skin-token="' . $escape($dle_login_hash)
-            . '" data-skin-resubmit="' . ($_SERVER['REQUEST_METHOD'] === 'POST' ? 'true' : 'false')
             . '" aria-haspopup="menu" aria-expanded="false" aria-controls="dle-toolbar-skin-menu">'
             . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>' . ($overridden ? '<span class="skin-indicator" aria-hidden="true"></span>' : '')
             . '</button><div class="skin-menu" id="dle-toolbar-skin-menu" data-skin-menu role="menu"'

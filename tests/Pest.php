@@ -54,7 +54,6 @@ function setupDleToolbarTestEnvironment(): void
         6 => ['group_name' => 'VIP', 'allow_admin' => 0, 'admin_editnews' => 0],
     ];
     $GLOBALS['dle_login_hash'] = 'test-user-hash';
-    $_SERVER['REQUEST_METHOD'] = 'GET';
     $GLOBALS['dletoolbar_test_skins'] = ['Default' => ['name' => 'Default']];
     http_response_code(200);
 }

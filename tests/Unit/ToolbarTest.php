@@ -232,15 +232,10 @@ it('renders installed templates with the current selection and keeps skin visibi
             ->and($html)->toContain('data-skin-value="Default" data-skin-default="true" type="button" role="menuitemradio" aria-checked="true"><span>Стандартный &lt;шаблон&gt;<span class="skin-option-meta">Default · По умолчанию</span></span>')
             ->toContain('data-skin-value="Studio" data-skin-default="false" type="button" role="menuitemradio" aria-checked="false"><span>Studio &amp; Co<span class="skin-option-meta">Studio</span></span>')
             ->toContain('data-skin-trigger')
-            ->toContain('data-skin-resubmit="false"')
             ->toContain('role="menu" aria-label="Выбрать шаблон" hidden')
             ->toContain('data-overridden="false"')
             ->not->toContain('class="skin-indicator"')
             ->not->toContain('title="Шаблон:');
-
-        $_SERVER['REQUEST_METHOD'] = 'POST';
-        expect((new DLEToolbar())->render())->toContain('data-skin-resubmit="true"');
-        $_SERVER['REQUEST_METHOD'] = 'GET';
 
         $_COOKIE['dle_skin'] = 'Studio';
         expect((new DLEToolbar())->render())->toContain('data-overridden="true"')
