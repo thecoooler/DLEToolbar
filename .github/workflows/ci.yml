@@ -36,40 +36,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-dleplugin
-      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
-        with:
-          php-version: '8.4'
-          coverage: none
-      - name: Load native DLE class definitions
-        env:
-          DLE_STATIC_ROOT: ${{ runner.temp }}/dle-static
-        run: |
-          mkdir -p "$DLE_STATIC_ROOT/DLE/src"
-          curl --fail --silent --show-error --location https://dle-news.ru/files/dle_trial.zip --output "$DLE_STATIC_ROOT/dle.zip"
-          unzip -p "$DLE_STATIC_ROOT/dle.zip" upload/engine/classes/userxfields.class.php > "$DLE_STATIC_ROOT/userxfields.class.php"
-          # The trial class is encoded. Reflect its API into declarations PHPStan can scan.
-          php <<'PHP' > "$DLE_STATIC_ROOT/DLE/src/userxfields.class.php"
-          <?php
-          define('DATALIFEENGINE', true);
-          require getenv('DLE_STATIC_ROOT') . '/userxfields.class.php';
-          $class = new ReflectionClass('DLEUserXFields');
-          echo "<?php\nabstract class ", $class->getName(), " {\n";
-          foreach (['GETFields', 'xfieldsdataload'] as $name) {
-              $method = $class->getMethod($name);
-              $parameters = array_map(static fn (ReflectionParameter $parameter): string => '$' . $parameter->getName(), $method->getParameters());
-              echo '    public static function ', $method->getName(), '(', implode(', ', $parameters), ") {}\n";
-          }
-          echo "}\n";
-          PHP
-          test -s "$DLE_STATIC_ROOT/DLE/src/userxfields.class.php"
       - name: Analyze plugin
         env:
           PHP_VERSION: ${{ matrix.php-version }}
         run: |
           if [[ "$PHP_VERSION" == 8.4 ]]; then
-            dleplugin static --dependency-root "$RUNNER_TEMP/dle-static"
+            dleplugin static
           else
-            dleplugin static --php-version "$PHP_VERSION" --dependency-root "$RUNNER_TEMP/dle-static"
+            dleplugin static --php-version "$PHP_VERSION"
           fi
   test:
     name: Pest tests

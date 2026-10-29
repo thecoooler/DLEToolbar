@@ -25,7 +25,7 @@ final class NewsEntry
         $categories = [];
         foreach (explode(',', (string) $row['category']) as $id) {
             if (isset($cat_info[(int) $id])) {
-                $categories[] = html_entity_decode($cat_info[(int) $id]['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $categories[] = Format::decode($cat_info[(int) $id]['name']);
             }
         }
         $tags = array_filter(array_map('trim', explode(',', (string) $row['tags'])), static fn(string $tag): bool => $tag !== '');
@@ -100,25 +100,20 @@ final class NewsEntry
         ]);
         $options[] = ['Доступ групп', $access ? implode('<br>', array_map([Format::class, 'escape'], $access)) : '<span class="entry-muted">по настройкам групп</span>'];
 
-        $links = [];
-        if (Format::allows('admin_editnews')) {
-            $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=editnews&action=editnews&id=' . (int) $row['id']), 'icon' => 'edit'];
-        }
-
         return [
             'kind' => 'Новость',
-            'title' => html_entity_decode((string) $row['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'title' => Format::decode((string) $row['title']),
             'id' => (string) (int) $row['id'],
             'badges' => $badges,
-            'links' => $links,
-            'tabs' => array_values(array_filter([
+            'edit' => Format::allows('admin_editnews') ? Format::adminUrl('mod=editnews&action=editnews&id=' . (int) $row['id']) : null,
+            'tabs' => [
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
                 // The stories are already split into pages and compiled at capture time.
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, ['short_story', 'full_story', 'cats', 'xfields', 'xfields_array'])],
-            ], static fn(array $tab): bool => $tab['rows'] !== [])),
+            ],
         ];
     }
 }

@@ -17,7 +17,7 @@ final class CategoryEntry
     public static function build(int $id, array $categories): array
     {
         $row = $categories[$id];
-        $name = static fn(int $id): string => html_entity_decode((string) $categories[$id]['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $name = static fn(int $id): string => Format::decode((string) $categories[$id]['name']);
         $global = self::GLOBAL;
 
         $parent = (int) $row['parentid'];
@@ -81,24 +81,19 @@ final class CategoryEntry
             ['Тип рейтинга', 'rating_type', static fn($value): string => (int) $value < 0 ? $global : Format::code($value)],
         ]);
 
-        $links = [];
-        if (Format::allows('admin_categories')) {
-            $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=categories&action=edit&catid=' . $id), 'icon' => 'edit'];
-        }
-
         return [
             'kind' => 'Категория',
             'title' => $name($id),
             'id' => (string) $id,
             'badges' => $badges,
-            'links' => $links,
-            'tabs' => array_values(array_filter([
+            'edit' => Format::allows('admin_categories') ? Format::adminUrl('mod=categories&action=edit&catid=' . $id) : null,
+            'tabs' => [
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'templates', 'label' => 'Шаблоны', 'rows' => $templates],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, [])],
-            ], static fn(array $tab): bool => $tab['rows'] !== [])),
+            ],
         ];
     }
 

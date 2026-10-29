@@ -15,12 +15,10 @@ final class UserEntry
      */
     public static function build(array $row): array
     {
-        global $config, $user_group, $member_id, $is_logged, $xfields;
+        global $config, $user_group, $member_id;
         /** @var array{version_id: string} $config */
-        /** @var array<int, array{group_name: string, admin_editusers?: int|string}> $user_group */
-        /** @var array{user_id: int|string, user_group: int|string} $member_id */
-        /** @var bool $is_logged */
-        /** @var array<int, array{0: string, 5: int|string}> $xfields Profile definitions loaded by profile.php. */
+        /** @var array<int, array{group_name: string}> $user_group */
+        /** @var array{user_id: int|string} $member_id */
 
         $name = (string) $row['name'];
         $group = (int) $row['user_group'];
@@ -66,29 +64,16 @@ final class UserEntry
             ['Подписка на ответы', 'comments_reply_subscribe', [Format::class, 'flag']],
         ]);
 
-        $modernFields = version_compare($config['version_id'], '19.0', '>=');
-        /** @var array<string, string> $data */
-        $data = $modernFields ? \DLEUserXFields::xfieldsdataload(stripslashes((string) $row['xfields']))
-            : \xfieldsdataload(stripslashes((string) $row['xfields']));
-        /** @var array<int, array{0: string, 5: int|string}> $legacyFields */
-        $legacyFields = \xfieldsload(true) ?: $xfields;
-        /** @var array<array-key, array{name: string, private: bool|int|string}> $definitions */
-        $definitions = $modernFields ? \DLEUserXFields::GETFields() : array_map(static fn(array $field): array => [
-            'name' => $field[0], 'private' => $field[5],
-        ], $legacyFields);
-        // DLE 19+ uses the edit-users permission; older versions reserve private fields for group 1.
-        $isOwn = $is_logged && ((int) $member_id['user_id'] === (int) $row['user_id']
-            || ($modernFields ? !empty($user_group[$member_id['user_group']]['admin_editusers']) : (int) $member_id['user_group'] === 1));
+        // Profile field definitions differ between DLE versions, so private fields are not told apart:
+        // the tab is shown to the owner and to groups that edit users.
         $fields = [];
-        foreach ($definitions as $field) {
-            if ($field['private'] && !$isOwn) {
-                continue;
+        if ((int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers')) {
+            $stored = stripslashes((string) $row['xfields']);
+            /** @var array<string, string> $data User and news fields share the storage format. */
+            $data = version_compare($config['version_id'], '19.0', '>=') ? \DLEXFields::xfieldsdataload($stored) : \xfieldsdataload($stored);
+            foreach ($data as $field => $value) {
+                $fields[] = ['<code>' . Format::escape((string) $field) . '</code>', Format::text(str_replace("\x01", "\n", $value))];
             }
-            if (!array_key_exists($field['name'], $data)) {
-                continue;
-            }
-            $fields[] = ['<code>' . Format::escape($field['name']) . '</code>',
-                Format::text(str_replace("\x01", "\n", $data[$field['name']]))];
         }
 
         $access = Format::rows($row, [
@@ -104,24 +89,19 @@ final class UserEntry
             ['Категории без модерации', 'cat_allow_addnews', [Format::class, 'text']],
         ]);
 
-        $links = [];
-        if (Format::allows('admin_editusers')) {
-            $links[] = ['label' => 'Редактировать в админке', 'url' => Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']), 'icon' => 'edit'];
-        }
-
         return [
             'kind' => 'Пользователь',
-            'title' => html_entity_decode($name, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'title' => Format::decode($name),
             'id' => (string) (int) $row['user_id'],
             'badges' => $badges,
-            'links' => $links,
-            'tabs' => array_values(array_filter([
+            'edit' => Format::allows('admin_editusers') ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
+            'tabs' => [
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'profile', 'label' => 'Профиль', 'rows' => $profile],
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'access', 'label' => 'Доступ', 'rows' => $access],
                 ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, array_merge(self::SECRET, ['xfields']))],
-            ], static fn(array $tab): bool => $tab['rows'] !== [])),
+            ],
         ];
     }
 }

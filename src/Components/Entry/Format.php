@@ -13,6 +13,11 @@ final class Format
         return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
+    public static function decode(string $value): string
+    {
+        return html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
     public static function empty(): string
     {
         return '<span class="entry-empty">—</span>';
@@ -21,7 +26,7 @@ final class Format
     /** @param scalar|null $value */
     public static function text($value): string
     {
-        $value = trim(html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $value = trim(self::decode((string) $value));
         if ($value === '') {
             return self::empty();
         }

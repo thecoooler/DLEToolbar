@@ -6,10 +6,10 @@ use iCooLER\DLEToolbar\ComponentFramework\Component;
 
 /**
  * Shows the data of the viewed news, category or user profile in a tabbed panel.
- * Rows hold the HTML of the label and the value.
+ * Rows hold the HTML of the label and the value; tabs without rows are not shown.
  * @phpstan-type EntryRow array{0: string, 1: string}
  * @phpstan-type EntryTab array{id: string, label: string, rows: list<EntryRow>}
- * @phpstan-type EntryData array{kind: string, title: string, id: string, badges: list<array{0: string, 1: string}>, links: list<array{label: string, url: string, icon: string}>, tabs: list<EntryTab>}
+ * @phpstan-type EntryData array{kind: string, title: string, id: string, badges: list<array{0: string, 1: string}>, edit: ?string, tabs: list<EntryTab>}
  */
 final class Entry implements Component
 {
@@ -64,15 +64,13 @@ final class Entry implements Component
         foreach ($entry['badges'] as [$text, $tone]) {
             $badges .= '<span class="entry-badge" data-tone="' . $tone . '">' . Format::escape($text) . '</span>';
         }
-        $links = '';
-        foreach ($entry['links'] as $link) {
-            $links .= '<a class="entry-action" href="' . Format::escape($link['url']) . '" target="_blank" rel="noopener"'
-                . ' title="' . Format::escape($link['label']) . '" aria-label="' . Format::escape($link['label']) . '">'
-                . self::icon($link['icon']) . '</a>';
-        }
+        $edit = $entry['edit'] === null ? '' : '<a class="entry-action" href="' . Format::escape($entry['edit']) . '"'
+            . ' target="_blank" rel="noopener" title="Редактировать в админке" aria-label="Редактировать в админке">'
+            . self::icon('edit') . '</a>';
 
         $tabs = $panels = '';
-        foreach ($entry['tabs'] as $index => $tab) {
+        $shown = array_values(array_filter($entry['tabs'], static fn(array $tab): bool => $tab['rows'] !== []));
+        foreach ($shown as $index => $tab) {
             $selected = $index === 0;
             $tabId = 'dle-toolbar-entry-tab-' . $tab['id'];
             $panelId = 'dle-toolbar-entry-tabpanel-' . $tab['id'];
@@ -94,7 +92,7 @@ final class Entry implements Component
             . '<p class="entry-kind">' . Format::escape($entry['kind']) . ' <span>ID ' . Format::escape($entry['id']) . '</span></p>'
             . '<h2 id="dle-toolbar-entry-title">' . Format::escape($entry['title']) . '</h2>'
             . ($badges === '' ? '' : '<div class="entry-badges">' . $badges . '</div>')
-            . '</div>' . $links
+            . '</div>' . $edit
             . '<button class="entry-action" data-entry-close type="button" aria-label="Закрыть сведения о странице">'
             . self::icon('close') . '</button></header>'
             . '<div class="entry-tabs" role="tablist" aria-label="Разделы сведений">' . $tabs . '</div>'
