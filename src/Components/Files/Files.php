@@ -4,6 +4,7 @@ namespace iCooLER\DLEToolbar\Components\Files;
 
 use iCooLER\DLEToolbar\ComponentFramework\ConfigurableComponent;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
+use iCooLER\DLEToolbar\ComponentFramework\SourcePath;
 use iCooLER\DLEToolbar\Components\Debug\DebugLog;
 
 /** One diagnostics panel: chronological marks and the files loaded during each DLE stage. */
@@ -120,9 +121,8 @@ final class Files implements ConfigurableComponent
     private static function fileRows(array $files): string
     {
         $rows = '';
-        $prefix = ROOT_DIR . '/';
         foreach ($files as $file) {
-            $path = strpos($file, $prefix) === 0 ? substr($file, strlen($prefix)) : $file;
+            $path = SourcePath::display($file);
             $rows .= '<li><code>' . self::escape($path) . '</code></li>';
         }
         return $rows === '' ? '<p class="files-empty">Новых файлов нет.</p>' : '<ol class="files-list">' . $rows . '</ol>';

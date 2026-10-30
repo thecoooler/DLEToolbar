@@ -2,6 +2,8 @@
 
 namespace iCooLER\DLEToolbar\Components\Queries;
 
+use iCooLER\DLEToolbar\ComponentFramework\SourcePath;
+
 /**
  * Takes the place of DLE's query_list array and adds the call site to each appended entry.
  * The db object itself stays untouched, so references to it and DLE's error page keep working.
@@ -94,32 +96,12 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
 
             // PHP supplies line together with file.
             /** @var array{function: string, file: string, line: int} $frame */
-            // Encoded DLE distributions run their sources through nested evals; the innermost line matches the source file.
-            /** @var string $file */
-            $file = preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
+            $file = str_replace('\\', '/', $frame['file']);
             if (stripos($file, $engine . '/classes/mysql.php') === 0) {
                 continue;
             }
 
-            $cache = $engine . '/cache/system/plugins/';
-            if (stripos($file, $cache) === 0) {
-                // DLE keeps this map private in both 14.x and 19.x.
-                $readPlugins = \Closure::bind(static function (): array {
-                    /** @var array<string, string|array<mixed>> $plugins */
-                    // @phpstan-ignore staticProperty.notFound (dleplugin stub omits DLEPlugins::$plugins)
-                    $plugins = \DLEPlugins::$plugins;
-                    return $plugins;
-                }, null, \DLEPlugins::class);
-                $original = array_search(substr($file, strlen($cache)), $readPlugins(), true);
-                if ($original !== false) {
-                    $file = $original;
-                }
-            }
-            $root = str_replace('\\', '/', ROOT_DIR) . '/';
-            if (stripos($file, $root) === 0) {
-                $file = substr($file, strlen($root));
-            }
-
+            $file = SourcePath::display($file);
             return ['source' => $file . ':' . $frame['line']];
         }
         return [];
