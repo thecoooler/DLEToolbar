@@ -20,7 +20,8 @@ it('creates edits and deletes simple shared notes', function (): void {
     $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
     expect($call([])['notes'])->toBe([]);
     $first = $call(['action' => 'save', 'title' => '  Проверить <шапку>  '])['notes'][0];
-    expect($first['title'])->toBe('Проверить <шапку>')->and(array_keys($first))->toBe(['id', 'title']);
+    expect($first['title'])->toBe('Проверить <шапку>')->and(array_keys($first))->toBe(['id', 'title', 'created_at'])
+        ->and($first['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/');
     $second = $call(['action' => 'save', 'title' => 'Вторая'])['notes'][0];
     expect($second['title'])->toBe('Вторая');
     $notes = $call(['action' => 'save', 'id' => $second['id'], 'title' => "Новое ' название"])['notes'];
@@ -35,13 +36,49 @@ it('keeps existing note data in storage and excludes removed fields from the lis
     $GLOBALS['db']->query('INSERT INTO `' . PREFIX . "_dletoolbar_notes` SET title = 'Прежняя', body = 'Старый текст', page_url = '/old', pinned = 1, updated_at = '2020-01-01 00:00:00'");
     $old = $call([])['notes'][0];
     $new = $call(['action' => 'save', 'title' => 'Новая', 'body' => 'Не сохранять', 'page_url' => '/new', 'pinned' => '1'])['notes'][0];
-    expect($new['title'])->toBe('Новая')->and(array_keys($new))->toBe(['id', 'title']);
+    expect($new['title'])->toBe('Новая')->and(array_keys($new))->toBe(['id', 'title', 'created_at'])
+        ->and($old['created_at'])->toBeNull();
     $notes = $call(['action' => 'save', 'id' => $old['id'], 'title' => 'Изменено'])['notes'];
     expect(array_column($notes, 'title'))->toContain('Изменено');
     $result = $GLOBALS['db']->query('SELECT body, page_url, pinned FROM `' . PREFIX . '_dletoolbar_notes` ORDER BY id');
     expect($GLOBALS['db']->get_row($result))->toBe(['body' => 'Старый текст', 'page_url' => '/old', 'pinned' => '1'])
         ->and($GLOBALS['db']->get_row($result))->toBe(['body' => '', 'page_url' => '', 'pinned' => '0']);
     $GLOBALS['db']->free($result);
+});
+
+it('preserves the creation date when a note is edited', function (): void {
+    $api = new NotesActions();
+    $note = $api->handle(['action' => 'save', 'title' => 'Прежняя', 'user_hash' => 'test-user-hash'])['notes'][0];
+    $GLOBALS['db']->query('UPDATE `' . PREFIX . "_dletoolbar_notes` SET created_at = '2020-03-04 05:06:07', updated_at = '2020-03-04 05:06:07' WHERE id = " . $note['id']);
+    $saved = $api->handle(['action' => 'save', 'id' => $note['id'], 'title' => 'Изменено', 'created_at' => '2030-01-01 00:00:00', 'user_hash' => 'test-user-hash'])['notes'][0];
+    expect($saved['created_at'])->toBe('2020-03-04 05:06:07');
+    $result = $GLOBALS['db']->query('SELECT updated_at FROM `' . PREFIX . '_dletoolbar_notes` WHERE id = ' . $note['id']);
+    expect($GLOBALS['db']->get_row($result)['updated_at'])->not->toBe('2020-03-04 05:06:07');
+    $GLOBALS['db']->free($result);
+});
+
+it('upgrades the old notes table without inventing dates and keeps dates on repeated upgrades', function (): void {
+    $root = dirname((new ReflectionClass(NotesActions::class))->getFileName(), 4);
+    $manifest = file_get_contents($root . '/dleplugin.yml');
+    $php = explode("\nphp:\n", $manifest)[1];
+    $upgrade = explode('  enable:', explode("  upgrade: |\n", $php)[1])[0];
+    $upgrade = preg_replace('/^    /m', '', $upgrade);
+    $runUpgrade = static function () use ($upgrade): void {
+        global $db;
+        eval($upgrade);
+    };
+    try {
+        $GLOBALS['db']->query('ALTER TABLE `' . PREFIX . '_dletoolbar_notes` DROP COLUMN created_at');
+        $GLOBALS['db']->query('INSERT INTO `' . PREFIX . "_dletoolbar_notes` SET title = 'Старая заметка', body = '', updated_at = '2020-01-01 00:00:00'");
+        $runUpgrade();
+        $api = new NotesActions();
+        expect($api->handle(['user_hash' => 'test-user-hash'])['notes'][0]['created_at'])->toBeNull();
+        $GLOBALS['db']->query('UPDATE `' . PREFIX . "_dletoolbar_notes` SET created_at = '2020-02-03 04:05:06'");
+        $runUpgrade();
+        expect($api->handle(['user_hash' => 'test-user-hash'])['notes'][0]['created_at'])->toBe('2020-02-03 04:05:06');
+    } finally {
+        $runUpgrade();
+    }
 });
 
 it('rejects unauthorized requests and hidden components without reading notes', function (): void {

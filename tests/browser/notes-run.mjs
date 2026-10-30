@@ -15,7 +15,7 @@ try {
         [1280, '18.0', '**/engine/ajax/controller.php?mod=dletoolbar_notes'],
         [375, '19.0', '**/index.php?controller=ajax&mod=dletoolbar_notes'],
     ]) {
-        const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce', colorScheme: 'light' });
+        const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce', colorScheme: 'light', timezoneId: 'America/Los_Angeles' });
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         let notes = [];
@@ -37,8 +37,9 @@ try {
             }
             if (action === 'save') {
                 const id = Number(input.get('id')) || nextId++;
+                const previous = notes.find(note => note.id === id);
                 notes = notes.filter(note => note.id !== id);
-                notes.unshift({ id, title: input.get('title').trim() });
+                notes.unshift({ id, title: input.get('title').trim(), created_at: previous ? previous.created_at : '2026-10-30 00:15:00' });
             }
             if (action === 'delete') notes = notes.filter(note => note.id !== Number(input.get('id')));
             await route.fulfill({ json: { notes } });
@@ -129,6 +130,13 @@ try {
         assert.equal(await focused(input), true);
         const row = page.locator('.notes-row');
         assert.equal((await row.boundingBox()).height, 36);
+        assert.equal(await row.locator(':scope > :first-child').getAttribute('class'), 'notes-date');
+        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
+        assert.equal(await row.locator('time').getAttribute('datetime'), '2026-10-30T00:15:00');
+        const dateBounds = await row.locator('.notes-date').boundingBox();
+        const textBounds = await row.locator('.notes-title').boundingBox();
+        assert(dateBounds.x + dateBounds.width <= textBounds.x);
+        assert(textBounds.width > 0);
         assert.equal(await row.locator('a, .notes-pin').count(), 0);
         assert.equal(await page.locator('.notes-panel img, .notes-panel script').count(), 0);
         const borders = await row.evaluate(element => {
@@ -159,6 +167,7 @@ try {
         await page.locator('.notes-title').click();
         const editor = page.getByRole('textbox', { name: 'Изменить заметку', exact: true });
         assert.equal(await editor.inputValue(), title);
+        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
         assert.equal(await input.isVisible(), true);
         await editor.fill('Не сохранять');
         await editor.press('Escape');
@@ -174,6 +183,7 @@ try {
         assert.equal(await focused(editor), true);
         await editor.press('Enter');
         await page.getByRole('button', { name: 'Исправлено', exact: true }).waitFor();
+        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
         assert.equal(await focused(page.locator('.notes-title')), true);
         await page.locator('.notes-title').click();
         const editHold = pauseNext();
@@ -207,10 +217,11 @@ try {
         assert.equal(await page.locator('.notes-compose input').inputValue(), 'Следующая заметка');
 
         // Reopening refreshes edits made by another administrator.
-        notes.unshift({ id: nextId++, title: 'От другого администратора' });
+        notes.unshift({ id: nextId++, title: 'От другого администратора', created_at: null });
         const listsBefore = requests.filter(action => action === 'list').length;
         await trigger.click();
         await page.getByRole('button', { name: 'От другого администратора', exact: true }).waitFor();
+        assert.equal(await page.locator('.notes-row').first().locator('.notes-date').textContent(), '—');
         assert.equal(requests.filter(action => action === 'list').length, listsBefore + 1);
         page.on('dialog', dialog => dialog.accept());
         await page.getByRole('button', { name: 'Удалить: От другого администратора', exact: true }).click();

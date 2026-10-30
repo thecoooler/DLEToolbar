@@ -84,6 +84,7 @@ mysql:
     CREATE TABLE IF NOT EXISTS `{prefix}_dletoolbar_notes` (
       `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
       `title` VARCHAR(200) NOT NULL,
+      `created_at` DATETIME DEFAULT NULL,
       `body` MEDIUMTEXT NOT NULL,
       `page_url` VARCHAR(2048) NOT NULL DEFAULT '',
       `pinned` TINYINT UNSIGNED NOT NULL DEFAULT 0,
@@ -95,6 +96,7 @@ mysql:
     CREATE TABLE IF NOT EXISTS `{prefix}_dletoolbar_notes` (
       `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
       `title` VARCHAR(200) NOT NULL,
+      `created_at` DATETIME DEFAULT NULL,
       `body` MEDIUMTEXT NOT NULL,
       `page_url` VARCHAR(2048) NOT NULL DEFAULT '',
       `pinned` TINYINT UNSIGNED NOT NULL DEFAULT 0,
@@ -111,7 +113,15 @@ mysql:
     DELETE FROM `{prefix}_admin_sections` WHERE `name` = 'dletoolbar';
 php:
   install: ''
-  upgrade: ''
+  upgrade: |
+    global $db;
+    $table = PREFIX . '_dletoolbar_notes';
+    $result = $db->query("SHOW COLUMNS FROM `$table` LIKE 'created_at'");
+    $column = $db->get_row($result);
+    $db->free($result);
+    if (!$column) {
+      $db->query("ALTER TABLE `$table` ADD COLUMN `created_at` DATETIME DEFAULT NULL AFTER `title`");
+    }
   enable: ''
   disable: ''
   delete: ''

@@ -37,7 +37,7 @@ final class NotesActions
                 }
                 $title = $db->safesql($title);
                 $values = "title = '$title', updated_at = CURRENT_TIMESTAMP";
-                $sql = $id === 0 ? "INSERT INTO $table SET $values, body = ''" : "UPDATE $table SET $values WHERE id = $id";
+                $sql = $id === 0 ? "INSERT INTO $table SET $values, body = '', created_at = CURRENT_TIMESTAMP" : "UPDATE $table SET $values WHERE id = $id";
             } else {
                 $sql = "DELETE FROM $table WHERE id = $id";
             }
@@ -46,13 +46,13 @@ final class NotesActions
             }
         }
 
-        $result = $db->query("SELECT id, title FROM $table ORDER BY updated_at DESC, id DESC", false);
+        $result = $db->query("SELECT id, title, created_at FROM $table ORDER BY updated_at DESC, id DESC", false);
         if ($result === false) {
             throw new \RuntimeException('Failed to load toolbar notes.');
         }
         $notes = [];
         while ($row = $db->get_row($result)) {
-            /** @var array{id: int|string, title: string} $row */
+            /** @var array{id: int|string, title: string, created_at: string|null} $row */
             $row['id'] = (int) $row['id'];
             $notes[] = $row;
         }

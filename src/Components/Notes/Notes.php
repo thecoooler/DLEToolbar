@@ -53,6 +53,7 @@ HTML,
 .notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); border-radius: 6px; transition: background-color 140ms ease; }
 .notes-row:hover { background: var(--hover); }
 .notes-row:last-child { border-bottom: 0; }
+.notes-date { flex: 0 0 86px; padding-left: 10px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .notes-panel .notes-row button, .notes-panel .notes-row button:hover { background: transparent; }
 .notes-row .notes-title { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
 .notes-row .notes-delete { flex: 0 0 30px; padding: 4px; border: 0; }
@@ -126,7 +127,7 @@ CSS,
                 focusNote(note.id);
             }
         });
-        row.replaceChildren(editor);
+        row.replaceChildren(row.querySelector('.notes-date'), editor);
         field.focus();
         field.select();
     };
@@ -136,13 +137,23 @@ CSS,
             const row = document.createElement('div');
             row.className = 'notes-row';
             row.dataset.noteId = note.id;
+            const date = document.createElement(note.created_at ? 'time' : 'span');
+            date.className = 'notes-date';
+            if (note.created_at) {
+                date.dateTime = note.created_at.replace(' ', 'T');
+                date.textContent = note.created_at.split(' ')[0].split('-').reverse().join('.');
+                date.title = 'Дата добавления: ' + date.textContent;
+            } else {
+                date.textContent = '—';
+                date.title = 'Дата добавления не сохранена';
+            }
             const open = button(note.title, 'notes-title', () => edit(note));
             open.title = note.title;
             const remove = button('×', 'notes-delete', () => {
                 if (window.confirm('Удалить заметку «' + note.title + '»?')) request('delete', { id: note.id });
             });
             remove.setAttribute('aria-label', 'Удалить: ' + note.title);
-            row.append(open, remove);
+            row.append(date, open, remove);
             list.append(row);
         });
         status.textContent = notes.length ? '' : 'Заметок пока нет.';
