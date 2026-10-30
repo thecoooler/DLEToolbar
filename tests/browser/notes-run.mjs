@@ -3,118 +3,148 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch({ headless: true });
+const headerStyle = element => {
+    const header = getComputedStyle(element);
+    const title = getComputedStyle(element.querySelector('h2'));
+    const close = getComputedStyle(element.querySelector('button:last-child'));
+    return [header.height, header.padding, header.gap, header.borderBottomWidth,
+        title.font, title.letterSpacing, close.width, close.height, close.borderRadius];
+};
 try {
     for (const [width, version, endpoint] of [
         [1280, '18.0', '**/engine/ajax/controller.php?mod=dletoolbar_notes'],
         [375, '19.0', '**/index.php?controller=ajax&mod=dletoolbar_notes'],
     ]) {
-        const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce' });
+        const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce', colorScheme: 'light' });
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         let notes = [];
+        let nextId = 1;
         let fail = false;
-        await page.route(endpoint, async route => {
-            const input = new URLSearchParams(route.request().postData());
-            assert.equal(input.get('user_hash'), 'browser-test-token');
+        let hold = false;
+        let held;
+        let signalHeld;
+        const requests = [];
+        const pauseNext = () => {
+            hold = true;
+            return new Promise(resolve => { signalHeld = resolve; });
+        };
+        const respond = async (route, input) => {
             const action = input.get('action');
             if (fail) {
                 fail = false;
                 return route.fulfill({ status: 500, json: { error: 'Ошибка сохранения' } });
             }
             if (action === 'save') {
-                const id = Number(input.get('id')) || notes.length + 1;
-                const old = notes.find(note => note.id === id);
+                const id = Number(input.get('id')) || nextId++;
                 notes = notes.filter(note => note.id !== id);
-                notes.push({ id, title: input.get('title'), body: input.get('body'), page_url: input.get('page_url'), pinned: Number(input.get('pinned') ?? old?.pinned ?? 0) });
+                notes.unshift({ id, title: input.get('title').trim() });
             }
-            if (action === 'pin') notes.find(note => note.id === Number(input.get('id'))).pinned = Number(input.get('pinned'));
             if (action === 'delete') notes = notes.filter(note => note.id !== Number(input.get('id')));
-            notes.sort((a, b) => b.pinned - a.pinned || b.id - a.id);
             await route.fulfill({ json: { notes } });
+        };
+        await page.route(endpoint, async route => {
+            const input = new URLSearchParams(route.request().postData());
+            assert.equal(input.get('user_hash'), 'browser-test-token');
+            assert.equal(input.has('body') || input.has('pinned') || input.has('page_url'), false);
+            requests.push(input.get('action'));
+            if (hold) {
+                hold = false;
+                held = () => respond(route, input);
+                signalHeld();
+                return;
+            }
+            await respond(route, input);
         });
         const fixture = new URL(process.argv[2] ?? 'http://127.0.0.1:8002/notes-panel.php?test=1#anchor');
         fixture.searchParams.set('dle_version', version);
         await page.goto(fixture.href);
-        await page.locator('[data-notes-trigger]').click();
+        const trigger = page.locator('[data-notes-trigger]');
+        const input = page.getByRole('textbox', { name: 'Новая заметка', exact: true });
+        const add = page.getByRole('button', { name: 'Добавить', exact: true });
+        const idle = () => page.locator('.notes-panel[aria-busy=false]').waitFor({ state: 'attached' });
+        const focused = locator => locator.evaluate(element => element.getRootNode().activeElement === element);
+        await trigger.click();
         await page.getByText('Заметок пока нет.').waitFor();
+        assert.equal(await focused(input), true);
+        assert.equal(await page.locator('.notes-panel textarea, .notes-panel input[type=checkbox], .notes-page').count(), 0);
+        await page.keyboard.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+        assert.equal(await focused(trigger), true);
+        await trigger.click();
+        await idle();
+        await trigger.focus();
+        await page.keyboard.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+
+        // Closing remains available while a list request is still in flight.
+        const initialHold = pauseNext();
+        await trigger.click();
+        await initialHold;
+        assert.equal(await page.locator('[data-notes-close]').isEnabled(), true);
+        await page.locator('[data-notes-close]').click();
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+        await held();
+        await idle();
+        assert.equal(await focused(trigger), true);
+        await trigger.click();
+        await idle();
+
+        // SQL and notes use the same panel and header dimensions, including short viewports.
         for (const height of [800, 480]) {
             await page.setViewportSize({ width, height });
             const notesBounds = await page.locator('.notes-panel').boundingBox();
-            const notesHeader = await page.locator('.notes-header').evaluate(element => {
-                const header = getComputedStyle(element);
-                const title = getComputedStyle(element.querySelector('h2'));
-                const close = getComputedStyle(element.querySelector('[data-notes-close]'));
-                return [header.height, header.padding, header.gap, header.borderBottomWidth,
-                    title.font, title.letterSpacing, close.width, close.height, close.borderRadius];
-            });
+            const notesHeader = await page.locator('.notes-header').evaluate(headerStyle);
+            const entry = await input.boundingBox();
+            const submit = await add.boundingBox();
+            assert(Math.abs(entry.y + entry.height / 2 - submit.y - submit.height / 2) < 1);
+            assert(entry.x + entry.width <= submit.x);
             await page.locator('[data-queries-open]').click();
             const queryBounds = await page.locator('.query-panel').boundingBox();
-            const queryHeader = await page.locator('.query-header').evaluate(element => {
-                const header = getComputedStyle(element);
-                const title = getComputedStyle(element.querySelector('h2'));
-                const close = getComputedStyle(element.querySelector('[data-query-close]'));
-                return [header.height, header.padding, header.gap, header.borderBottomWidth,
-                    title.font, title.letterSpacing, close.width, close.height, close.borderRadius];
-            });
-            assert.equal(notesBounds.width, queryBounds.width, `panel widths at ${width}×${height}`);
-            assert.equal(notesBounds.height, queryBounds.height, `panel heights at ${width}×${height}`);
-            assert.deepEqual(notesHeader, queryHeader, `panel headers at ${width}×${height}`);
-            await page.locator('[data-notes-trigger]').click();
+            assert.equal(notesBounds.width, queryBounds.width);
+            assert.equal(notesBounds.height, queryBounds.height);
+            assert.deepEqual(notesHeader, await page.locator('.query-header').evaluate(headerStyle));
+            await trigger.click();
+            await idle();
         }
         await page.setViewportSize({ width, height: 800 });
-        await page.getByRole('button', { name: 'Добавить', exact: true }).click();
-        assert.equal(await page.locator('input[name=title]').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
-        assert.equal(await page.locator('textarea').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
-        const title = '<img src=x onerror=alert(1)> ' + 'Длинное название '.repeat(9);
-        await page.locator('input[name=title]').fill(title);
-        await page.locator('textarea').fill('Текст\nзаметки <script>alert(1)</script>');
-        await page.locator('input[name=bind]').check();
-        await page.locator('input[name=pinned]').check();
+        const border = await input.evaluate(element => {
+            element.blur();
+            const plain = getComputedStyle(element).borderColor;
+            element.focus();
+            return { plain, focused: getComputedStyle(element).borderColor, outline: getComputedStyle(element).outlineStyle };
+        });
+        assert.equal(border.outline, 'none');
+        assert.notEqual(border.plain, border.focused);
+        const title = ('<img src=x onerror=alert(1)> ' + 'Длинная заметка '.repeat(9)).trim();
+        await input.fill(title);
         fail = true;
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
+        await input.press('Enter');
         await page.getByText('Ошибка сохранения', { exact: true }).waitFor();
-        assert.equal(await page.locator('input[name=title]').inputValue(), title);
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
+        assert.equal(await input.inputValue(), title);
+        assert.equal(await focused(input), true);
+        await add.click();
         await page.locator('.notes-row').waitFor();
-        assert.equal(notes[0].page_url, fixture.pathname + fixture.search + fixture.hash);
+        assert.equal(await input.inputValue(), '');
+        assert.equal(await focused(input), true);
         const row = page.locator('.notes-row');
-        const bounds = await row.boundingBox();
-        assert.equal(bounds.height, 36);
-        assert(bounds.width <= width - 24);
-        assert.equal(await page.locator('.notes-panel img, .notes-panel script').count(), 0);
+        assert.equal((await row.boundingBox()).height, 36);
         assert.equal(await row.locator('a, .notes-pin').count(), 0);
-        assert.equal(await row.evaluate(element => getComputedStyle(element).borderBottomWidth), '0px');
-        assert.equal(await row.evaluate(element => getComputedStyle(element).borderRadius), '6px');
-        const contentPadding = await page.locator('.notes-content').evaluate(element => {
+        assert.equal(await page.locator('.notes-panel img, .notes-panel script').count(), 0);
+        const borders = await row.evaluate(element => {
+            const last = getComputedStyle(element).borderBottomWidth;
+            const extra = element.cloneNode(true);
+            element.parentElement.append(extra);
+            const first = getComputedStyle(element).borderBottomWidth;
+            extra.remove();
+            return { first, last, radius: getComputedStyle(element).borderRadius };
+        });
+        assert.deepEqual(borders, { first: '1px', last: '0px', radius: '6px' });
+        const padding = await page.locator('.notes-content').evaluate(element => {
             const style = getComputedStyle(element);
             return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
         });
-        assert.equal(contentPadding[0], contentPadding[1]);
-        assert.equal(contentPadding[1], contentPadding[2]);
-        assert.equal(contentPadding[2], contentPadding[3]);
-        const firstBorder = await row.evaluate(element => {
-            const extra = element.cloneNode(true);
-            element.parentElement.append(extra);
-            const width = getComputedStyle(element).borderBottomWidth;
-            extra.remove();
-            return width;
-        });
-        assert.equal(firstBorder, '1px');
-        const scroll = await row.evaluate(element => {
-            const list = element.parentElement;
-            const content = list.closest('.notes-content');
-            const header = content.previousElementSibling;
-            const top = header.getBoundingClientRect().top;
-            const copies = Array.from({ length: 30 }, () => element.cloneNode(true));
-            list.append(...copies);
-            content.scrollTop = content.scrollHeight;
-            const result = { scrollTop: content.scrollTop, headerTop: header.getBoundingClientRect().top, top };
-            copies.forEach(copy => copy.remove());
-            content.scrollTop = 0;
-            return result;
-        });
-        assert(scroll.scrollTop > 0);
-        assert.equal(scroll.headerTop, scroll.top);
+        assert.equal(new Set(padding).size, 1);
         await page.locator('.notes-title').hover();
         const colors = await row.evaluate(element => ({
             row: getComputedStyle(element).backgroundColor,
@@ -124,28 +154,79 @@ try {
         assert.equal(colors.row, 'rgb(244, 244, 245)');
         assert.equal(colors.title, 'rgba(0, 0, 0, 0)');
         assert.equal(colors.remove, 'rgba(0, 0, 0, 0)');
-        await page.locator('.notes-delete').hover();
-        assert.equal(await row.evaluate(element => getComputedStyle(element).backgroundColor), colors.row);
+
+        // Editing stays in its row; the addition field is always available.
         await page.locator('.notes-title').click();
-        assert.equal(await page.locator('textarea').inputValue(), 'Текст\nзаметки <script>alert(1)</script>');
-        assert.equal(await page.locator('input[name=pinned]').isChecked(), true);
-        assert.equal(await page.locator('.notes-page').getAttribute('href'), fixture.pathname + fixture.search + fixture.hash);
-        await page.locator('input[name=title]').fill('Исправлено');
-        await page.locator('input[name=bind]').uncheck();
-        await page.locator('input[name=pinned]').uncheck();
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
+        const editor = page.getByRole('textbox', { name: 'Изменить заметку', exact: true });
+        assert.equal(await editor.inputValue(), title);
+        assert.equal(await input.isVisible(), true);
+        await editor.fill('Не сохранять');
+        await editor.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('.notes-title').textContent(), title);
+        assert.equal(await focused(page.locator('.notes-title')), true);
+        await page.locator('.notes-title').click();
+        await editor.fill('Исправлено');
+        fail = true;
+        await editor.press('Enter');
+        await page.getByText('Ошибка сохранения', { exact: true }).waitFor();
+        assert.equal(await editor.inputValue(), 'Исправлено');
+        assert.equal(await focused(editor), true);
+        await editor.press('Enter');
         await page.getByRole('button', { name: 'Исправлено', exact: true }).waitFor();
-        assert.equal(notes[0].page_url, '');
-        assert.equal(notes[0].pinned, 0);
+        assert.equal(await focused(page.locator('.notes-title')), true);
+        await page.locator('.notes-title').click();
+        const editHold = pauseNext();
+        await editor.press('Enter');
+        await editHold;
+        await editor.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+        await held();
+        await idle();
+        assert.equal(await focused(trigger), true);
+        await trigger.click();
+        await idle();
+
+        // A pending save cannot be submitted twice, and typing another draft does not lose it.
+        await input.fill('Вторая заметка');
+        const savesBefore = requests.filter(action => action === 'save').length;
+        const saveHold = pauseNext();
+        await input.press('Enter');
+        await saveHold;
+        await input.press('Enter');
+        await add.focus();
+        await page.keyboard.press('Enter');
+        assert.equal(requests.filter(action => action === 'save').length, savesBefore + 1);
+        assert.equal(await focused(add), true);
+        await input.fill('Следующая заметка');
+        await page.locator('[data-notes-close]').click();
+        await held();
+        await idle();
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+        assert.equal(await focused(trigger), true);
+        assert.equal(await page.locator('.notes-compose input').inputValue(), 'Следующая заметка');
+
+        // Reopening refreshes edits made by another administrator.
+        notes.unshift({ id: nextId++, title: 'От другого администратора' });
+        const listsBefore = requests.filter(action => action === 'list').length;
+        await trigger.click();
+        await page.getByRole('button', { name: 'От другого администратора', exact: true }).waitFor();
+        assert.equal(requests.filter(action => action === 'list').length, listsBefore + 1);
         page.on('dialog', dialog => dialog.accept());
-        await page.locator('.notes-delete').click();
+        await page.getByRole('button', { name: 'Удалить: От другого администратора', exact: true }).click();
+        await idle();
+        assert.equal(await page.getByRole('button', { name: 'От другого администратора', exact: true }).count(), 0);
+        assert.equal(await focused(page.getByRole('button', { name: 'Вторая заметка', exact: true })), true);
+        await page.getByRole('button', { name: 'Удалить: Вторая заметка', exact: true }).click();
+        await idle();
+        await page.getByRole('button', { name: 'Удалить: Исправлено', exact: true }).click();
         await page.getByText('Заметок пока нет.').waitFor();
-        await page.locator('[data-notes-add]').focus();
+        assert.equal(await focused(input), true);
         await page.keyboard.press('Escape');
-        assert.equal(await page.locator('[data-notes-trigger]').getAttribute('aria-expanded'), 'false');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
         assert.deepEqual(errors, []);
         await page.close();
-        console.log(`PASS: DLE ${version} notes CRUD, pin, binding, retry, escaping, one-line row and Escape at ${width}px`);
+        console.log(`PASS: DLE ${version}, ${width}px — simple notes, inline edits, focus, slow requests, retry, refresh and panel layout`);
     }
 } finally {
     await browser.close();

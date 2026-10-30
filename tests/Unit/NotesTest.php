@@ -15,30 +15,33 @@ afterEach(function (): void {
     $GLOBALS['db']->query('DELETE FROM `' . PREFIX . '_dletoolbar_notes`');
 });
 
-it('creates edits pins and deletes shared notes with optional page links', function (): void {
+it('creates edits and deletes simple shared notes', function (): void {
     $api = new NotesActions();
     $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
     expect($call([])['notes'])->toBe([]);
-    $first = $call(['action' => 'save', 'title' => '  Проверить <шапку>  ', 'body' => "Текст\nзаметки", 'page_url' => '/news.html?x=1#header'])['notes'][0];
-    expect($first['title'])->toBe('Проверить <шапку>')->and($first['page_url'])->toBe('/news.html?x=1#header');
-    $second = $call(['action' => 'save', 'title' => 'Вторая', 'body' => ''])['notes'][0];
-    $notes = $call(['action' => 'pin', 'id' => $first['id'], 'pinned' => '1'])['notes'];
-    expect($notes[0]['id'])->toBe($first['id'])->and($notes[0]['pinned'])->toBe(1);
-    $notes = $call(['action' => 'save', 'id' => $first['id'], 'title' => "Новое ' название", 'body' => '<script>alert(1)</script>', 'page_url' => ''])['notes'];
-    expect($notes[0]['title'])->toBe("Новое ' название")->and($notes[0]['body'])->toBe('<script>alert(1)</script>')->and($notes[0]['page_url'])->toBe('')->and($notes[0]['pinned'])->toBe(1);
+    $first = $call(['action' => 'save', 'title' => '  Проверить <шапку>  '])['notes'][0];
+    expect($first['title'])->toBe('Проверить <шапку>')->and(array_keys($first))->toBe(['id', 'title']);
+    $second = $call(['action' => 'save', 'title' => 'Вторая'])['notes'][0];
+    expect($second['title'])->toBe('Вторая');
+    $notes = $call(['action' => 'save', 'id' => $second['id'], 'title' => "Новое ' название"])['notes'];
+    expect($notes[0]['title'])->toBe("Новое ' название");
     expect($call(['action' => 'delete', 'id' => $first['id']])['notes'])->toHaveCount(1);
     expect($call(['action' => 'delete', 'id' => $second['id']])['notes'])->toBe([]);
 });
 
-it('saves pin changes together with the note and keeps existing pin state when omitted', function (): void {
+it('keeps existing note data in storage and excludes removed fields from the list and saves', function (): void {
     $api = new NotesActions();
     $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
-    $note = $call(['action' => 'save', 'title' => 'Закрепить', 'pinned' => '1'])['notes'][0];
-    expect($note['pinned'])->toBe(1);
-    $note = $call(['action' => 'save', 'id' => $note['id'], 'title' => 'Изменено'])['notes'][0];
-    expect($note['pinned'])->toBe(1);
-    $note = $call(['action' => 'save', 'id' => $note['id'], 'title' => 'Открепить', 'pinned' => '0'])['notes'][0];
-    expect($note['pinned'])->toBe(0);
+    $GLOBALS['db']->query('INSERT INTO `' . PREFIX . "_dletoolbar_notes` SET title = 'Прежняя', body = 'Старый текст', page_url = '/old', pinned = 1, updated_at = '2020-01-01 00:00:00'");
+    $old = $call([])['notes'][0];
+    $new = $call(['action' => 'save', 'title' => 'Новая', 'body' => 'Не сохранять', 'page_url' => '/new', 'pinned' => '1'])['notes'][0];
+    expect($new['title'])->toBe('Новая')->and(array_keys($new))->toBe(['id', 'title']);
+    $notes = $call(['action' => 'save', 'id' => $old['id'], 'title' => 'Изменено'])['notes'];
+    expect(array_column($notes, 'title'))->toContain('Изменено');
+    $result = $GLOBALS['db']->query('SELECT body, page_url, pinned FROM `' . PREFIX . '_dletoolbar_notes` ORDER BY id');
+    expect($GLOBALS['db']->get_row($result))->toBe(['body' => 'Старый текст', 'page_url' => '/old', 'pinned' => '1'])
+        ->and($GLOBALS['db']->get_row($result))->toBe(['body' => '', 'page_url' => '', 'pinned' => '0']);
+    $GLOBALS['db']->free($result);
 });
 
 it('rejects unauthorized requests and hidden components without reading notes', function (): void {
@@ -52,22 +55,23 @@ it('rejects unauthorized requests and hidden components without reading notes', 
     expect(implode("\n", $GLOBALS['db']->queries))->not->toContain('SELECT id, title');
 });
 
-it('rejects invalid note data and external or malformed page links', function (array $data): void {
+it('rejects empty or oversized notes and invalid actions or IDs', function (array $data): void {
     $response = (new NotesActions())->handle($data + ['action' => 'save', 'title' => 'Заметка', 'user_hash' => 'test-user-hash']);
     expect($response)->toHaveKey('error')->and(http_response_code())->toBe(422);
     expect((new NotesActions())->handle(['user_hash' => 'test-user-hash'])['notes'])->toBe([]);
 })->with([
-    [['title' => '  ']], [['title' => str_repeat('я', 201)]], [['body' => str_repeat('я', 20001)]],
-    [['page_url' => '//evil.test/']], [['page_url' => 'https://evil.test/']], [['page_url' => '/\\evil.test/']],
-    [['page_url' => "/test\nheader"]], [['id' => '-1']], [['id' => '1 OR 1=1']],
+    [['title' => '  ']], [['title' => str_repeat('я', 201)]], [['title' => []]],
+    [['id' => '-1']], [['id' => '1 OR 1=1']], [['action' => 'delete', 'id' => '0']],
+    [['action' => 'pin', 'id' => '1']], [['action' => ['save']]],
 ]);
 
-it('renders an isolated notes popup without loading notes into page markup', function (): void {
+it('renders one always visible entry field without optional note features', function (): void {
     $render = (new Notes())->render();
     expect($render['control'])->toContain('data-component="notes"')
-        ->and($render['panel'])->toContain('maxlength="200"')->toContain('maxlength="20000"')->toContain('type="checkbox"')
+        ->and($render['panel'])->toContain('class="notes-compose"')->toContain('maxlength="200"')
+        ->not->toContain('<textarea')->not->toContain('type="checkbox"')->not->toContain('notes-page')
         ->and($render['styles'])->toContain('text-overflow: ellipsis; white-space: nowrap')
-        ->and($render['script'])->toContain('open.title = note.title')->toContain('open = button(note.title')->not->toContain('innerHTML');
+        ->and($render['script'])->not->toContain('innerHTML');
 });
 
 it('uses the DLE AJAX controller for the installed version and site directory', function (string $version, string $endpoint): void {
