@@ -26,7 +26,7 @@ final class UserEntry
         $restricted = (int) ($row['restricted'] ?? 0);
         $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers');
         if (!$canViewPrivate) {
-            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread']);
+            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth']);
         }
 
         $badges = [];
@@ -36,7 +36,7 @@ final class UserEntry
         if (isset(self::RESTRICTED[$restricted])) {
             $badges[] = ['Ограничен', 'warning'];
         }
-        if (!empty($row['twofactor_auth'])) {
+        if ($canViewPrivate && !empty($row['twofactor_auth'])) {
             $badges[] = ['Двухфакторная авторизация', 'success'];
         }
 
@@ -44,7 +44,7 @@ final class UserEntry
             ['Логин', 'name', [Format::class, 'text']],
             ['ID', 'user_id', [Format::class, 'code']],
             ['Группа', 'user_group', static fn($value): string => Format::escape($user_group[$group]['group_name'] ?? (string) $value)
-                . (empty($row['time_limit']) ? '' : ' <span class="entry-muted">до ' . Format::date($row['time_limit']) . '</span>')],
+                . ($canViewPrivate && !empty($row['time_limit']) ? ' <span class="entry-muted">до ' . Format::date($row['time_limit']) . '</span>' : '')],
             ['E-mail', 'email', [Format::class, 'text']],
             ['Полное имя', 'fullname', [Format::class, 'text']],
             ['Место жительства', 'land', [Format::class, 'text']],

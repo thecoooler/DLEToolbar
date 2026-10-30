@@ -77,7 +77,7 @@ final class Entry implements Component
             $tabs .= '<button class="entry-tab" id="' . $tabId . '" data-entry-tab="' . $tab['id'] . '" type="button" role="tab"'
                 . ' aria-selected="' . ($selected ? 'true' : 'false') . '" aria-controls="' . $panelId . '"'
                 . ' tabindex="' . ($selected ? '0' : '-1') . '">' . Format::escape($tab['label'])
-                . '<span class="entry-count">' . count($tab['rows']) . '</span></button>';
+                . '<span class="entry-count" aria-hidden="true">' . count($tab['rows']) . '</span></button>';
             $rows = '';
             foreach ($tab['rows'] as [$label, $value]) {
                 $rows .= '<dt>' . $label . '</dt><dd>' . $value . '</dd>';

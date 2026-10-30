@@ -8,6 +8,12 @@ final class CategoryEntry
     private const SORT = ['date' => 'Дата публикации', 'editdate' => 'Дата редактирования', 'rating' => 'Рейтинг',
         'news_read' => 'Просмотры', 'title' => 'Алфавит', 'comm_num' => 'Комментарии'];
     private const DIRECTION = ['DESC' => 'По убыванию', 'ASC' => 'По возрастанию'];
+    private const RATING_TYPE = [
+        0 => 'Оценка',
+        1 => 'Только «Нравится»',
+        2 => '«Нравится» или «Не нравится»',
+        3 => '«Нравится» и «Не нравится»',
+    ];
     private const GLOBAL = '<span class="entry-muted">по настройкам сайта</span>';
 
     /**
@@ -78,7 +84,9 @@ final class CategoryEntry
             ['Отключить комментарии', 'disable_comments', [Format::class, 'flag']],
             ['В Дзене', 'enable_dzen', [Format::class, 'flag']],
             ['В Турбо-страницах', 'enable_turbo', [Format::class, 'flag']],
-            ['Тип рейтинга', 'rating_type', static fn($value): string => (int) $value < 0 ? $global : Format::code($value)],
+            ['Тип рейтинга', 'rating_type', static fn($value): string => (int) $value < 0
+                ? $global
+                : (isset(self::RATING_TYPE[(int) $value]) ? Format::escape(self::RATING_TYPE[(int) $value]) : Format::code($value))],
         ]);
 
         return [

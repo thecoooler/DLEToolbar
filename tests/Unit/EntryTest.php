@@ -155,6 +155,7 @@ it('renders repeated dynamic news fields on separate lines', function (): void {
 it('shows the viewed category with its parent, children and settings', function (): void {
     $GLOBALS['dle_module'] = 'cat';
     $GLOBALS['category_id'] = 7;
+    $GLOBALS['cat_info'][7]['rating_type'] = 2;
     $GLOBALS['user_group'][1]['admin_categories'] = 1;
     $panel = renderEntry()['panel'];
     expect($panel)->toContain('<p class="entry-kind">Категория <span>ID 7</span></p>')
@@ -164,6 +165,7 @@ it('shows the viewed category with its parent, children and settings', function 
         ->toContain('<dt>Подкатегории</dt><dd>Мелодрамы</dd>')
         ->toContain('<dt>Сортировка</dt><dd>Рейтинг</dd>')
         ->toContain('<dt>Порядок сортировки</dt><dd><span class="entry-muted">по настройкам сайта</span></dd>')
+        ->toContain('<dt>Тип рейтинга</dt><dd>«Нравится» или «Не нравится»</dd>')
         ->toContain('<dt>Микроразметка</dt><dd><code>Movie</code></dd>')
         ->toContain('<details class="entry-spoiler">')
         ->toContain('href="https://example.test/admin.php?mod=categories&amp;action=edit&amp;catid=7"');
@@ -204,19 +206,23 @@ it('shows private profile data only to the owner and to groups that edit users',
         'xfields' => 'city|PROFILE_VALUE', 'email' => 'private@example.test', 'allowed_ip' => '192.0.2.1',
         'logged_ip' => '192.0.2.2', 'favorites' => '41,42', 'pm_all' => 51, 'pm_unread' => 52,
         'other_column' => 'RAW_PROFILE_VALUE', 'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH',
-        'twofactor_secret' => 'TOTP_SECRET']);
+        'twofactor_secret' => 'TOTP_SECRET', 'twofactor_auth' => 1, 'time_limit' => 1700000000]);
     $panel = renderEntry()['panel'];
     if ($visible) {
         expect($panel)->toContain('<dt><code>city</code></dt><dd>PROFILE_VALUE</dd>')
             ->toContain('private@example.test')->toContain('192.0.2.1')->toContain('192.0.2.2')
             ->toContain('<dt>В избранном</dt><dd>2</dd>')->toContain('<dt>Сообщений</dt><dd>51')
-            ->toContain('RAW_PROFILE_VALUE');
+            ->toContain('RAW_PROFILE_VALUE')
+            ->toContain('Двухфакторная авторизация')
+            ->toContain('<span class="entry-muted">до ');
     } else {
         expect($panel)->not->toContain('data-entry-tab="fields"')
             ->not->toContain('data-entry-tab="raw"')
             ->not->toContain('PROFILE_VALUE')->not->toContain('RAW_PROFILE_VALUE')
             ->not->toContain('private@example.test')->not->toContain('192.0.2.1')->not->toContain('192.0.2.2')
-            ->not->toContain('<dt>В избранном</dt>')->not->toContain('<dt>Сообщений</dt>');
+            ->not->toContain('<dt>В избранном</dt>')->not->toContain('<dt>Сообщений</dt>')
+            ->not->toContain('Двухфакторная авторизация')
+            ->not->toContain('<span class="entry-muted">до ');
     }
     expect($panel)->not->toContain('PASSWORD_HASH')->not->toContain('SESSION_HASH')->not->toContain('TOTP_SECRET');
 })->with([
