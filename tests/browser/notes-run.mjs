@@ -253,11 +253,42 @@ try {
         await idle();
         assert.deepEqual(await page.locator('.notes-date').allTextContents(), ['Вчера, 23:59', '31.12.2025, 09:05']);
         assert.equal(await page.locator('.notes-row').evaluateAll(rows => rows.every(element => element.scrollWidth <= element.clientWidth)), true);
+        const scrollbar = page.locator('[data-notes-scrollbar]');
+        const thumb = page.locator('.notes-scroll-thumb');
+        assert.equal(await scrollbar.getAttribute('hidden'), '');
+        await page.evaluate(() => {
+            const list = document.querySelector('[data-dle-toolbar]').shadowRoot.querySelector('.notes-list');
+            const row = list.firstElementChild;
+            const copies = Array.from({ length: 30 }, (_, i) => {
+                const copy = row.cloneNode(true);
+                copy.dataset.noteId = String(900 + i);
+                return copy;
+            });
+            list.append(...copies);
+        });
+        await scrollbar.waitFor({ state: 'visible' });
+        const thumbBox = await thumb.boundingBox();
+        const trackBox = await scrollbar.boundingBox();
+        await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(thumbBox.x + thumbBox.width / 2, trackBox.y + trackBox.height - 2, { steps: 8 });
+        await page.mouse.up();
+        const contentScroll = await page.locator('.notes-content').evaluate(element => element.scrollTop);
+        assert(contentScroll > 0, 'Thumb drag scrolled notes list');
+        await page.mouse.move(trackBox.x + trackBox.width / 2, trackBox.y + 5);
+        await page.mouse.wheel(0, 50);
+        await page.evaluate(() => {
+            const list = document.querySelector('[data-dle-toolbar]').shadowRoot.querySelector('.notes-list');
+            list.querySelectorAll('[data-note-id]').forEach((element, index) => {
+                if (index >= 2) element.remove();
+            });
+        });
+        await scrollbar.waitFor({ state: 'hidden' });
         await page.keyboard.press('Escape');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
         assert.deepEqual(errors, []);
         await page.close();
-        console.log(`PASS: DLE ${version}, ${width}px — simple notes, inline edits, focus, slow requests, retry, refresh and panel layout`);
+        console.log(`PASS: DLE ${version}, ${width}px — simple notes, inline edits, scrollbar, focus, slow requests, retry, refresh and panel layout`);
     }
 } finally {
     await browser.close();

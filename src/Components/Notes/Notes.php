@@ -29,9 +29,12 @@ final class Notes implements Component
 <input class="notes-input" name="title" aria-label="Новая заметка" placeholder="Новая заметка" maxlength="200" required autocomplete="off">
 <button type="submit" data-notes-action>Добавить</button>
 </form>
+<div class="notes-scroll-area">
 <div class="notes-content">
 <p class="notes-status" role="status" aria-live="polite"></p>
 <div class="notes-list" aria-label="Список заметок"></div>
+</div>
+<div class="notes-scrollbar" data-notes-scrollbar aria-hidden="true" hidden><div class="notes-scroll-thumb"></div></div>
 </div>
 </section>
 HTML,
@@ -47,7 +50,13 @@ HTML,
 .notes-close svg { width: 16px; height: 16px; }
 .notes-panel button[aria-disabled="true"] { opacity: .5; cursor: wait; }
 .notes-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
-.notes-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px; }
+.notes-scroll-area { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.notes-content { height: 100%; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; padding: 18px; }
+.notes-content::-webkit-scrollbar { display: none; }
+.notes-scrollbar { position: absolute; top: 3px; right: 0; bottom: 3px; width: 10px; cursor: pointer; touch-action: none; user-select: none; }
+.notes-scrollbar[hidden] { display: none; }
+.notes-scroll-thumb { position: absolute; top: 0; right: 2px; width: 4px; border-radius: 4px; background: var(--muted); opacity: .4; }
+.notes-scrollbar:hover .notes-scroll-thumb, .notes-scrollbar[data-dragging] .notes-scroll-thumb { width: 6px; opacity: .8; }
 .notes-status { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .notes-status:empty { display: none; }
 .notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); border-radius: 6px; transition: background-color 140ms ease; }
@@ -79,12 +88,56 @@ CSS,
 (() => {
     const trigger = root.querySelector('[data-notes-trigger]');
     const panel = root.querySelector('.notes-panel');
+    const content = panel.querySelector('.notes-content');
+    const scrollbar = panel.querySelector('[data-notes-scrollbar]');
+    const scrollThumb = scrollbar.firstElementChild;
     const list = panel.querySelector('.notes-list');
     const form = panel.querySelector('.notes-compose');
     const input = form.elements.namedItem('title');
     const status = panel.querySelector('.notes-status');
     let notes = [];
     let busy = false;
+    const updateScrollbar = () => {
+        const maxScroll = content.scrollHeight - content.clientHeight;
+        scrollbar.hidden = content.clientHeight === 0 || maxScroll <= 0;
+        if (scrollbar.hidden) return;
+        const trackHeight = scrollbar.clientHeight;
+        const thumbHeight = Math.min(trackHeight, Math.max(24, trackHeight * content.clientHeight / content.scrollHeight));
+        scrollThumb.style.height = thumbHeight + 'px';
+        scrollThumb.style.transform = 'translateY(' + (trackHeight - thumbHeight) * content.scrollTop / maxScroll + 'px)';
+    };
+    content.addEventListener('scroll', updateScrollbar, { passive: true });
+    scrollbar.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? content.clientHeight : 1;
+        content.scrollTop += event.deltaY * unit;
+    }, { passive: false });
+    const scrollResizeObserver = new ResizeObserver(updateScrollbar);
+    scrollResizeObserver.observe(content);
+    scrollResizeObserver.observe(list);
+    let dragOffset = 0;
+    const scrollToPointer = (event) => {
+        const travel = scrollbar.clientHeight - scrollThumb.offsetHeight;
+        if (travel <= 0) return;
+        content.scrollTop = (event.clientY - scrollbar.getBoundingClientRect().top - dragOffset)
+            / travel * (content.scrollHeight - content.clientHeight);
+    };
+    scrollbar.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        dragOffset = event.target === scrollThumb
+            ? event.clientY - scrollThumb.getBoundingClientRect().top : scrollThumb.offsetHeight / 2;
+        scrollbar.dataset.dragging = 'true';
+        scrollbar.setPointerCapture(event.pointerId);
+        scrollToPointer(event);
+    });
+    scrollbar.addEventListener('pointermove', (event) => {
+        if (scrollbar.hasPointerCapture(event.pointerId)) scrollToPointer(event);
+    });
+    scrollbar.addEventListener('pointerup', (event) => {
+        if (scrollbar.hasPointerCapture(event.pointerId)) scrollbar.releasePointerCapture(event.pointerId);
+    });
+    scrollbar.addEventListener('lostpointercapture', () => delete scrollbar.dataset.dragging);
     const focusNote = (id) => {
         const button = list.querySelector('[data-note-id="' + id + '"] .notes-title');
         if (button) button.focus();
@@ -163,6 +216,7 @@ CSS,
             list.append(row);
         });
         status.textContent = notes.length ? '' : 'Заметок пока нет.';
+        updateScrollbar();
     };
     const setBusy = (value) => {
         busy = value;
@@ -200,6 +254,7 @@ CSS,
     };
     const popup = createPopup({ trigger, panel, closeDuration: 0, onOpen: () => {
         input.focus();
+        updateScrollbar();
         request('list');
     } });
     trigger.addEventListener('click', () => popup.isOpen() ? popup.close() : popup.open());
