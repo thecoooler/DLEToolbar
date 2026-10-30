@@ -29,7 +29,7 @@ it('captures the actual caller without retaining arguments and preserves checkpo
         ->and(DebugLog::elapsed())->toBeGreaterThanOrEqual($entries[1]['time']);
 });
 
-it('renders escaped checkpoints, request edges and a timeline only for a visible component', function (): void {
+it('renders escaped checkpoints, cache badges and a timeline only for a visible component', function (): void {
     $start = $_SERVER['REQUEST_TIME_FLOAT'];
     try {
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true) - 1;
@@ -38,9 +38,9 @@ it('renders escaped checkpoints, request edges and a timeline only for a visible
         $registry = new ComponentRegistry();
         $rendered = $registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]]));
         expect($rendered['controls'])->toContain('data-component="files"', 'Лог и файлы: 2 отметок')
-            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'Снимок панели', 'Граница измерения', 'files-slow', 'Самый долгий интервал', 'files-track', 'DebugTest.php:')
+            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-track', 'DebugTest.php:', 'не из кэша')
             ->not->toContain('<script>', 'INF', 'NAN')
-            ->and(substr_count($rendered['panels'], '<li class="files-event'))->toBe(3)
+            ->and(substr_count($rendered['panels'], '<li class="files-event'))->toBe(2)
             ->and(substr_count($rendered['panels'], 'Самый долгий интервал'))->toBe(1)
             ->and(DebugLog::entries())->toHaveCount(2)
             ->and($registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => []]]))['panels'])->toBe('');
@@ -60,19 +60,18 @@ it('renders an empty log without fabricated checkpoints and clears collected req
         ->and($registry->render($preferences)['controls'])->toContain('Лог и файлы: 0 отметок');
 });
 
-it('keeps early marks and does not split a DLE stage when a manual mark is added inside it', function (): void {
+it('keeps early marks and records milestones with file deltas', function (): void {
     DebugLog::add('Before access check');
     $early = DebugLog::entries()[0];
     DebugLog::start();
     DebugLog::start();
     DebugLog::add('Inside engine.php');
-    DebugLog::checkpoint('engine/engine.php — подключение');
+    DebugLog::checkpoint('engine/engine.php');
     $snapshot = DebugLog::snapshot();
-    expect($snapshot['stages'])->toHaveCount(1)
-        ->and($snapshot['entries'])->toHaveCount(4)
+    expect($snapshot['entries'])->toHaveCount(4)
         ->and($snapshot['entries'][0])->toBe($early)
-        ->and(array_column($snapshot['entries'], 'kind'))->toBe(['log', 'start', 'log', 'stage'])
-        ->and($snapshot['stages'][0]['duration'])->toBeGreaterThanOrEqual($snapshot['entries'][2]['time'] - $snapshot['entries'][1]['time']);
+        ->and(array_column($snapshot['entries'], 'kind'))->toBe(['log', 'stage', 'log', 'stage'])
+        ->and($snapshot['entries'][3]['message'])->toBe('engine/engine.php');
     DebugLog::finish();
     $frozen = DebugLog::snapshot();
     DebugLog::add('Too late');
