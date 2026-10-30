@@ -111,6 +111,47 @@ it('omits the fields tab for news without visible fields', function (): void {
         ->toContain('<dt>Теги</dt><dd>один, два</dd>');
 });
 
+it('does not expose profile columns joined into a news row', function (): void {
+    $GLOBALS['dle_module'] = 'showfull';
+    $GLOBALS['news_found'] = true;
+    $profileColumns = ['email', 'name', 'news_num', 'user_comm_num', 'user_group', 'lastdate', 'reg_date',
+        'banned', 'allow_mail', 'info', 'signature', 'foto', 'fullname', 'land', 'favorites',
+        'pm_all', 'pm_unread', 'time_limit', 'user_xfields'];
+    $joined = [];
+    foreach ($profileColumns as $column) {
+        $joined[$column] = 'JOINED_' . $column . '_VALUE';
+    }
+    PageEntry::captureNews(entryNewsRow($joined));
+    $panel = renderEntry()['panel'];
+    foreach ($joined as $value) {
+        expect($panel)->not->toContain($value);
+    }
+    expect($panel)->not->toContain('<code>user_id</code>')
+        ->toContain('<dt>Просмотры</dt><dd>1 234</dd>')
+        ->toContain('ID 5');
+});
+
+it('renders repeated dynamic news fields on separate lines', function (): void {
+    require_once \DLEPlugins::Check(ENGINE_DIR . '/classes/xfields.class.php');
+    $previous = \DLEXFields::$fields;
+    try {
+        $GLOBALS['config']['version_id'] = '21.0';
+        $GLOBALS['dle_module'] = 'showfull';
+        $GLOBALS['news_found'] = true;
+        \DLEXFields::$fields = ['fields' => [
+            'code' => ['name' => 'code', 'description' => 'Код', 'type' => 'text', 'allow_view_usergroups' => '', 'dynamic' => 1],
+        ]];
+        $row = entryNewsRow(['xfields' => 'code|first||code|second']);
+        PageEntry::captureNews($row);
+        NewsFields::capture($row['xfields']);
+        expect(renderEntry()['panel'])->toContain('<dt>Код<code>code</code></dt><dd><details class="entry-spoiler">')
+            ->toContain("first\nsecond")
+            ->not->toContain("first\x01second");
+    } finally {
+        \DLEXFields::$fields = $previous;
+    }
+});
+
 it('shows the viewed category with its parent, children and settings', function (): void {
     $GLOBALS['dle_module'] = 'cat';
     $GLOBALS['category_id'] = 7;
@@ -153,21 +194,31 @@ it('shows the viewed profile without account secrets', function (): void {
         ->not->toContain('mod=editusers');
 });
 
-it('shows profile fields only to the owner and to groups that edit users', function (string $version, int $viewer, bool $editor, bool $visible): void {
+it('shows private profile data only to the owner and to groups that edit users', function (string $version, int $viewer, bool $editor, bool $visible): void {
     require_once \DLEPlugins::Check(ENGINE_DIR . '/classes/xfields.class.php');
     $GLOBALS['dle_module'] = 'userinfo';
     $GLOBALS['config']['version_id'] = $version;
     $GLOBALS['member_id']['user_id'] = $viewer;
     $GLOBALS['user_group'][1]['admin_editusers'] = (int) $editor;
     PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => 3, 'banned' => '',
-        'xfields' => 'city|PROFILE_VALUE']);
+        'xfields' => 'city|PROFILE_VALUE', 'email' => 'private@example.test', 'allowed_ip' => '192.0.2.1',
+        'logged_ip' => '192.0.2.2', 'favorites' => '41,42', 'pm_all' => 51, 'pm_unread' => 52,
+        'other_column' => 'RAW_PROFILE_VALUE', 'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH',
+        'twofactor_secret' => 'TOTP_SECRET']);
     $panel = renderEntry()['panel'];
     if ($visible) {
-        expect($panel)->toContain('<dt><code>city</code></dt><dd>PROFILE_VALUE</dd>');
+        expect($panel)->toContain('<dt><code>city</code></dt><dd>PROFILE_VALUE</dd>')
+            ->toContain('private@example.test')->toContain('192.0.2.1')->toContain('192.0.2.2')
+            ->toContain('<dt>В избранном</dt><dd>2</dd>')->toContain('<dt>Сообщений</dt><dd>51')
+            ->toContain('RAW_PROFILE_VALUE');
     } else {
         expect($panel)->not->toContain('data-entry-tab="fields"')
-            ->not->toContain('PROFILE_VALUE');
+            ->not->toContain('data-entry-tab="raw"')
+            ->not->toContain('PROFILE_VALUE')->not->toContain('RAW_PROFILE_VALUE')
+            ->not->toContain('private@example.test')->not->toContain('192.0.2.1')->not->toContain('192.0.2.2')
+            ->not->toContain('<dt>В избранном</dt>')->not->toContain('<dt>Сообщений</dt>');
     }
+    expect($panel)->not->toContain('PASSWORD_HASH')->not->toContain('SESSION_HASH')->not->toContain('TOTP_SECRET');
 })->with([
     'legacy owner' => ['18.0', 12, false, true],
     'legacy user editor' => ['18.0', 1, true, true],

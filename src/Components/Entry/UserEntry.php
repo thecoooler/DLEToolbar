@@ -24,6 +24,10 @@ final class UserEntry
         $group = (int) $row['user_group'];
         $banned = $row['banned'] === 'yes';
         $restricted = (int) ($row['restricted'] ?? 0);
+        $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers');
+        if (!$canViewPrivate) {
+            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread']);
+        }
 
         $badges = [];
         if ($banned) {
@@ -67,7 +71,7 @@ final class UserEntry
         // Profile field definitions differ between DLE versions, so private fields are not told apart:
         // the tab is shown to the owner and to groups that edit users.
         $fields = [];
-        if ((int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers')) {
+        if ($canViewPrivate) {
             $stored = stripslashes((string) $row['xfields']);
             /** @var array<string, string> $data User and news fields share the storage format. */
             $data = version_compare($config['version_id'], '19.0', '>=') ? \DLEXFields::xfieldsdataload($stored) : \xfieldsdataload($stored);
@@ -100,7 +104,7 @@ final class UserEntry
                 ['id' => 'profile', 'label' => 'Профиль', 'rows' => $profile],
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'access', 'label' => 'Доступ', 'rows' => $access],
-                ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, array_merge(self::SECRET, ['xfields']))],
+                ['id' => 'raw', 'label' => 'Все поля', 'rows' => $canViewPrivate ? Format::raw($row, array_merge(self::SECRET, ['xfields'])) : []],
             ],
         ];
     }

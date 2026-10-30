@@ -352,7 +352,10 @@ HTML;
         const dock = root.querySelector('.dock');
         const tabs = [...panel.querySelectorAll('[data-entry-tab]')];
         const storageKey = 'dletoolbar:entry-tab:' + panel.dataset.kind;
-        const popup = createPopup({ trigger: button, panel, closeDuration: 150 });
+        const popup = createPopup({
+            trigger: button, panel, closeDuration: 150,
+            onOpen: () => tabs.find((tab) => tab.getAttribute('aria-selected') === 'true').focus(),
+        });
         const select = (tab, focus = false) => {
             tabs.forEach((item) => {
                 const selected = item === tab;

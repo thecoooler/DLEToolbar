@@ -67,7 +67,7 @@ final class NewsEntry
         $fields = [];
         foreach (NewsFields::fields() as $field) {
             $fields[] = [Format::escape($field['label'] !== '' ? $field['label'] : $field['name'])
-                . '<code>' . Format::escape($field['name']) . '</code>', Format::text($field['value'])];
+                . '<code>' . Format::escape($field['name']) . '</code>', Format::text(str_replace("\x01", "\n", $field['value']))];
         }
 
         $seo = Format::rows($row, [
@@ -111,8 +111,13 @@ final class NewsEntry
                 ['id' => 'fields', 'label' => 'Допполя', 'rows' => $fields],
                 ['id' => 'seo', 'label' => 'SEO', 'rows' => $seo],
                 ['id' => 'options', 'label' => 'Параметры', 'rows' => $options],
-                // The stories are already split into pages and compiled at capture time.
-                ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, ['short_story', 'full_story', 'cats', 'xfields', 'xfields_array'])],
+                // The stories are compiled, and user_in_news adds profile columns to the row.
+                ['id' => 'raw', 'label' => 'Все поля', 'rows' => Format::raw($row, [
+                    'short_story', 'full_story', 'cats', 'xfields', 'xfields_array',
+                    'email', 'name', 'user_id', 'news_num', 'user_comm_num', 'user_group', 'lastdate', 'reg_date',
+                    'banned', 'allow_mail', 'info', 'signature', 'foto', 'fullname', 'land', 'favorites',
+                    'pm_all', 'pm_unread', 'time_limit', 'user_xfields',
+                ])],
             ],
         ];
     }
