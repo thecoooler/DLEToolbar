@@ -2,6 +2,8 @@
 
 namespace iCooLER\DLEToolbar\Components\Debug;
 
+use iCooLER\DLEToolbar\ComponentFramework\SourcePath;
+
 /** One request-local journal for manual marks, DLE stages and included-file snapshots. */
 final class DebugLog
 {
@@ -72,11 +74,7 @@ final class DebugLog
 
     private static function append(string $message, string $file, int $line, string $kind, float $time): void
     {
-        $file = str_replace('\\', '/', $file);
-        $root = rtrim(str_replace('\\', '/', ROOT_DIR), '/') . '/';
-        if (strpos($file, $root) === 0) {
-            $file = substr($file, strlen($root));
-        }
+        $file = SourcePath::display($file);
         self::$entries[] = ['message' => $message, 'file' => $file, 'line' => $line, 'time' => $time, 'kind' => $kind];
     }
 
