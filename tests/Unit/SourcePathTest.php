@@ -10,6 +10,11 @@ use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
     setupDleToolbarTestEnvironment();
+    DebugLog::reset();
+});
+
+afterEach(function (): void {
+    DebugLog::reset();
 });
 
 it('resolves cache paths, eval frames and Windows separators using the current DLE plugin map', function (): void {
@@ -24,18 +29,24 @@ it('resolves cache paths, eval frames and Windows separators using the current D
         $cache = ENGINE_DIR . '/cache/system/plugins/';
         $windowsCache = str_replace('/', '\\', $cache);
         expect(SourcePath::display($cache . 'dletoolbar-source-test.php'))->toBe('engine/modules/source.php')
+            ->and(SourcePath::isCached($cache . 'dletoolbar-source-test.php'))->toBeTrue()
+            ->and(SourcePath::resolve($cache . 'dletoolbar-source-test.php'))->toBe(['path' => 'engine/modules/source.php', 'cached' => true])
             ->and(SourcePath::display($windowsCache . 'dletoolbar-source-test.php'))->toBe('engine/modules/source.php')
+            ->and(SourcePath::isCached($windowsCache . 'dletoolbar-source-test.php'))->toBeTrue()
             ->and(SourcePath::display($cache . "dletoolbar-source-test.php(4) : eval()'d code(9) : eval()'d code"))->toBe('engine/modules/source.php')
             ->and(SourcePath::display($cache . 'dletoolbar-other-test.php'))->toBe('engine/modules/other.php')
             ->and(SourcePath::display($cache . 'unknown.php'))->toBe('engine/cache/system/plugins/unknown.php')
+            ->and(SourcePath::isCached($cache . 'unknown.php'))->toBeTrue()
             ->and(SourcePath::display(ROOT_DIR . '/engine/modules/plain.php'))->toBe('engine/modules/plain.php')
-            ->and(SourcePath::display('/outside/site.php'))->toBe('/outside/site.php');
+            ->and(SourcePath::isCached(ROOT_DIR . '/engine/modules/plain.php'))->toBeFalse()
+            ->and(SourcePath::display('/outside/site.php'))->toBe('/outside/site.php')
+            ->and(SourcePath::isCached('/outside/site.php'))->toBeFalse();
     } finally {
         $plugins->setValue(null, $before);
     }
 });
 
-it('displays original files and call sites while retaining physical files in the snapshot', function (): void {
+it('displays original files and call sites with cache badges while retaining physical files in the snapshot', function (): void {
     $plugins = new ReflectionProperty(DLEPlugins::class, 'plugins');
     $plugins->setAccessible(true);
     $before = $plugins->getValue();
@@ -61,16 +72,17 @@ it('displays original files and call sites while retaining physical files in the
         DebugLog::finish();
         $snapshot = DebugLog::snapshot();
         $panel = (new ComponentRegistry())->render($preferences)['panels'];
-        expect($snapshot['before'])->toContain($early)
-            ->and($snapshot['stages'][0]['files'])->toContain($late)
-            ->and($snapshot['stages'][1]['files'])->toContain($unknown)
+        expect($snapshot['entries'][0]['files'])->toContain($early)
+            ->and($snapshot['entries'][0]['cached'])->toBeTrue()
             ->and($snapshot['entries'][0]['file'])->toBe('engine/modules/<early>.php')
             ->and($snapshot['entries'][0]['line'])->toBe(2)
             ->and($snapshot['entries'][2]['file'])->toBe('engine/modules/example/run.php')
             ->and($snapshot['entries'][2]['line'])->toBe(2)
-            ->and($snapshot['entries'][3]['file'])->toBe('engine/modules/example/run.php')
-            ->and($snapshot['entries'][3]['line'])->toBe(3)
+            ->and($snapshot['entries'][2]['cached'])->toBeTrue()
+            ->and($snapshot['entries'][2]['files'])->toContain($late)
+            ->and($snapshot['entries'][4]['files'])->toContain($unknown)
             ->and($panel)->toContain('engine/modules/&lt;early&gt;.php', 'engine/modules/example/run.php:2', 'engine/modules/example/run.php:3', 'engine/cache/system/plugins/' . basename($unknown))
+            ->toContain('из кэша', 'не из кэша')
             ->not->toContain('engine/modules/<early>.php', basename($early), basename($late));
     } finally {
         $plugins->setValue(null, $before);

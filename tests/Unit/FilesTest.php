@@ -10,9 +10,14 @@ use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
     setupDleToolbarTestEnvironment();
+    DebugLog::reset();
 });
 
-it('records sequential stages and attributes each new file only to its first stage', function (): void {
+afterEach(function (): void {
+    DebugLog::reset();
+});
+
+it('records sequential milestones and attributes each new file only to its first milestone', function (): void {
     $directory = sys_get_temp_dir() . '/dletoolbar-files-' . bin2hex(random_bytes(6));
     mkdir($directory);
     $child = $directory . '/child.php';
@@ -22,7 +27,6 @@ it('records sequential stages and attributes each new file only to its first sta
     $executions = 0;
     try {
         DebugLog::start();
-        $before = DebugLog::snapshot()['before'];
         include $parent;
         DebugLog::checkpoint('Подключение parent.php');
         include $parent;
@@ -30,15 +34,15 @@ it('records sequential stages and attributes each new file only to its first sta
         DebugLog::finish();
         $snapshot = DebugLog::snapshot();
         expect($executions)->toBe(2)
-            ->and($snapshot['before'])->toBe($before)
-            ->and($snapshot['stages'][0]['files'])->toBe([$parent, $child])
-            ->and($snapshot['stages'][1]['files'])->toBe([])
-            ->and($snapshot['stages'][2]['label'])->toBe('Сборка main.tpl до вывода панели');
+            ->and($snapshot['entries'][0]['message'])->toBe('engine/init.php')
+            ->and($snapshot['entries'][1]['files'])->toBe([$parent, $child])
+            ->and($snapshot['entries'][2]['files'])->toBe([])
+            ->and($snapshot['entries'][3]['message'])->toBe('engine/modules/main.php');
         $end = 0.0;
-        foreach ($snapshot['stages'] as $stage) {
-            expect($stage['start'])->toBeGreaterThanOrEqual($end)
-                ->and($stage['duration'])->toBeGreaterThanOrEqual(0.0);
-            $end = $stage['start'] + $stage['duration'];
+        foreach ($snapshot['entries'] as $entry) {
+            expect($entry['time'])->toBeGreaterThanOrEqual($end)
+                ->and($entry['gap'])->toBeGreaterThanOrEqual(0.0);
+            $end = $entry['time'];
         }
         DebugLog::finish();
         DebugLog::checkpoint('После вывода');
@@ -57,11 +61,11 @@ it('starts collecting only for a visible component and an authorized toolbar', f
     $toolbar = new DLEToolbar();
     $toolbar->init();
     DebugLog::checkpoint('Контрольная точка');
-    $stages = DebugLog::snapshot()['stages'];
-    expect(count($stages))->toBe($visible && $group === 1 ? 1 : 0);
+    $entries = DebugLog::snapshot()['entries'];
+    expect(count($entries))->toBe($visible && $group === 1 ? 2 : 0);
 })->with([[true, 1], [false, 1], [true, 4], [true, 2]]);
 
-it('renders escaped executed paths and stage timings without inventing individual file durations', function (): void {
+it('renders escaped executed paths and cache badges in the unified timeline', function (): void {
     $file = sys_get_temp_dir() . '/dletoolbar-<file>"-' . bin2hex(random_bytes(6)) . '.php';
     file_put_contents($file, '<?php return 1;');
     try {
@@ -73,16 +77,16 @@ it('renders escaped executed paths and stage timings without inventing individua
         DebugLog::checkpoint('Этап <test>');
         DebugLog::finish();
         $snapshot = DebugLog::snapshot();
-        $count = count($snapshot['before']) + array_sum(array_map(static fn(array $stage): int => count($stage['files']), $snapshot['stages']));
+        $count = $snapshot['totalFiles'];
         $rendered = $registry->render($preferences);
         expect($rendered['controls'])->toContain('data-component="files"')
             ->toContain('<span class="metric-value">' . $count . '</span>')
-            ->and($rendered['panels'])->toContain('До начала замеров')
+            ->and($rendered['panels'])->toContain('Лог и файлы')
             ->toContain('Этап &lt;test&gt;')
             ->toContain(htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))
             ->not->toContain($file)
-            ->toContain('Время измерено для этапа целиком')
-            ->toContain('Новых файлов нет.')
+            ->toContain('не из кэша')
+            ->toContain('files-details', 'files-toggle')
             ->and($rendered['scripts'])->toContain('createPopup(');
         expect((new Files($preferences->componentParameters('files')))->render()['panel'])->toBe($rendered['panels']);
     } finally {
@@ -90,13 +94,13 @@ it('renders escaped executed paths and stage timings without inventing individua
     }
 });
 
-it('closes the last stage before rendering the toolbar and keeps saved visibility unchanged', function (): void {
+it('closes main.php before rendering the toolbar and keeps saved visibility unchanged', function (): void {
     ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]])->save();
     $toolbar = new DLEToolbar();
     $toolbar->init();
     $html = $toolbar->render();
-    expect(DebugLog::snapshot()['stages'])->toHaveCount(1)
-        ->and($html)->toContain('Сборка main.tpl до вывода панели')
+    expect(DebugLog::snapshot()['entries'])->toHaveCount(2)
+        ->and($html)->toContain('engine/modules/main.php')
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['time']]])->visibleItems())->toBe(['time']);
 });
 
@@ -111,9 +115,9 @@ it('starts automatic collection after request components for either toolbar orde
         $toolbar = new DLEToolbar();
         $toolbar->init();
         $snapshot = DebugLog::snapshot();
-        expect($snapshot['stages'])->toBe([])
-            ->and(array_column($snapshot['entries'], 'kind'))->toBe(['start'])
-            ->and(implode('\n', $snapshot['before']))->toContain('Components/Queries/QueryLog.php')
+        expect($snapshot['entries'])->toHaveCount(1)
+            ->and($snapshot['entries'][0]['message'])->toBe('engine/init.php')
+            ->and(implode('\n', $snapshot['entries'][0]['files']))->toContain('Components/Queries/QueryLog.php')
             ->and($GLOBALS['db']->query_list)->toBeInstanceOf(\iCooLER\DLEToolbar\Components\Queries\QueryLog::class);
     } finally {
         $GLOBALS['dletoolbar_native_db']->query_list = [];

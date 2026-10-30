@@ -23,27 +23,7 @@ PHP,
         <<<'PHP'
 try {
   if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
-    \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('Подготовка DLE после проверки доступа');
-  }
-} catch (\Throwable $error) {
-  $DLEToolbar = null;
-  error_log('[DLEToolbar] file timing: ' . $error);
-}
-PHP,
-        <<<'PHP'
-try {
-  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
-    \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php — подключение');
-  }
-} catch (\Throwable $error) {
-  $DLEToolbar = null;
-  error_log('[DLEToolbar] file timing: ' . $error);
-}
-PHP,
-        <<<'PHP'
-try {
-  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
-    \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('Блоки страницы после engine.php');
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php');
   }
 } catch (\Throwable $error) {
   $DLEToolbar = null;

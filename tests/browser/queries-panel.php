@@ -69,10 +69,8 @@ http_response_code(200);
 $toolbar = new \iCooLER\DLEToolbar\Toolbar\DLEToolbar();
 \iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Подготовка шаблона');
 $toolbar->init();
-\iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('Подготовка DLE после проверки доступа');
 \iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Контент страницы собран');
-\iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php — подключение');
-\iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('Блоки страницы после engine.php');
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php');
 ?>
 <!doctype html>
 <html lang="ru">
