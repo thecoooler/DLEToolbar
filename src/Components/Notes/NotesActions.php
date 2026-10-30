@@ -46,14 +46,15 @@ final class NotesActions
             }
         }
 
-        $result = $db->query("SELECT id, title, created_at FROM $table ORDER BY updated_at DESC, id DESC", false);
+        $result = $db->query("SELECT id, title, created_at, DATEDIFF(CURRENT_DATE(), created_at) AS created_days_ago FROM $table ORDER BY updated_at DESC, id DESC", false);
         if ($result === false) {
             throw new \RuntimeException('Failed to load toolbar notes.');
         }
         $notes = [];
         while ($row = $db->get_row($result)) {
-            /** @var array{id: int|string, title: string, created_at: string|null} $row */
+            /** @var array{id: int|string, title: string, created_at: string|null, created_days_ago: int|string|null} $row */
             $row['id'] = (int) $row['id'];
+            $row['created_days_ago'] = $row['created_days_ago'] === null ? null : (int) $row['created_days_ago'];
             $notes[] = $row;
         }
         $db->free($result);

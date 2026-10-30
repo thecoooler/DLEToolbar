@@ -20,7 +20,8 @@ it('creates edits and deletes simple shared notes', function (): void {
     $call = fn(array $input): array => $api->handle($input + ['user_hash' => 'test-user-hash']);
     expect($call([])['notes'])->toBe([]);
     $first = $call(['action' => 'save', 'title' => '  Проверить <шапку>  '])['notes'][0];
-    expect($first['title'])->toBe('Проверить <шапку>')->and(array_keys($first))->toBe(['id', 'title', 'created_at'])
+    expect($first['title'])->toBe('Проверить <шапку>')->and(array_keys($first))->toBe(['id', 'title', 'created_at', 'created_days_ago'])
+        ->and($first['created_days_ago'])->toBe(0)
         ->and($first['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/');
     $second = $call(['action' => 'save', 'title' => 'Вторая'])['notes'][0];
     expect($second['title'])->toBe('Вторая');
@@ -36,8 +37,8 @@ it('keeps existing note data in storage and excludes removed fields from the lis
     $GLOBALS['db']->query('INSERT INTO `' . PREFIX . "_dletoolbar_notes` SET title = 'Прежняя', body = 'Старый текст', page_url = '/old', pinned = 1, updated_at = '2020-01-01 00:00:00'");
     $old = $call([])['notes'][0];
     $new = $call(['action' => 'save', 'title' => 'Новая', 'body' => 'Не сохранять', 'page_url' => '/new', 'pinned' => '1'])['notes'][0];
-    expect($new['title'])->toBe('Новая')->and(array_keys($new))->toBe(['id', 'title', 'created_at'])
-        ->and($old['created_at'])->toBeNull();
+    expect($new['title'])->toBe('Новая')->and(array_keys($new))->toBe(['id', 'title', 'created_at', 'created_days_ago'])
+        ->and($old['created_at'])->toBeNull()->and($old['created_days_ago'])->toBeNull();
     $notes = $call(['action' => 'save', 'id' => $old['id'], 'title' => 'Изменено'])['notes'];
     expect(array_column($notes, 'title'))->toContain('Изменено');
     $result = $GLOBALS['db']->query('SELECT body, page_url, pinned FROM `' . PREFIX . '_dletoolbar_notes` ORDER BY id');
@@ -55,6 +56,15 @@ it('preserves the creation date when a note is edited', function (): void {
     $result = $GLOBALS['db']->query('SELECT updated_at FROM `' . PREFIX . '_dletoolbar_notes` WHERE id = ' . $note['id']);
     expect($GLOBALS['db']->get_row($result)['updated_at'])->not->toBe('2020-03-04 05:06:07');
     $GLOBALS['db']->free($result);
+});
+
+it('reports calendar days in the same database clock used to create notes', function (): void {
+    $api = new NotesActions();
+    $api->handle(['action' => 'save', 'title' => 'Вчера', 'user_hash' => 'test-user-hash']);
+    $GLOBALS['db']->query('UPDATE `' . PREFIX . '_dletoolbar_notes` SET created_at = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)');
+    expect($api->handle(['user_hash' => 'test-user-hash'])['notes'][0]['created_days_ago'])->toBe(1);
+    $GLOBALS['db']->query('UPDATE `' . PREFIX . '_dletoolbar_notes` SET created_at = DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)');
+    expect($api->handle(['user_hash' => 'test-user-hash'])['notes'][0]['created_days_ago'])->toBe(2);
 });
 
 it('upgrades the old notes table without inventing dates and keeps dates on repeated upgrades', function (): void {

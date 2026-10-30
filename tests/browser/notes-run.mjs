@@ -16,6 +16,7 @@ try {
         [375, '19.0', '**/index.php?controller=ajax&mod=dletoolbar_notes'],
     ]) {
         const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion: 'reduce', colorScheme: 'light', timezoneId: 'America/Los_Angeles' });
+        await page.clock.setFixedTime(new Date('2026-10-29T12:00:00Z'));
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         let notes = [];
@@ -39,7 +40,7 @@ try {
                 const id = Number(input.get('id')) || nextId++;
                 const previous = notes.find(note => note.id === id);
                 notes = notes.filter(note => note.id !== id);
-                notes.unshift({ id, title: input.get('title').trim(), created_at: previous ? previous.created_at : '2026-10-30 00:15:00' });
+                notes.unshift({ id, title: input.get('title').trim(), created_at: previous ? previous.created_at : '2026-10-30 00:15:00', created_days_ago: previous ? previous.created_days_ago : 0 });
             }
             if (action === 'delete') notes = notes.filter(note => note.id !== Number(input.get('id')));
             await route.fulfill({ json: { notes } });
@@ -131,7 +132,8 @@ try {
         const row = page.locator('.notes-row');
         assert.equal((await row.boundingBox()).height, 36);
         assert.equal(await row.locator(':scope > :first-child').getAttribute('class'), 'notes-date');
-        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
+        assert.equal(await row.locator('.notes-date').textContent(), 'Сегодня, 00:15');
+        assert.equal(await row.locator('.notes-date').getAttribute('title'), 'Дата добавления: 30.10.2026, 00:15');
         assert.equal(await row.locator('time').getAttribute('datetime'), '2026-10-30T00:15:00');
         const dateBounds = await row.locator('.notes-date').boundingBox();
         const textBounds = await row.locator('.notes-title').boundingBox();
@@ -167,11 +169,20 @@ try {
         await page.locator('.notes-title').click();
         const editor = page.getByRole('textbox', { name: 'Изменить заметку', exact: true });
         assert.equal(await editor.inputValue(), title);
-        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
+        assert.equal(await row.locator('.notes-date').textContent(), 'Сегодня, 00:15');
+        assert((await editor.boundingBox()).width >= 100);
+        assert.equal(await row.evaluate(element => element.scrollWidth <= element.clientWidth), true);
         assert.equal(await input.isVisible(), true);
         await editor.fill('Не сохранять');
         await editor.press('Escape');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('.notes-title').textContent(), title);
+        assert.equal(await focused(page.locator('.notes-title')), true);
+        await page.locator('.notes-title').click();
+        await editor.fill('Отменить кнопкой');
+        const cancel = page.getByRole('button', { name: 'Отменить редактирование', exact: true });
+        assert.equal(await cancel.textContent(), 'Отмена');
+        await cancel.click();
         assert.equal(await page.locator('.notes-title').textContent(), title);
         assert.equal(await focused(page.locator('.notes-title')), true);
         await page.locator('.notes-title').click();
@@ -183,7 +194,7 @@ try {
         assert.equal(await focused(editor), true);
         await editor.press('Enter');
         await page.getByRole('button', { name: 'Исправлено', exact: true }).waitFor();
-        assert.equal(await row.locator('.notes-date').textContent(), '30.10.2026');
+        assert.equal(await row.locator('.notes-date').textContent(), 'Сегодня, 00:15');
         assert.equal(await focused(page.locator('.notes-title')), true);
         await page.locator('.notes-title').click();
         const editHold = pauseNext();
@@ -217,7 +228,7 @@ try {
         assert.equal(await page.locator('.notes-compose input').inputValue(), 'Следующая заметка');
 
         // Reopening refreshes edits made by another administrator.
-        notes.unshift({ id: nextId++, title: 'От другого администратора', created_at: null });
+        notes.unshift({ id: nextId++, title: 'От другого администратора', created_at: null, created_days_ago: null });
         const listsBefore = requests.filter(action => action === 'list').length;
         await trigger.click();
         await page.getByRole('button', { name: 'От другого администратора', exact: true }).waitFor();
@@ -233,6 +244,15 @@ try {
         await page.getByRole('button', { name: 'Удалить: Исправлено', exact: true }).click();
         await page.getByText('Заметок пока нет.').waitFor();
         assert.equal(await focused(input), true);
+        await page.locator('[data-notes-close]').click();
+        notes = [
+            { id: nextId++, title: 'Вчерашняя заметка', created_at: '2026-10-29 23:59:00', created_days_ago: 1 },
+            { id: nextId++, title: 'Прежняя заметка', created_at: '2025-12-31 09:05:00', created_days_ago: 303 },
+        ];
+        await trigger.click();
+        await idle();
+        assert.deepEqual(await page.locator('.notes-date').allTextContents(), ['Вчера, 23:59', '31.12.2025, 09:05']);
+        assert.equal(await page.locator('.notes-row').evaluateAll(rows => rows.every(element => element.scrollWidth <= element.clientWidth)), true);
         await page.keyboard.press('Escape');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
         assert.deepEqual(errors, []);
