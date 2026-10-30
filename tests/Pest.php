@@ -25,7 +25,7 @@ define('LOGGED_IN', true);
 
 function setupDleToolbarTestEnvironment(): void
 {
-    \iCooLER\DLEToolbar\Components\Files\FileTimeline::reset();
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::reset();
     $GLOBALS['dletoolbar_native_db'] ??= $GLOBALS['db'];
     $GLOBALS['dletoolbar_native_db']->query('DELETE FROM `' . PREFIX . '_dletoolbar_settings`');
     \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences::resetRequestCache();

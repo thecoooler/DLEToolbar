@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { mkdir } from 'node:fs/promises';
 import { testClock } from './clock.mjs';
 
 const require = createRequire(import.meta.url);
@@ -55,6 +56,31 @@ try {
         });
         await track.waitFor({ state: 'hidden' });
         console.log('PASS: scrollbar drag, track click, wheel and hiding when content fits');
+
+        await page.locator('[data-files-open]').click();
+        await page.locator('[data-files-view="list"]').click();
+        await page.locator('.files-group').first().evaluate((group) => { group.open = true; });
+        const fileList = page.locator('#dle-toolbar-files-list');
+        await fileList.focus();
+        await fileList.press('End');
+        await page.waitForFunction(() => document.querySelector('[data-dle-toolbar]').shadowRoot
+            .querySelector('#dle-toolbar-files-list').scrollTop > 0);
+        await fileList.press('Home');
+        await page.waitForFunction(() => document.querySelector('[data-dle-toolbar]').shadowRoot
+            .querySelector('#dle-toolbar-files-list').scrollTop === 0);
+        console.log('PASS: keyboard scrolls the file list');
+        const evidenceDir = process.env.DLETOOLBAR_SCREENSHOT_DIR;
+        if (evidenceDir) {
+            await mkdir(evidenceDir, { recursive: true });
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await page.locator('[data-files-open]').hover();
+            for (const view of ['timeline', 'list']) {
+                await page.locator(`[data-files-view="${view}"]`).click();
+                await page.locator('[data-files-open]').focus();
+                await page.screenshot({ path: `${evidenceDir}/diagnostics-${view}-${page.viewportSize().width}.png` });
+            }
+        }
+
     }
 
     // Template print styles cannot override the shadow :host rule, which wins with !important.
