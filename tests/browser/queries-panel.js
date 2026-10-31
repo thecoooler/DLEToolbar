@@ -325,6 +325,42 @@
             skinTrigger.removeAttribute('aria-busy');
         }
 
+        const filesButton = root.querySelector('[data-files-open]');
+        const filesPanel = root.querySelector('#dle-toolbar-files-panel');
+        assert(filesPanel.hidden, 'Files panel starts hidden');
+        filesButton.click();
+        assert(!filesPanel.hidden && filesButton.getAttribute('aria-expanded') === 'true', 'Files trigger opens panel');
+        const measured = filesPanel.querySelector('.files-time-before').closest('.files-event');
+        assert(measured.querySelector('.files-time-after') && measured.querySelector('.files-duration'), 'One inclusion row shows both timestamps and execution duration');
+        assert(!filesPanel.textContent.includes('queries-panel.php:'), 'Call site is omitted from diagnostics');
+        const filesBox = filesPanel.getBoundingClientRect();
+        assert(filesBox.top >= 0 && filesBox.right <= window.innerWidth, 'Files panel fits viewport');
+        const timelineView = filesPanel.querySelector('#dle-toolbar-files-timeline');
+        assert(!timelineView.hidden, 'Diagnostics displays the unified timeline');
+        assert(timelineView.textContent.includes('Подготовка шаблона') && timelineView.textContent.includes('Контент страницы собран'), 'Manual marks appear beside milestones');
+        assert(filesButton.getAttribute('aria-label').includes('Закрыть панель'), 'Open diagnostics announces close action');
+        const fileDetails = filesPanel.querySelector('.files-details');
+        assert(fileDetails, 'Timeline entry has collapsible files list');
+        const fileSummary = fileDetails.querySelector('.files-toggle');
+        fileSummary.click();
+        assert(fileDetails.open, 'Clicking file count expands the list of files');
+        assert(fileDetails.querySelector('.files-badge'), 'Files list displays cache badge');
+        assert(timelineView.querySelector('.files-badge'), 'Timeline displays cache badge on call sites and files');
+        filesButton.focus();
+        key(filesButton, 'Escape');
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files Escape closes from trigger and restores focus');
+        assert(filesButton.getAttribute('aria-label').includes('Показать панель'), 'Closed diagnostics announces open action');
+        filesButton.click();
+        trigger.click();
+        assert(filesPanel.hidden && expanded(), 'SQL opening closes files immediately');
+        filesButton.click();
+        assert(panel.hidden && !filesPanel.hidden, 'Files opening closes SQL immediately');
+        filesPanel.querySelector('[data-files-close]').click();
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files close button restores focus');
+        filesButton.click();
+        document.getElementById('outside').click();
+        assert(filesPanel.hidden, 'Outside click closes files');
+
         window.queriesPanelTestResult = { status: 'PASS', assertions };
         result.textContent = `PASS (${assertions} assertions)`;
     } catch (error) {

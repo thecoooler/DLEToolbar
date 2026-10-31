@@ -6,6 +6,7 @@ use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
+use iCooLER\DLEToolbar\Components\Files\Files;
 use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Components\Response\Response;
@@ -21,6 +22,7 @@ final class ComponentRegistry
         'response' => Response::class,
         'time' => Time::class,
         'queries' => Queries::class,
+        'files' => Files::class,
         'skin' => Skin::class,
         'cache' => Cache::class,
         'editpost' => EditPost::class,

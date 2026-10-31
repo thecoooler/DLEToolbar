@@ -5,6 +5,7 @@
 // Open: http://127.0.0.1:8001/queries-panel.php
 // The page reports PASS/FAIL and exposes window.queriesPanelTestResult.
 
+define('ROOT_DIR', dirname(__DIR__, 2));
 define('ENGINE_DIR', sys_get_temp_dir() . '/dletoolbar-browser-' . getmypid());
 
 spl_autoload_register(static function (string $class): void {
@@ -53,8 +54,8 @@ $db = new class {
     {
         $rows = [
             ['setting_key' => 'toolbar', 'setting_value' => json_encode([
-                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock'],
-                'enabled' => isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin'],
+                'items' => ['response', 'time', 'queries', 'files', 'skin', 'cache', 'editpost', 'clock'],
+                'enabled' => isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin', 'files'],
             ])],
             ['setting_key' => 'components', 'setting_value' => json_encode([
                 'clock' => ['show_seconds' => ($_GET['clock'] ?? 'seconds') !== 'minutes'],
@@ -65,6 +66,12 @@ $db = new class {
     public function free($result = null) {}
 };
 http_response_code(200);
+$toolbar = new \iCooLER\DLEToolbar\Toolbar\DLEToolbar();
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Подготовка шаблона');
+$toolbar->init();
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::before(ROOT_DIR . '/engine/engine.php');
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Контент страницы собран');
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ROOT_DIR . '/engine/engine.php');
 ?>
 <!doctype html>
 <html lang="ru">
@@ -72,7 +79,7 @@ http_response_code(200);
 <body>
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
-<?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
+<?= $toolbar->render() ?>
 <?php if (!isset($_GET['clock'])): ?>
 <script src="queries-panel.js"></script>
 <?php endif; ?>

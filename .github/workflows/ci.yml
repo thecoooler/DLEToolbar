@@ -110,6 +110,7 @@ jobs:
       - name: Run browser regression
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          DLETOOLBAR_SCREENSHOT_DIR: ${{ runner.temp }}/diagnostics-screenshots
         run: |
           php -S 127.0.0.1:8001 -t tests/browser > "$RUNNER_TEMP/queries-panel-php.log" 2>&1 &
           server_pid=$!
@@ -122,3 +123,11 @@ jobs:
           done
           curl --fail --silent --output /dev/null http://127.0.0.1:8001/queries-panel.php
           node tests/browser/run.mjs
+      - name: Upload diagnostics screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: diagnostics-screenshots
+          path: ${{ runner.temp }}/diagnostics-screenshots
+          if-no-files-found: ignore
+          retention-days: 14
