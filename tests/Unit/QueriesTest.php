@@ -44,7 +44,7 @@ it('masks password and session hash values in SQL rows', function (): void {
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     expect($panel)->toContain('password=&#039;***&#039;, lastdate=&#039;1&#039;, hash=&#039;***&#039;, logged_ip=&#039;::1&#039;')
-        ->toContain('PASSWORD=&#039;***&#039; WHERE name=&#039;admin&#039;')
+        ->toContain('PASSWORD = &#039;***&#039; WHERE name=&#039;admin&#039;')
         ->toContain('user_hash=&#039;***&#039; AND u.password=&#039;***&#039;')
         ->not->toContain('def456')
         ->not->toContain('ghi789')
@@ -244,4 +244,24 @@ it('escapes initiator names in filters and row attributes', function (): void {
     expect($panel)->toContain('data-query-filter="&quot;&gt;&lt;i&gt;"')
         ->toContain('data-initiator="&quot;&gt;&lt;i&gt;"')
         ->not->toContain('"><i>');
+});
+
+
+it('groups and colors traced plugin queries by plugin name and masks additional secrets', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [
+        ['query' => "SELECT * FROM settings WHERE api_key = 'hidden' AND token LIKE 'secret'", 'time' => .0002, 'num' => 1, 'source' => 'engine/modules/main.php:12 (копия с плагинами)', 'plugin' => '<Plugin>'],
+        ['query' => 'SELECT 2', 'time' => .0003, 'num' => 2, 'source' => 'engine/modules/main.php:13 (копия с плагинами)', 'plugin' => '<Plugin>'],
+        ['query' => 'SELECT 3', 'time' => .002, 'num' => 3, 'source' => 'engine/modules/main.php:14'],
+    ];
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    expect($panel)->toContain('data-query-filter="&lt;Plugin&gt;"')
+        ->toContain('data-initiator="&lt;Plugin&gt;"')
+        ->toContain('<span class="query-source-label">&lt;Plugin&gt;</span> · engine/modules/main.php:12 (копия с плагинами)')
+        ->toContain('api_key = &#039;***&#039; AND token LIKE &#039;***&#039;')
+        ->not->toContain('hidden&#039;')
+        ->not->toContain('secret&#039;')
+        ->and(substr_count($panel, 'data-fold '))->toBe(1);
 });

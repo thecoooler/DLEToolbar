@@ -6,12 +6,12 @@ namespace iCooLER\DLEToolbar\Components\Queries;
  * Takes the place of DLE's query_list array and adds the call site to each appended entry.
  * The db object itself stays untouched, so references to it and DLE's error page keep working.
  *
- * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string}|null>
- * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string}>
+ * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string, plugin?: string}|null>
+ * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string, plugin?: string}>
  */
 final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
 {
-    /** @var array<int, array{query: string, time: float, num: int, source?: string}> */
+    /** @var array<int, array{query: string, time: float, num: int, source?: string, plugin?: string}> */
     private array $entries;
 
     /** @param array<int, array{query: string, time: float, num: int}> $entries */
@@ -24,10 +24,16 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     {
         global $db;
         /** @var \db $db */
+        // @phpstan-ignore instanceof.alwaysFalse
+        if ($db->query_list instanceof self) {
+            PluginMap::load();
+            return;
+        }
         /** @var array<int, array{query: string, time: float, num: int}> $entries */
-        $entries = $db->query_list;
+        $entries = (array) $db->query_list;
         // @phpstan-ignore assign.propertyType (DLE only appends, counts and iterates query_list)
         $db->query_list = new self($entries);
+        PluginMap::load();
     }
 
     /** @param int $offset */
@@ -40,7 +46,7 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
      * Existing entries are returned by reference so callers can change their fields in place.
      * Missing entries emit PHP's undefined-key warning without inserting a null into the log.
      * @param int $offset
-     * @return array{query: string, time: float, num: int, source?: string}|null
+     * @return array{query: string, time: float, num: int, source?: string, plugin?: string}|null
      */
     public function &offsetGet($offset): ?array
     {
@@ -76,52 +82,84 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
         return count($this->entries);
     }
 
-    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string}> */
+    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string, plugin?: string}> */
     public function getIterator(): \ArrayIterator
     {
         return new \ArrayIterator($this->entries);
     }
 
-    /** @return array{source?: string} */
+    /** @return array{source?: string, plugin?: string} */
     private static function source(): array
     {
-        // ENGINE_DIR mixes separators on Windows, and Windows paths ignore case, so compare normalized paths case-insensitively.
         $engine = str_replace('\\', '/', ENGINE_DIR);
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 8) as $frame) {
-            if (!isset($frame['file']) || $frame['file'] === __FILE__) {
+        $root = str_replace('\\', '/', ROOT_DIR) . '/';
+        $cache = $engine . '/cache/system/plugins/';
+        $first = null;
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 16) as $frame) {
+            if (!isset($frame['file'], $frame['line']) || $frame['file'] === __FILE__) {
                 continue;
             }
 
-            // PHP supplies line together with file.
             /** @var array{function: string, file: string, line: int} $frame */
-            // Encoded DLE distributions run their sources through nested evals; the innermost line matches the source file.
             /** @var string $file */
-            $file = preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
+            $file = (string) preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
             if (stripos($file, $engine . '/classes/mysql.php') === 0) {
                 continue;
             }
 
-            $cache = $engine . '/cache/system/plugins/';
+            $built = null;
             if (stripos($file, $cache) === 0) {
-                // DLE keeps this map private in both 14.x and 19.x.
-                $readPlugins = \Closure::bind(static function (): array {
-                    /** @var array<string, string|array<mixed>> $plugins */
-                    // @phpstan-ignore staticProperty.notFound (dleplugin stub omits DLEPlugins::$plugins)
-                    $plugins = \DLEPlugins::$plugins;
-                    return $plugins;
-                }, null, \DLEPlugins::class);
-                $original = array_search(substr($file, strlen($cache)), $readPlugins(), true);
-                if ($original !== false) {
+                $built = $file;
+                $original = self::originalOf($file, substr($file, strlen($cache)));
+                if ($original !== null) {
                     $file = $original;
                 }
             }
-            $root = str_replace('\\', '/', ROOT_DIR) . '/';
             if (stripos($file, $root) === 0) {
                 $file = substr($file, strlen($root));
             }
+            if ($built !== null && PluginMap::isCreated($file)) {
+                $built = null;
+            }
 
-            return ['source' => $file . ':' . $frame['line']];
+            $source = $file . ':' . (int) $frame['line'] . ($built !== null ? ' (копия с плагинами)' : '');
+            $plugin = PluginMap::resolve($file, (int) $frame['line'], $built);
+            if ($plugin !== null) {
+                return ['source' => $source, 'plugin' => $plugin];
+            }
+            if ($first === null) {
+                $first = $source;
+            }
         }
-        return [];
+        return $first === null ? [] : ['source' => $first];
+    }
+
+    private static function originalOf(string $built, string $name): ?string
+    {
+        foreach (self::pluginFiles() as $original => $target) {
+            if (!is_string($target)) {
+                continue;
+            }
+            $target = str_replace('\\', '/', $target);
+            if ($target === $name || $target === $built || basename($target) === $name) {
+                return str_replace('\\', '/', (string) $original);
+            }
+        }
+        return null;
+    }
+
+    /** @return array<string, mixed> */
+    private static function pluginFiles(): array
+    {
+        static $read = null;
+        if ($read === null) {
+            $read = \Closure::bind(static function (): array {
+                /** @var array<string, mixed> $plugins */
+                // @phpstan-ignore staticProperty.notFound
+                $plugins = \DLEPlugins::$plugins;
+                return $plugins;
+            }, null, \DLEPlugins::class);
+        }
+        return $read();
     }
 }

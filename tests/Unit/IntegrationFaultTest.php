@@ -54,6 +54,7 @@ function runRequest(array $vars, ?string $xfields = ''): array
 
 beforeEach(function (): void {
     setupDleToolbarTestEnvironment();
+    set_vars('dletoolbar_plugins', '');
     $GLOBALS['xfields'] = [];
     $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
 });

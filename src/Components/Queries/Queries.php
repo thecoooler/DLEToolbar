@@ -33,9 +33,9 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 'Объединять соседние запросы быстрее 1 мс. Долгие запросы остаются видимыми.',
             ),
             'trace_sources' => Parameter::boolean(
-                'Показывать источник запросов (экспериментально)',
-                false,
-                'Экспериментальная функция для DLE 14.0 и новее: показывает файл, строку вызова и модуль или плагин для запросов после инициализации панели. Заменяет журнал запросов $db->query_list на время обработки страницы; сторонний код, работающий с ним как с массивом, может перестать работать.',
+                'Показывать источник и плагин запросов',
+                true,
+                'Экспериментальная функция для DLE 14.0 и новее: показывает файл, строку вызова и определяет модуль или плагин для запросов после инициализации панели. Заменяет журнал запросов $db->query_list на время обработки страницы; сторонний код, работающий с ним как с массивом, может перестать работать.',
             ),
         ];
     }
@@ -95,7 +95,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var iterable<int, array{query: string, time: float, num: int, source?: string}> $queries QueryLog when source tracing is enabled. */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, plugin?: string}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
         /** @var int $queryCount */
         $queryCount = $db->query_num;
@@ -116,12 +116,10 @@ final class Queries implements ConfigurableComponent, RequestComponent
             }
 
             $number++;
-            // DLE writes the session hash and password hashes in plain UPDATE queries; prefixed columns such as user_hash are masked too.
-            /** @var string $sql */
-            $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
+            $sql = self::redact($query['query']);
             $source = $query['source'] ?? '';
             $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $source,
-                'initiator' => $source === '' ? '' : self::initiator($source)];
+                'initiator' => $query['plugin'] ?? ($source === '' ? '' : self::initiator($source))];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
             // A folded group keeps one initiator so the initiator filter can show or hide it whole.
@@ -179,7 +177,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                         . '<span class="query-bar"></span>'
                         . '<span class="query-num">#' . $item['number'] . '</span>'
                         . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                        . $this->renderSource($item['source']) . '</span>'
+                        . $this->renderSource($item['source'], $item['initiator']) . '</span>'
                         . '<span class="query-time"></span>'
                         . $this->renderQueryCopyButton()
                         . '</div>';
@@ -196,7 +194,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                    . $this->renderSource($item['source']) . '</span>'
+                    . $this->renderSource($item['source'], $item['initiator']) . '</span>'
                     . '<span class="query-time">' . ($this->foldFast && !$isSlow && $item['time'] < 0.001 ? '' : $format($item['time'])) . '</span>'
                     . $this->renderQueryCopyButton()
                     . '</div>';
@@ -255,15 +253,23 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . '<p class="query-copy-status" data-copy-status role="status" aria-live="polite"></p></section>';
     }
 
-    private function renderSource(string $source): string
+    private function renderSource(string $source, string $initiator): string
     {
         if ($source === '') {
             return '';
         }
 
         $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        return '<span class="query-source"><span class="query-source-label">' . $escape(self::initiator($source)) . '</span>'
+        return '<span class="query-source"><span class="query-source-label">' . $escape($initiator) . '</span>'
             . ' · ' . $escape($source) . '</span>';
+    }
+
+    private static function redact(string $sql): string
+    {
+        $secret = '(?:pass|password|hash|token|secret|salt|auth|twofactor|apikey|api_key|private)';
+        $quoted = "'(?:[^'\\\\]|\\\\.)*'";
+        $sql = (string) preg_replace('/\\b(`?\\w*' . $secret . '\\w*`?)(\\s*(?:=|<>|!=|LIKE)\\s*)' . $quoted . '/i', "$1$2'***'", $sql);
+        return $sql;
     }
 
     /** Names the module or plugin that issued the query, or DLE for the engine itself. */
