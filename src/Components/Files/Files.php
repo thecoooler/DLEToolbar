@@ -51,15 +51,15 @@ final class Files implements ConfigurableComponent
                 . '<span class="files-subtitle">Отметок: ' . $entryCount . ' · Файлов: ' . $count . '</span></div>'
                 . '<button type="button" data-files-close aria-label="Закрыть панель диагностики">×</button></header>'
                 . '<div class="files-scroll" id="dle-toolbar-files-timeline" role="region" tabindex="0" aria-label="Лог и файлы">'
-                . '<p class="files-note">Время от начала запроса. Полоса показывает интервал до отметки. Нажмите на количество файлов, чтобы посмотреть подключённые файлы.</p>'
-                . $this->timeline($entries, $snapshot['end']) . '</div></section>',
+                . '<p class="files-note">Хронология контрольных точек и задержек между ними. Нажмите на количество файлов, чтобы посмотреть подключённые файлы.</p>'
+                . $this->timeline($entries) . '</div></section>',
             'styles' => self::styles(),
             'script' => self::script(),
         ];
     }
 
     /** @param list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, files: list<string>}> $entries */
-    private function timeline(array $entries, float $end): string
+    private function timeline(array $entries): string
     {
         if ($entries === []) {
             return '<p class="files-empty">Отметок нет. Для ручной записи вызовите DebugLog::add() в нужной точке CMS.</p>';
@@ -72,15 +72,14 @@ final class Files implements ConfigurableComponent
         $rows = '';
         foreach ($entries as $index => $entry) {
             $gap = $entry['gap'];
-            $left = $end > 0 ? ($entry['time'] - $gap) / $end * 100 : 0;
-            $width = $end > 0 ? $gap / $end * 100 : 0;
+            $isSlow = $gap >= $this->slowThreshold;
 
             $sourceHtml = '';
             if ($entry['file'] !== '') {
                 $badge = $entry['cached']
                     ? '<span class="files-badge files-cached">из кэша</span>'
                     : '<span class="files-badge files-uncached">не из кэша</span>';
-                $sourceHtml = '<span class="files-source">' . self::escape($entry['file'] . ($entry['line'] > 0 ? ':' . $entry['line'] : '')) . ' ' . $badge . '</span>';
+                $sourceHtml = '<div class="files-source"><span>' . self::escape($entry['file'] . ($entry['line'] > 0 ? ':' . $entry['line'] : '')) . '</span> ' . $badge . '</div>';
             }
 
             $fileCount = count($entry['files']);
@@ -101,14 +100,20 @@ final class Files implements ConfigurableComponent
                     . '</details>';
             }
 
-            $rows .= '<li class="files-event' . ($gap >= $this->slowThreshold ? ' files-slow' : '') . '">'
+            $gapLabel = self::milliseconds($gap);
+            $timeLabel = self::milliseconds($entry['time']);
+
+            $rows .= '<li class="files-event' . ($isSlow ? ' files-slow' : '') . '">'
+                . '<div class="files-rail-dot" aria-hidden="true"></div>'
+                . '<div class="files-event-header">'
                 . '<div class="files-event-title"><strong>' . self::escape($entry['message']) . '</strong>'
                 . ($index === $longest ? '<span class="files-longest">Самый долгий интервал</span>' : '') . '</div>'
+                . '<div class="files-times" title="Время от начала запроса и интервал">'
+                . '<span class="files-time-start">от начала: ' . $timeLabel . '</span>'
+                . '<b class="files-time-gap">+' . $gapLabel . '</b>'
+                . '</div>'
+                . '</div>'
                 . $sourceHtml
-                . '<div class="files-track" aria-hidden="true"><span style="left:' . number_format($left, 6, '.', '')
-                . '%;width:' . number_format($width, 6, '.', '') . '%"></span></div>'
-                . '<div class="files-times"><span>От начала: ' . self::milliseconds($entry['time']) . '</span>'
-                . '<b>Интервал: +' . self::milliseconds($gap) . '</b></div>'
                 . $filesHtml
                 . '</li>';
         }
@@ -138,33 +143,37 @@ final class Files implements ConfigurableComponent
 .files-subtitle { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
 .files-header button { border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; }
 .files-header button:hover { background: var(--hover); }
-.files-note { margin: 0; padding: 12px 0 8px; font-size: 12px; color: var(--muted); }
-.files-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 16px 12px; }
+.files-note { margin: 0; padding: 12px 0 10px; font-size: 12px; color: var(--muted); }
+.files-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 16px 14px; }
 .files-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: -2px; }
-.files-events { list-style: none; margin: 0; padding: 0; }
-.files-event { padding: 12px 0; border-top: 1px solid var(--border); }
-.files-event:first-child { border-top: 0; }
-.files-event-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
-.files-longest { font-size: 11px; color: var(--muted); }
-.files-source { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; font: 11px/1.5 ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
+.files-events { list-style: none; margin: 0; padding: 0 0 0 20px; position: relative; }
+.files-events::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 12px; width: 2px; background: var(--border); }
+.files-event { position: relative; padding: 12px 0 16px 16px; border-bottom: 1px solid rgba(128, 128, 128, 0.08); }
+.files-event:last-child { border-bottom: none; }
+.files-rail-dot { position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid #3b82f6; z-index: 1; }
+.files-slow .files-rail-dot { border-color: #dc2626; background: #dc2626; }
+:host([data-theme="dark"]) .files-slow .files-rail-dot { border-color: #f87171; background: #f87171; }
+.files-event-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.files-event-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; overflow-wrap: anywhere; font-size: 13px; }
+.files-longest { font-size: 11px; color: var(--muted); font-weight: normal; }
+.files-times { display: inline-flex; align-items: baseline; gap: 8px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.files-time-start { opacity: 0.8; }
+.files-time-gap { color: var(--foreground); font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--hover); }
+.files-slow .files-time-gap { color: #dc2626; background: rgba(220, 38, 38, 0.12); }
+:host([data-theme="dark"]) .files-slow .files-time-gap { color: #f87171; background: rgba(248, 113, 113, 0.16); }
+.files-source { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; font: 11px/1.5 ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
 .files-badge { display: inline-flex; align-items: center; flex-shrink: 0; font: 600 10px/1 system-ui, -apple-system, sans-serif; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.02em; }
 .files-cached { background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
 :host([data-theme="dark"]) .files-cached { background: rgba(245, 158, 11, 0.22); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35); }
 .files-uncached { background: var(--hover); color: var(--muted); border: 1px solid var(--border); }
-.files-track { position: relative; height: 8px; margin: 10px 0 6px; border-radius: 4px; background: var(--hover); }
-.files-track span { position: absolute; top: 0; height: 100%; min-width: 2px; max-width: 100%; border-radius: 4px; background: #3b82f6; }
-.files-times { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
-.files-slow .files-track span { background: #dc2626; }
-.files-slow .files-times b { color: #dc2626; }
-:host([data-theme="dark"]) .files-slow .files-times b { color: #f87171; }
 .files-count { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .files-details { margin-top: 8px; }
 .files-toggle { cursor: pointer; font-size: 11px; color: var(--muted); user-select: none; }
 .files-toggle:hover { color: var(--foreground); }
-.files-list { margin: 6px 0 0; padding-left: 18px; }
-.files-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px; overflow-wrap: anywhere; }
-.files-list li:nth-child(odd) { background: var(--row-stripe); }
-.files-list code { font: 12px/1.5 ui-monospace, monospace; flex: 1; min-width: 0; }
+.files-list { margin: 6px 0 0; padding: 6px 8px; list-style: none; border-radius: 6px; background: var(--hover); border: 1px solid var(--border); }
+.files-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px; overflow-wrap: anywhere; border-bottom: 1px solid rgba(128, 128, 128, 0.12); }
+.files-list li:last-child { border-bottom: none; }
+.files-list code { font: 11px/1.5 ui-monospace, monospace; flex: 1; min-width: 0; }
 .files-empty { color: var(--muted); font-size: 12px; }
 CSS;
     }

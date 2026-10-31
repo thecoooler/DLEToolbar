@@ -38,7 +38,7 @@ it('renders escaped checkpoints, cache badges and a timeline only for a visible 
         $registry = new ComponentRegistry();
         $rendered = $registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]]));
         expect($rendered['controls'])->toContain('data-component="files"', 'Лог и файлы: 2 отметок')
-            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-track', 'DebugTest.php:', 'не из кэша')
+            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-rail-dot', 'DebugTest.php:', 'не из кэша')
             ->not->toContain('<script>', 'INF', 'NAN')
             ->and(substr_count($rendered['panels'], '<li class="files-event'))->toBe(2)
             ->and(substr_count($rendered['panels'], 'Самый долгий интервал'))->toBe(1)
