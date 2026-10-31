@@ -26,14 +26,15 @@ final class UserEntry
         $restricted = (int) ($row['restricted'] ?? 0);
         $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers');
         if (!$canViewPrivate) {
-            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth']);
+            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth'],
+                $row['restricted'], $row['restricted_days'], $row['restricted_date'], $row['cat_add'], $row['cat_allow_addnews']);
         }
 
         $badges = [['ID ' . (int) $row['user_id'], 'neutral']];
         if ($banned) {
             $badges[] = ['Заблокирован', 'danger'];
         }
-        if (isset(self::RESTRICTED[$restricted])) {
+        if ($canViewPrivate && isset(self::RESTRICTED[$restricted])) {
             $badges[] = ['Ограничен', 'warning'];
         }
         if ($canViewPrivate && !empty($row['twofactor_auth'])) {
