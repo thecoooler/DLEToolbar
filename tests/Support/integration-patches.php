@@ -25,10 +25,22 @@ PHP,
         <<<'PHP'
 try {
   if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Entry\PageEntry::captureNews($row);
     \iCooLER\DLEToolbar\Components\Link\NewsFields::capture($row['xfields']);
   }
 } catch (\Throwable $error) {
   error_log('[DLEToolbar] news fields: ' . $error);
+}
+PHP,
+    ],
+    'engine/modules/profile.php' => [
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Entry\PageEntry::captureUser($row);
+  }
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] user profile: ' . $error);
 }
 PHP,
     ],

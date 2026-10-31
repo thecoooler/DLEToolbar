@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { testClock } from './clock.mjs';
+import { testEntry } from './entry.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -64,6 +65,7 @@ try {
     console.log(`print display: ${printDisplay}`);
     if (printDisplay !== 'none') process.exitCode = 1;
     await testClock(browser, url);
+    await testEntry(browser, url);
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;
