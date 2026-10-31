@@ -46,11 +46,15 @@ final class Files implements ConfigurableComponent
                 . ' aria-expanded="false" aria-controls="dle-toolbar-files-panel" aria-label="Лог и файлы: ' . $entryCount
                 . ' отметок, ' . $count . ' файлов. Показать панель">'
                 . $icon . '<span class="metric-value">' . $count . '</span></button>',
-            'panel' => '<section class="files-panel" id="dle-toolbar-files-panel" aria-labelledby="dle-toolbar-files-title" hidden>'
+            'panel' => '<section class="files-panel" id="dle-toolbar-files-panel" aria-labelledby="dle-toolbar-files-title" data-layout="rail" hidden>'
                 . '<header class="files-header"><div><h2 id="dle-toolbar-files-title">Лог и файлы</h2>'
                 . '<span class="files-subtitle">Отметок: ' . $entryCount . ' · Файлов: ' . $count . '</span></div>'
                 . '<button type="button" data-files-close aria-label="Закрыть панель диагностики">×</button></header>'
-                . '<div class="files-scroll-area"><div class="files-scroll" id="dle-toolbar-files-timeline" role="region" tabindex="0" aria-label="Лог и файлы">'
+                . '<div class="files-layout-tabs" role="tablist" aria-label="Оформление таймлайна">'
+                . '<button type="button" role="tab" id="files-tab-rail" data-files-layout="rail" aria-selected="true" aria-controls="dle-toolbar-files-timeline">Ось</button>'
+                . '<button type="button" role="tab" id="files-tab-grid" data-files-layout="grid" aria-selected="false" tabindex="-1" aria-controls="dle-toolbar-files-timeline">Таблица</button>'
+                . '<button type="button" role="tab" id="files-tab-waterfall" data-files-layout="waterfall" aria-selected="false" tabindex="-1" aria-controls="dle-toolbar-files-timeline">Водопад</button></div>'
+                . '<div class="files-scroll-area"><div class="files-scroll" id="dle-toolbar-files-timeline" role="tabpanel" tabindex="0" aria-labelledby="files-tab-rail">'
                 . $this->timeline($entries) . '</div><div class="files-scrollbar" data-files-scrollbar aria-hidden="true" hidden><div class="files-scroll-thumb"></div></div></div></section>',
             'styles' => self::styles(),
             'script' => self::script(),
@@ -77,6 +81,7 @@ final class Files implements ConfigurableComponent
         }
 
 
+        $totalTime = max(array_column($entries, 'time'));
         $rows = '';
         foreach ($entries as $index => $entry) {
             if (isset($paired[$index])) {
@@ -117,6 +122,12 @@ final class Files implements ConfigurableComponent
                 ? '<span class="files-time-before" title="До подключения"><span class="files-boundary">До</span> ' . self::milliseconds($starts[$index]) . '</span>'
                     . '<span class="files-time-after" title="После подключения"><span class="files-boundary">После</span> ' . $timeLabel . '</span>'
                 : '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>';
+            $barStart = $starts[$index] ?? $entry['time'];
+            $barLeft = $totalTime > 0 ? $barStart / $totalTime * 100 : 0;
+            $barWidth = $totalTime > 0 ? ($entry['time'] - $barStart) / $totalTime * 100 : 0;
+            $waterfall = '<div class="files-waterfall" aria-hidden="true"><span class="files-waterfall-bar'
+                . (isset($starts[$index]) ? '' : ' files-waterfall-point') . '" style="left:' . number_format($barLeft, 6, '.', '')
+                . '%;width:' . number_format($barWidth, 6, '.', '') . '%"></span></div>';
             $rows .= '<li class="files-event' . ($isSlow ? ' files-slow' : '') . '">'
                 . '<div class="files-times">' . $times
                 . '</div><div class="files-rail-dot" aria-hidden="true"></div>'
@@ -124,6 +135,7 @@ final class Files implements ConfigurableComponent
                 . ($entry['kind'] === 'before' ? '<span class="files-phase">До подключения</span>' : '')
                 . ($entry['duration'] !== null ? '<span class="files-duration">Выполнение · ' . self::milliseconds($entry['duration']) . '</span>' : '')
                 . $sourceHtml
+                . $waterfall
                 . $filesHtml
                 . '</div></li>';
         }
@@ -191,6 +203,43 @@ final class Files implements ConfigurableComponent
 .files-list li:last-child { border-bottom: none; }
 .files-list code { font: 11px/1.5 ui-monospace, monospace; flex: 1; min-width: 0; }
 .files-empty { color: var(--muted); font-size: 12px; }
+.files-layout-tabs { display: flex; flex-shrink: 0; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.files-layout-tabs button { flex: 1; border: 0; border-radius: 6px; padding: 7px 10px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.files-layout-tabs button:hover { background: var(--hover); }
+.files-layout-tabs button[aria-selected="true"] { background: var(--hover); color: var(--foreground); font-weight: 600; }
+.files-waterfall { display: none; }
+.files-panel[data-layout="grid"] .files-events::before,
+.files-panel[data-layout="waterfall"] .files-events::before,
+.files-panel[data-layout="grid"] .files-rail-dot,
+.files-panel[data-layout="waterfall"] .files-rail-dot { display: none; }
+.files-panel[data-layout="grid"] .files-event { column-gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.files-panel[data-layout="grid"] .files-event:last-child { border-bottom: 0; }
+.files-panel[data-layout="grid"] .files-event-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: baseline; }
+.files-panel[data-layout="grid"] .files-event-title { grid-column: 1; grid-row: 1; font-size: 12px; }
+.files-panel[data-layout="grid"] .files-duration { grid-column: 2; grid-row: 1; text-align: right; margin: 0; }
+.files-panel[data-layout="grid"] .files-source { grid-column: 1 / -1; }
+.files-panel[data-layout="grid"] .files-details { grid-column: 1 / -1; margin-top: 5px; }
+.files-panel[data-layout="grid"] .files-phase { grid-column: 1 / -1; }
+.files-panel[data-layout="grid"] .files-times { font-size: 10px; gap: 0; }
+.files-panel[data-layout="waterfall"] .files-event { column-gap: 14px; margin: 8px 0 12px; padding: 14px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--row-stripe); }
+.files-panel[data-layout="waterfall"] .files-event-body { display: contents; }
+.files-panel[data-layout="waterfall"] .files-times { grid-column: 1; grid-row: 1 / span 3; }
+.files-panel[data-layout="waterfall"] .files-event-title,
+.files-panel[data-layout="waterfall"] .files-phase,
+.files-panel[data-layout="waterfall"] .files-duration,
+.files-panel[data-layout="waterfall"] .files-source { grid-column: 2; }
+.files-panel[data-layout="waterfall"] .files-details,
+.files-panel[data-layout="waterfall"] .files-waterfall { grid-column: 1 / -1; }
+.files-panel[data-layout="waterfall"] .files-waterfall { position: relative; display: block; height: 6px; margin-top: 12px; border-radius: 3px; background: var(--border); }
+.files-waterfall-bar { position: absolute; top: 0; height: 100%; min-width: 2px; max-width: 100%; border-radius: inherit; background: #3b82f6; transform: translateX(-1px); }
+.files-waterfall-point { width: 2px !important; }
+.files-slow .files-waterfall-bar { background: #dc2626; }
+:host([data-theme="dark"]) .files-slow .files-waterfall-bar { background: #f87171; }
+@media (max-width: 480px) {
+    .files-panel[data-layout="grid"] .files-event-body { grid-template-columns: minmax(0, 1fr); }
+    .files-panel[data-layout="grid"] .files-duration { grid-column: 1; grid-row: auto; text-align: left; }
+    .files-panel[data-layout="waterfall"] .files-event { grid-template-columns: 84px minmax(0, 1fr); padding: 12px 8px; column-gap: 10px; }
+}
             .files-scrollbar {
                 position: absolute;
                 top: 3px;
@@ -268,6 +317,31 @@ CSS;
         });
         scrollbar.addEventListener('lostpointercapture', () => delete scrollbar.dataset.dragging);
 
+        const layoutTabs = [...panel.querySelectorAll('[data-files-layout]')];
+        const selectLayout = (tab) => {
+            panel.dataset.layout = tab.dataset.filesLayout;
+            layoutTabs.forEach((item) => {
+                item.setAttribute('aria-selected', item === tab ? 'true' : 'false');
+                item.tabIndex = item === tab ? 0 : -1;
+            });
+            fileTimeline.setAttribute('aria-labelledby', tab.id);
+            updateScrollbar();
+            requestAnimationFrame(updateScrollbar);
+        };
+        layoutTabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => selectLayout(tab));
+            tab.addEventListener('keydown', (event) => {
+                let next;
+                if (event.key === 'ArrowRight') next = (index + 1) % layoutTabs.length;
+                else if (event.key === 'ArrowLeft') next = (index + layoutTabs.length - 1) % layoutTabs.length;
+                else if (event.key === 'Home') next = 0;
+                else if (event.key === 'End') next = layoutTabs.length - 1;
+                else return;
+                event.preventDefault();
+                selectLayout(layoutTabs[next]);
+                layoutTabs[next].focus();
+            });
+        });
         const popup = createPopup({ trigger: button, panel, closeDuration: 0,
             onOpen: () => button.setAttribute('aria-label', closedLabel.replace('Показать панель', 'Закрыть панель')),
             onClose: () => button.setAttribute('aria-label', closedLabel),
