@@ -103,7 +103,6 @@ final class NewsEntry
         return [
             'kind' => 'Новость',
             'title' => Format::decode((string) $row['title']),
-            'id' => (string) (int) $row['id'],
             'badges' => $badges,
             'edit' => Format::allows('admin_editnews') ? Format::adminUrl('mod=editnews&action=editnews&id=' . (int) $row['id']) : null,
             'tabs' => [

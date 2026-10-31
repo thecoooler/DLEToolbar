@@ -30,8 +30,7 @@ final class Format
         if ($value === '') {
             return self::empty();
         }
-        $length = mb_strlen($value, 'UTF-8');
-        if ($length <= self::LONG_VALUE && strpos($value, "\n") === false) {
+        if (mb_strlen($value, 'UTF-8') <= self::LONG_VALUE && strpos($value, "\n") === false) {
             return self::escape($value);
         }
 

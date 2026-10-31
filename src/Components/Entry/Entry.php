@@ -9,7 +9,7 @@ use iCooLER\DLEToolbar\ComponentFramework\Component;
  * Rows hold the HTML of the label and the value; tabs without rows are not shown.
  * @phpstan-type EntryRow array{0: string, 1: string}
  * @phpstan-type EntryTab array{id: string, label: string, rows: list<EntryRow>}
- * @phpstan-type EntryData array{kind: string, title: string, id: string, badges: list<array{0: string, 1: string}>, edit: ?string, tabs: list<EntryTab>}
+ * @phpstan-type EntryData array{kind: string, title: string, badges: list<array{0: string, 1: string}>, edit: ?string, tabs: list<EntryTab>}
  */
 final class Entry implements Component
 {

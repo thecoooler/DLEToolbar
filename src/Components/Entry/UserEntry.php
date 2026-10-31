@@ -96,7 +96,6 @@ final class UserEntry
         return [
             'kind' => 'Пользователь',
             'title' => Format::decode($name),
-            'id' => (string) (int) $row['user_id'],
             'badges' => $badges,
             'edit' => Format::allows('admin_editusers') ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
             'tabs' => [

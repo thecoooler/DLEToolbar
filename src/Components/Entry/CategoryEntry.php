@@ -92,7 +92,6 @@ final class CategoryEntry
         return [
             'kind' => 'Категория',
             'title' => $name($id),
-            'id' => (string) $id,
             'badges' => $badges,
             'edit' => Format::allows('admin_categories') ? Format::adminUrl('mod=categories&action=edit&catid=' . $id) : null,
             'tabs' => [
