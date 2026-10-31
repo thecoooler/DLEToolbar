@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 try {
     $preferences = ToolbarPreferences::load();
+    $savedState = null;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $preferences = ToolbarPreferences::fromRequest($_POST, $preferences);
         if ($preferences->parameterErrors() === []) {
@@ -49,23 +50,35 @@ try {
             exit;
         }
         http_response_code(422);
+        $savedState = is_string($_POST['dlt_saved_state'] ?? null) ? $_POST['dlt_saved_state'] : null;
         unset($_SESSION['dletoolbar_settings_notice']);
     }
 
     $notice = $_SESSION['dletoolbar_settings_notice'] ?? null;
     /** @var string|null $notice */
     unset($_SESSION['dletoolbar_settings_notice']);
-    $content = (new ToolbarSettingsPage($preferences, $actionUrl, $notice))->render();
+    $content = (new ToolbarSettingsPage($preferences, $actionUrl, $notice, $savedState))->render();
 } catch (\Throwable $error) {
     http_response_code(500);
     error_log('[DLEToolbar] admin: ' . $error);
     unset($_SESSION['dletoolbar_settings_notice']);
-    $content = '<div class="alert alert-danger" role="alert">Не удалось загрузить или сохранить настройки панели.</div>';
+    // The page is open to administrators only, so the cause may be shown in full.
+    $details = [];
+    for ($cause = $error; $cause !== null; $cause = $cause->getPrevious()) {
+        $details[] = get_class($cause) . ': ' . $cause->getMessage() . "\n"
+            . $cause->getFile() . ':' . $cause->getLine() . "\n"
+            . $cause->getTraceAsString();
+    }
+    $details = str_replace(ROOT_DIR . DIRECTORY_SEPARATOR, '', implode("\n\nПредыдущее исключение:\n", $details));
+    $content = '<div class="alert alert-danger" role="alert">Не удалось загрузить или сохранить настройки панели.'
+        . '<details class="mt-10"><summary>Подробности</summary>'
+        . '<pre class="mt-10" style="white-space: pre-wrap;">' . htmlspecialchars($details, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>'
+        . '</details></div>';
 }
 
 echoheader(
     '<i class="fa fa-sliders position-left"></i><span class="text-semibold">DLEToolbar</span>',
-    'Настройки плагина'
+    'Настройки плагина',
 );
 if (version_compare($config['version_id'], '13.1', '<')) {
     require \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Views/sortable.php');

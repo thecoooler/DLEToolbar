@@ -61,6 +61,15 @@
         assert(!tooltip.dataset.open, 'Opening SQL dismisses shared tooltip');
         assert(trigger.getAttribute('aria-label').includes('Закрыть список запросов'), 'Open trigger label');
 
+        const queryList = panel.querySelector('.query-list');
+        const scrollArea = panel.querySelector('.query-scroll-area');
+        const scrollbar = panel.querySelector('[data-query-scrollbar]');
+        const listWidth = queryList.clientWidth;
+        const foldLabel = folds[0].querySelector('.query-sql').textContent;
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '···', 'Collapsed group shows dots');
+        assert(queryList.getAttribute('role') === 'region' && queryList.getAttribute('aria-label'),
+            'Focusable query list has an accessible region name');
+
         // A non-query sibling must not break the group association.
         folds[0].after(document.createElement('span'));
         folds[0].click();
@@ -69,36 +78,105 @@
             'Expanded fast rows show call sites');
         assert(rows[1].every((row) => row.hidden), 'First group leaves second group collapsed');
         assert(folds[0].getAttribute('aria-expanded') === 'true', 'Fold announces expansion');
-        assert(folds[0].textContent.includes('Скрыть'), 'Expanded fold label');
+        assert(folds[0].querySelector('.query-sql').textContent === foldLabel, 'Expanding keeps the group label unchanged');
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '×', 'Expanded group shows a close mark');
+        assert(queryList.clientWidth === listWidth, 'Expanding queries preserves content width');
+        scrollArea.style.flex = '0 0 60px';
+        await wait(50);
+        assert(!scrollbar.hidden, 'Overlay scrollbar appears for overflowing queries');
+        for (const deltaMode of [0, 1, 2]) {
+            queryList.scrollTop = 0;
+            const wheel = new WheelEvent('wheel', { deltaY: 1, deltaMode, cancelable: true, bubbles: true });
+            scrollbar.dispatchEvent(wheel);
+            assert(wheel.defaultPrevented && queryList.scrollTop > 0,
+                'Wheel over scrollbar scrolls the list and prevents page scrolling, mode ' + deltaMode);
+        }
+        queryList.scrollTop = 0;
+        await wait(50);
+        const thumb = scrollbar.firstElementChild;
+        const thumbTop = thumb.getBoundingClientRect().top;
+        queryList.scrollTop = queryList.scrollHeight;
+        await wait(50);
+        assert(thumb.getBoundingClientRect().top > thumbTop, 'Overlay thumb follows native scrolling');
+        assert(thumb.getBoundingClientRect().bottom <= scrollbar.getBoundingClientRect().bottom + 1,
+            'Overlay thumb stays within track');
+        queryList.scrollTop = 0;
+        scrollArea.style.flex = '';
         key(folds[0], ' ');
         assert(rows[0].every((row) => row.hidden), 'Space collapses first group');
+        assert(folds[0].querySelector('[data-fold-marker]').textContent === '···', 'Collapsing restores dots');
         key(folds[1], 'Enter');
         assert(rows[1].every((row) => !row.hidden), 'Enter expands second group');
         assert(rows[0].every((row) => row.hidden), 'Second group leaves first collapsed');
 
-        const chips = [...panel.querySelectorAll('[data-owner-filter]')];
-        const queryRows = [...panel.querySelectorAll('.query-row[data-owner]')];
-        const visibleOwners = () => queryRows.filter((row) => !row.hidden).map((row) => row.dataset.owner);
-        assert(chips.length === 3, 'Three owners rendered as chips');
-        assert(chips[0].textContent.includes('DLE') && chips[0].textContent.includes('3'), 'DLE chip present');
-        assert(chips[1].textContent.includes('Plugin') && chips[1].textContent.includes('1'), 'Plugin chip present');
-        assert(chips[2].textContent.includes('shop') && chips[2].textContent.includes('2'), 'shop chip present');
-        assert(chips.every((chip) => chip.getAttribute('aria-pressed') === 'false') && queryRows.every((row) => !row.hidden),
-            'All owner rows shown initially');
-        chips[2].click();
-        assert(chips[2].getAttribute('aria-pressed') === 'true', 'Clicked owner chip is pressed');
-        assert(visibleOwners().every((owner) => owner === chips[2].dataset.ownerFilter), 'Only clicked owner rows are visible');
-        chips[2].click();
-        assert(chips[2].getAttribute('aria-pressed') === 'false', 'Unclicked owner chip resets');
-        assert(queryRows.every((row) => !row.hidden), 'All rows restored after untoggling');
-        assert(expanded(), 'Chip click does not close panel');
+        const filters = [...panel.querySelectorAll('.query-filter')];
+        const entries = [...panel.querySelectorAll('.query-list > [data-initiator]')];
+        const visible = () => entries.filter((entry) => !entry.hidden).map((entry) => entry.dataset.initiator);
+        assert(JSON.stringify(filters.map((filter) => filter.textContent))
+            === JSON.stringify(['Все6 · 23 мс', 'Plugin1 · 2 мс', 'shop2 · <1 мс', 'Без источника3 · 21 мс']),
+            'Initiator filters show query count and total time');
+        assert(filters[0].getAttribute('aria-pressed') === 'true' && entries.every((entry) => !entry.hidden),
+            'All initiators are shown at first');
+        const dot = (filter) => getComputedStyle(filter, '::before').backgroundColor;
+        const bar = (row) => getComputedStyle(row.querySelector('.query-bar')).backgroundColor;
+        const pluginRow = panel.querySelector('.query-list > [data-initiator="Plugin"]');
+        assert(!filters[0].classList.contains('query-tinted') && !filters[3].classList.contains('query-tinted')
+            && dot(filters[1]) !== dot(filters[2]), 'Every initiator filter gets its own colour dot');
+        assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)' && bar(folds[0]) === 'rgba(0, 0, 0, 0)'
+            && bar(rows[0][0]) === 'rgba(0, 0, 0, 0)', 'Plain rows and folded groups do not tint the left bar');
+        assert(getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+            'Source label takes its initiator colour');
+        const fastRow = panel.querySelector('[data-fast-row]');
+        assert(getComputedStyle(fastRow).opacity === '1',
+            'Fast rows keep full opacity so ancestor styling does not dilute contrast');
+        assert(getComputedStyle(fastRow.querySelector('.query-text')).opacity === '0.7',
+            'Fast SQL text is dimmed without fading the initiator label');
+        const slowRow = panel.querySelector('.query-row-slow');
+        slowRow.classList.add('query-tinted');
+        slowRow.style.setProperty('--query-hue', '145');
+        assert(bar(slowRow) === 'rgb(185, 28, 28)', 'Slow rows keep the red bar with an initiator colour');
+        const host = root.host;
+        const theme = host.getAttribute('data-theme');
+        host.setAttribute('data-theme', 'dark');
+        try {
+            assert(bar(slowRow) === 'rgb(252, 165, 165)', 'Slow rows keep the red bar in the dark theme');
+            assert(bar(pluginRow) === 'rgba(0, 0, 0, 0)'
+                && getComputedStyle(pluginRow.querySelector('.query-source-label')).color === dot(filters[1]),
+                'Dark theme colours the source label while keeping the plain bar transparent');
+        } finally {
+            if (theme === null) host.removeAttribute('data-theme');
+            else host.setAttribute('data-theme', theme);
+            slowRow.classList.remove('query-tinted');
+            slowRow.style.removeProperty('--query-hue');
+        }
+        filters[2].click();
+        assert(JSON.stringify(visible()) === '["shop"]', 'Initiator filter leaves only its rows');
+        assert(filters[2].getAttribute('aria-pressed') === 'true' && filters[0].getAttribute('aria-pressed') === 'false',
+            'Pressed filter is announced');
+        assert(getComputedStyle(filters[2], '::before').boxShadow !== 'none'
+            && getComputedStyle(filters[1], '::before').boxShadow === 'none', 'Pressed filter rings its colour dot');
+        filters[3].click();
+        assert(JSON.stringify(visible()) === '["",""]', 'Filter without call site shows untraced rows');
+        assert(rows[1].every((row) => !row.hidden), 'Filtering keeps the expanded fold state');
+        filters[0].click();
+        assert(entries.every((entry) => !entry.hidden), 'All filter restores every row');
+        assert(expanded(), 'Filter click does not close panel');
 
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
         assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
             'Ordinary rows show plugin labels');
         const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+        const originalExecCommand = document.execCommand;
         let copied;
+        let selectionCopies;
+        // The fallback copies the selection of a temporary field inside the panel.
+        document.execCommand = (command) => {
+            const field = root.activeElement;
+            copied = command === 'copy' && field.closest('[data-query-panel]') === panel
+                ? field.value.slice(field.selectionStart, field.selectionEnd) : undefined;
+            return selectionCopies;
+        };
         try {
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
                 writeText: (text) => { copied = text; return Promise.resolve(); },
@@ -109,13 +187,34 @@
             assert(status.textContent === 'SQL-запрос скопирован.', 'Copy success feedback');
             assert(expanded(), 'Copy click does not close panel');
             navigator.clipboard.writeText = () => Promise.reject(new Error('denied'));
+            copied = undefined;
+            selectionCopies = true;
             copy.click();
             await wait(0);
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Rejected Clipboard API falls back to selection copy');
+            assert(status.textContent === 'SQL-запрос скопирован.', 'Fallback copy success feedback');
+            selectionCopies = false;
+            copy.click();
+            await wait(0);
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Rejected Clipboard API attempted selection copy on failure');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed on rejected fallback failure');
             assert(status.textContent.startsWith('Не удалось скопировать'), 'Copy rejection feedback');
             Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+            copied = undefined;
+            selectionCopies = true;
             copy.click();
-            assert(status.textContent.includes('HTTPS'), 'Unavailable clipboard feedback');
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Selection copy gets original SQL without Clipboard API');
+            assert(status.textContent === 'SQL-запрос скопирован.', 'Selection copy success feedback');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed');
+            assert(root.activeElement === copy, 'Selection copy restores button focus');
+            assert(expanded(), 'Selection copy does not close panel');
+            selectionCopies = false;
+            copy.click();
+            assert(copied === 'SELECT "<value>"\nFROM dle_post', 'Selection copy gets original SQL on failure');
+            assert(!panel.querySelector('.query-copy-buffer'), 'Temporary copy field is removed on failure');
+            assert(status.textContent.startsWith('Не удалось скопировать'), 'Selection copy failure feedback');
         } finally {
+            document.execCommand = originalExecCommand;
             if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
             else delete navigator.clipboard;
         }

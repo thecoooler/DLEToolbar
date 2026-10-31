@@ -1,0 +1,78 @@
+name: Ошибка
+description: Панель или админка плагина работают не так, как ожидается.
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Перед отправкой поищите похожие issue и проверьте, повторяется ли ошибка на последнем релизе.
+        Уязвимости сообщайте приватно, см. SECURITY.md.
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Версия DLEToolbar
+      description: Видна в «Управлении плагинами» админки DLE.
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: input
+    id: dle-version
+    attributes:
+      label: Версия DLE
+      placeholder: "19.0"
+    validations:
+      required: true
+  - type: input
+    id: php-version
+    attributes:
+      label: Версия PHP
+      placeholder: "8.3"
+    validations:
+      required: true
+  - type: input
+    id: db
+    attributes:
+      label: СУБД и версия
+      placeholder: MySQL 8.0 / MariaDB 10.11
+  - type: input
+    id: environment
+    attributes:
+      label: Шаблон сайта и браузер
+      placeholder: Default, Chrome 141
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      placeholder: |
+        1. Включить компонент …
+        2. Открыть страницу …
+        3. Нажать …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемый результат
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактический результат
+      description: Можно приложить скриншот.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Журнал PHP и консоль браузера
+      description: Записи с префиксом `[DLEToolbar]` из журнала ошибок PHP, ошибки из консоли браузера. Уберите пароли, токены и личные данные.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Проверки
+      options:
+        - label: Я поискал похожие issue
+          required: true
+        - label: Ошибка повторяется на последнем релизе

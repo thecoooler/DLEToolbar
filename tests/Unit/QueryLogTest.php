@@ -1,9 +1,10 @@
 <?php
 
-use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
+use iCooLER\DLEToolbar\Components\Queries\QueryLog;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -69,6 +70,32 @@ it('lets callers change entry fields in place like the original array', function
     QueryLog::install();
     $GLOBALS['db']->query_list[0]['query'] = 'SELECT redacted';
     expect($GLOBALS['db']->query_list[0]['query'])->toBe('SELECT redacted');
+});
+
+it('preserves array indexes when replacing and removing entries before the next query', function (): void {
+    $db = $GLOBALS['db'];
+    $db->query_list = [
+        ['query' => 'SELECT first', 'time' => .001, 'num' => 0],
+        ['query' => 'SELECT second', 'time' => .002, 'num' => 1],
+    ];
+    $expected = $db->query_list;
+    QueryLog::install();
+
+    $replacement = ['query' => 'SELECT redacted', 'time' => .003, 'num' => 1];
+    $expected[1] = $db->query_list[1] = $replacement;
+    unset($expected[0], $db->query_list[0]);
+
+    expect(isset($db->query_list[0]))->toBeFalse()
+        ->and(isset($db->query_list[1]))->toBeTrue()
+        ->and(count($db->query_list))->toBe(1)
+        ->and(iterator_to_array($db->query_list))->toBe($expected);
+
+    $line = __LINE__ + 1;
+    $db->query('SELECT 42 AS value');
+    expect(array_keys(iterator_to_array($db->query_list)))->toBe([1, 2])
+        ->and($db->query_list[1])->toBe($replacement)
+        ->and(lastQuerySource()['source'])->toBe(testFileSource($line))
+        ->and($db->get_row()['value'])->toBe('42');
 });
 
 it('warns on missing indexes without changing the log or breaking subsequent queries and rendering', function (): void {

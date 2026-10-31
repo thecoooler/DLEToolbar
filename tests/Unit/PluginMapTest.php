@@ -1,6 +1,7 @@
 <?php
 
 use iCooLER\DLEToolbar\Components\Queries\PluginMap;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -39,7 +40,7 @@ it('resolves plugin names by matching inserted code ranges in built files', func
     $code = "line 1\nline 2\n\$inserted = true;\nline 4\nline 5\n";
     file_put_contents($tempBuilt, $code);
 
-    $insert = "\$inserted = true;";
+    $insert = '$inserted = true;';
     \Closure::bind(function () use ($insert): void {
         self::$inserts = [
             'engine/modules/main.php' => [
@@ -56,7 +57,9 @@ it('resolves plugin names by matching inserted code ranges in built files', func
             ->and(PluginMap::resolve('engine/modules/other.php', 3, $tempBuilt))->toBeNull()
             ->and(PluginMap::resolve('engine/modules/main.php', 3, null))->toBeNull();
     } finally {
-        if (file_exists($tempBuilt)) unlink($tempBuilt);
+        if (file_exists($tempBuilt)) {
+            unlink($tempBuilt);
+        }
     }
 });
 
@@ -71,7 +74,7 @@ it('prefers narrower overlapping ranges when multiple plugins patch the same fil
         self::$inserts = [
             'engine/modules/main.php' => [
                 ['plugin' => 'WidePlugin', 'code' => "wide_start\nnarrow_target\nwide_end"],
-                ['plugin' => 'NarrowPlugin', 'code' => "narrow_target"],
+                ['plugin' => 'NarrowPlugin', 'code' => 'narrow_target'],
             ],
         ];
         self::$loaded = true;
@@ -83,7 +86,9 @@ it('prefers narrower overlapping ranges when multiple plugins patch the same fil
             ->and(PluginMap::resolve('engine/modules/main.php', 5, $tempBuilt))->toBe('WidePlugin')
             ->and(PluginMap::resolve('engine/modules/main.php', 2, $tempBuilt))->toBeNull();
     } finally {
-        if (file_exists($tempBuilt)) unlink($tempBuilt);
+        if (file_exists($tempBuilt)) {
+            unlink($tempBuilt);
+        }
     }
 });
 
@@ -129,8 +134,8 @@ it('loads active plugins and files from the database and caches them', function 
     $GLOBALS['dletoolbar_native_db']->query('DELETE FROM `' . PREFIX . '_plugins_files`');
     $GLOBALS['dletoolbar_native_db']->query('DELETE FROM `' . PREFIX . '_plugins`');
 
-    $GLOBALS['dletoolbar_native_db']->query("INSERT INTO `" . PREFIX . "_plugins` (`id`, `name`, `active`) VALUES (1, 'BannerPro', 1), (2, 'InactivePlugin', 0)");
-    $GLOBALS['dletoolbar_native_db']->query("INSERT INTO `" . PREFIX . "_plugins_files` (`plugin_id`, `file`, `action`, `replacecode`, `active`) VALUES
+    $GLOBALS['dletoolbar_native_db']->query('INSERT INTO `' . PREFIX . "_plugins` (`id`, `name`, `active`) VALUES (1, 'BannerPro', 1), (2, 'InactivePlugin', 0)");
+    $GLOBALS['dletoolbar_native_db']->query('INSERT INTO `' . PREFIX . "_plugins_files` (`plugin_id`, `file`, `action`, `replacecode`, `active`) VALUES
         (1, 'engine/modules/banner.php', 'create', '', 1),
         (1, 'engine/modules/main.php', 'replace', '\$banner_active = true; // 12+ chars code', 1),
         (1, 'engine/modules/short.php', 'replace', 'short', 1),

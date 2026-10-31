@@ -5,6 +5,7 @@ use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -14,6 +15,7 @@ beforeEach(function (): void {
 it('supplies component parameter defaults for existing configuration files', function (): void {
     $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'editpost']]]);
     expect($preferences->componentParameters('editpost'))->toBe(['target' => '_blank'])
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => true])
         ->and($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 20.0, 'fold_fast' => true, 'trace_sources' => true]);
 
     $GLOBALS['dle_module'] = 'showfull';
@@ -25,14 +27,17 @@ it('normalizes component parameters and rejects unregistered fields', function (
     $preferences = ToolbarPreferences::fromRequest(['components' => [
         'editpost' => ['target' => '_blank', 'extra' => 'ignored'],
         'queries' => ['slow_threshold_ms' => '50.5', 'fold_fast' => '0'],
+        'clock' => ['show_seconds' => '0'],
         'unknown' => ['extra' => 'ignored'],
     ]]);
     expect($preferences->componentParameters('editpost'))->toBe(['target' => '_blank'])
         ->and($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 50.5, 'fold_fast' => false, 'trace_sources' => true])
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => false])
         ->and($preferences->toConfig()['components'])->not->toHaveKey('unknown');
 
     $updated = ToolbarPreferences::fromRequest(['components' => ['queries' => ['fold_fast' => '1']]], $preferences);
     expect($updated->componentParameters('editpost'))->toBe(['target' => '_blank'])
+        ->and($updated->componentParameters('clock'))->toBe(['show_seconds' => false])
         ->and($updated->componentParameters('queries'))->toBe(['slow_threshold_ms' => 50.5, 'fold_fast' => true, 'trace_sources' => true]);
 
     $padded = ToolbarPreferences::fromRequest(['components' => ['queries' => ['slow_threshold_ms' => ' 25 ']]]);
@@ -58,6 +63,7 @@ it('renders each declared parameter type with the stored values', function (): v
     $preferences = ToolbarPreferences::fromConfig(['components' => [
         'editpost' => ['target' => '_blank'],
         'queries' => ['slow_threshold_ms' => 50.5, 'fold_fast' => false],
+        'clock' => ['show_seconds' => false],
     ]]);
     $html = (new ToolbarSettingsPage($preferences, '?mod=dletoolbar'))->render();
     expect($html)->toContain('name="components[editpost][target]"')
@@ -66,6 +72,9 @@ it('renders each declared parameter type with the stored values', function (): v
         ->toContain('type="hidden" name="components[queries][fold_fast]" value="0"')
         ->toContain('name="components[queries][fold_fast]" value="1" aria-label="Сворачивать быстрые запросы">')
         ->toContain('name="components[queries][trace_sources]" value="1" aria-label="Показывать источник и плагин запросов" checked>')
+        ->toContain('data-target="#dlt-settings-clock"')
+        ->toContain('type="hidden" name="components[clock][show_seconds]" value="0"')
+        ->toContain('name="components[clock][show_seconds]" value="1" aria-label="Показывать секунды">')
         ->toContain('Порог долгого запроса, мс');
 
     $parameter = Parameter::select('<label>', 'safe', ['safe' => '<option>']);
@@ -86,8 +95,11 @@ it('uses the configured tab for news editing', function (string $target): void {
     $html = $registry->render($preferences)['controls'];
     expect($html)->toContain('target="' . $target . '"')
         ->toContain('id=42');
-    if ($target === '_blank') expect($html)->toContain('rel="noopener"');
-    else expect($html)->not->toContain('rel="noopener"');
+    if ($target === '_blank') {
+        expect($html)->toContain('rel="noopener"');
+    } else {
+        expect($html)->not->toContain('rel="noopener"');
+    }
 })->with(['_self', '_blank']);
 
 it('uses the slow query threshold at its exact boundary and can disable fast folding', function (): void {
@@ -143,16 +155,20 @@ it('persists component parameters and applies them when assembling the toolbar',
         ['query' => 'SELECT b', 'time' => .002, 'num' => 2],
     ];
     ToolbarPreferences::fromRequest([
-        'toolbar' => ['enabled' => ['queries', 'editpost']],
+        'toolbar' => ['enabled' => ['queries', 'editpost', 'clock']],
         'components' => [
             'editpost' => ['target' => '_blank'],
             'queries' => ['slow_threshold_ms' => '2', 'fold_fast' => '0'],
+            'clock' => ['show_seconds' => '0'],
         ],
     ])->save();
+    ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
     expect($preferences->componentParameters('editpost'))->toBe(['target' => '_blank'])
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => false])
         ->and($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 2.0, 'fold_fast' => false, 'trace_sources' => true]);
     $html = (new DLEToolbar())->render();
     expect($html)->toContain('target="_blank" rel="noopener"')
+        ->toContain('data-clock data-show-seconds="false"')
         ->toContain('query-stats-alert">⚠ 1');
 });

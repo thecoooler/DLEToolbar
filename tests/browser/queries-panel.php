@@ -26,8 +26,16 @@ $member_id = ['user_group' => 1];
 $user_group = [1 => ['group_name' => 'Администраторы', 'allow_admin' => 1]];
 $dle_module = 'main';
 $news_found = false;
+if (isset($_GET['entry'])) {
+    $dle_module = 'cat';
+    $category_id = 7;
+    $cat_info = [7 => ['id' => 7, 'parentid' => 0, 'name' => 'Категория', 'alt_name' => 'category', 'descr' => 'Описание']];
+}
 $Timer = new class {
-    public function get(): float { return .125; }
+    public function get(): float
+    {
+        return .125;
+    }
 };
 define('PREFIX', 'dle');
 $db = new class {
@@ -41,12 +49,23 @@ $db = new class {
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
         ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],
     ];
-    public function query($sql, $showError = true) { return true; }
-    private bool $settingsRead = false;
-    public function get_row($result = null) {
-        if ($this->settingsRead) return null;
-        $this->settingsRead = true;
-        return ['setting_key' => 'toolbar', 'setting_value' => json_encode(['enabled' => ['time', 'queries', 'skin']])];
+    public function query($sql, $showError = true)
+    {
+        return true;
+    }
+    private int $settingsRead = 0;
+    public function get_row($result = null)
+    {
+        $rows = [
+            ['setting_key' => 'toolbar', 'setting_value' => json_encode([
+                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'clock', 'entry'],
+                'enabled' => isset($_GET['entry']) ? ['entry'] : (isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin']),
+            ])],
+            ['setting_key' => 'components', 'setting_value' => json_encode([
+                'clock' => ['show_seconds' => ($_GET['clock'] ?? 'seconds') !== 'minutes'],
+            ])],
+        ];
+        return $rows[$this->settingsRead++] ?? null;
     }
     public function free($result = null) {}
 };
@@ -59,6 +78,8 @@ http_response_code(200);
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
 <?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
+<?php if (!isset($_GET['clock']) && !isset($_GET['entry'])): ?>
 <script src="queries-panel.js"></script>
+<?php endif; ?>
 </body>
 </html>

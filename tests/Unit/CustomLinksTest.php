@@ -1,10 +1,11 @@
 <?php
 
 use iCooLER\DLEToolbar\AdminUI\ToolbarSettingsPage;
-use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\ComponentFramework\ComponentRegistry;
+use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -116,8 +117,11 @@ it('opens links in the selected tab and defaults unknown targets to the current 
     $link = new Link($preferences->componentParameters($id));
     $control = $link->render()['control'];
     expect($control)->toContain('target="' . $expected . '"');
-    if ($expected === '_blank') expect($control)->toContain('rel="noopener"');
-    else expect($control)->not->toContain('rel=');
+    if ($expected === '_blank') {
+        expect($control)->toContain('rel="noopener"');
+    } else {
+        expect($control)->not->toContain('rel=');
+    }
 })->with([['_self', '_self'], ['_blank', '_blank'], ['unsafe" onclick="alert(1)', '_self'], [['invalid'], '_self']]);
 
 it('renders each saved link with its own settings modal and removal control', function (): void {
@@ -188,7 +192,7 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
     $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
     $previousScripts = $GLOBALS['js_array'] ?? [];
     $_SERVER['REQUEST_METHOD'] = 'POST';
-    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'],
+    $_POST = ['user_hash' => $GLOBALS['dle_login_hash'], 'dlt_saved_state' => 'saved&value="test"',
         'instances' => [$a => 'link', $b => 'link'],
         'access' => ['groups' => [2, 3]],
         'toolbar' => ['items' => [$b, 'queries', $a], 'enabled' => [$b, 'queries']],
@@ -204,27 +208,36 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
         expect(http_response_code())->toBe(422)
             ->and($GLOBALS['db']->queries)->toBe([])
             ->and(isset($_SESSION['dletoolbar_settings_notice']))->toBeFalse()
-            ->and($html)->toContain('class="alert alert-danger"', 'Настройки не сохранены.',
-                'Отчёт &lt;SQL&gt;: ' . $message, 'Кастомная ссылка: Заполните поле «Ссылка».',
-                'class="form-group has-error"', 'aria-invalid="true"',
+            ->and($html)->toContain(
+                'class="alert alert-danger"',
+                'Настройки не сохранены.',
+                'Отчёт &lt;SQL&gt;: ' . $message,
+                'Кастомная ссылка: Заполните поле «Ссылка».',
+                'class="form-group has-error"',
+                'aria-invalid="true"',
                 'aria-describedby="dlt-parameter-' . $a . '-url-error"',
                 'class="help-block" id="dlt-parameter-' . $a . '-url-error"',
                 'name="components[' . $a . '][url]" aria-invalid="true"',
                 'value="' . htmlspecialchars(is_string($url) ? $url : '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" required',
-                '<option value="2" selected>', '<option value="3" selected>',
-                '<option value="_blank" selected>', '<option value="news" selected>',
+                '<option value="2" selected>',
+                '<option value="3" selected>',
+                '<option value="_blank" selected>',
+                '<option value="news" selected>',
                 'name="components[queries][slow_threshold_ms]" value="7.5"',
                 'name="components[' . $a . '][icon]" value="chart" checked',
-                'name="components[' . $b . '][icon]" value="home" checked')
+                'name="components[' . $b . '][icon]" value="home" checked',
+            )
             ->not->toContain('alert-success', 'Старое уведомление', 'data-component-id="' . $removed . '"');
         $dom = new DOMDocument();
         $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
         $xpath = new DOMXPath($dom);
         $order = $xpath->query('//tbody[@id="dlt-component-list"]/tr/@data-id');
         expect([$order[0]->value, $order[1]->value, $order[2]->value])->toBe([$b, 'queries', $a]);
-        expect($xpath->query('//input[@name="toolbar[enabled][]" and @value="' . $a . '" and @checked]')->length)->toBe(0)
-            ->and($xpath->query('//input[@name="toolbar[enabled][]" and @value="' . $b . '" and @checked]')->length)->toBe(1)
-            ->and($xpath->query('//input[@name="components[queries][fold_fast]" and @type="checkbox" and @checked]')->length)->toBe(0);
+        expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $a . '" and @checked]')->length)->toBe(0)
+            ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="toolbar[enabled][]" and @value="' . $b . '" and @checked]')->length)->toBe(1)
+            ->and($xpath->query('//form[@id="dlt-settings-form"]//input[@name="components[queries][fold_fast]" and @type="checkbox" and @checked]')->length)->toBe(0);
+        expect($xpath->query('//form[@id="dlt-settings-form"]//input[@name="dlt_saved_state"]')->item(0)->getAttribute('value'))
+            ->toBe('saved&value="test"');
         ToolbarPreferences::resetRequestCache();
         expect(ToolbarPreferences::load()->toConfig())->toBe($old->toConfig());
     } finally {
@@ -232,8 +245,11 @@ it('rejects invalid admin links atomically and renders all submitted settings', 
         $_POST = $previousPost;
         $_SESSION = $previousSession;
         $GLOBALS['js_array'] = $previousScripts;
-        if ($previousMethod === null) unset($_SERVER['REQUEST_METHOD']);
-        else $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
         http_response_code(200);
     }
 })->with([
@@ -249,8 +265,10 @@ it('keeps legacy empty links free of server errors and requires URLs in creation
     $html = (new ToolbarSettingsPage($preferences, '?mod=dletoolbar'))->render();
     expect($preferences->parameterErrors())->toBe([])
         ->and($preferences->componentParameters($id)['url'])->toBe('')
-        ->and($html)->toContain('name="components[' . $id . '][url]" value="" required',
-            'name="components[__COMPONENT_ID__][url]" value="" required')
+        ->and($html)->toContain(
+            'name="components[' . $id . '][url]" value="" required',
+            'name="components[__COMPONENT_ID__][url]" value="" required',
+        )
         ->not->toContain('aria-invalid="true"', 'alert alert-danger');
 });
 

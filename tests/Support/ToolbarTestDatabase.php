@@ -12,10 +12,14 @@ final class ToolbarTestDatabase
     public array $query_errors_list = [];
     public array $queries = [];
     public ?string $failQuery = null;
+    /** Thrown instead of returning false when $failQuery matches. */
+    public ?\Throwable $failWith = null;
 
     public function __construct(private \db $native, array $metrics = [])
     {
-        foreach ($metrics as $key => $value) $this->$key = $value;
+        foreach ($metrics as $key => $value) {
+            $this->$key = $value;
+        }
     }
 
     public function query(string $sql, bool $showError = true, bool $logQuery = true): \mysqli_result|bool
@@ -23,6 +27,9 @@ final class ToolbarTestDatabase
         $this->queries[] = $sql;
         if ($this->failQuery !== null && str_starts_with($sql, $this->failQuery)) {
             $this->failQuery = null;
+            if ($this->failWith !== null) {
+                throw $this->failWith;
+            }
             $this->query_errors_list[] = ['query' => $sql, 'error' => 'Injected database failure'];
             return false;
         }

@@ -54,8 +54,14 @@ $db = new class {
     public int $query_num = 0;
     public array $query_list = [];
     public float $MySQL_time_taken = 0;
-    public function query($sql, $showError = true) { return true; }
-    public function get_row($result = null) { return null; }
+    public function query($sql, $showError = true)
+    {
+        return true;
+    }
+    public function get_row($result = null)
+    {
+        return null;
+    }
     public function free($result = null) {}
 };
 
@@ -153,7 +159,9 @@ foreach ($items as $index => $item) {
     $toolbarsHtml .= $positionToolbar($html, $index, $item['column'], $item['group'], $item['badge']);
     http_response_code(200);
 
-    if ($compare) continue;
+    if ($compare) {
+        continue;
+    }
     $cardsHtml .= '<article class="scenario"><span class="scenario-number">'
         . str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) . '</span><div><h2>'
         . htmlspecialchars($item['badge']) . '</h2><p>HTTP ' . $scenario['response'] . ' · '

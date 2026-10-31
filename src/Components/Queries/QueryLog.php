@@ -64,8 +64,11 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
      */
     public function offsetSet($offset, $value): void
     {
-        if ($offset === null) $this->entries[] = $value + self::source();
-        else $this->entries[$offset] = $value;
+        if ($offset === null) {
+            $this->entries[] = $value + self::source();
+        } else {
+            $this->entries[$offset] = $value;
+        }
     }
 
     /** @param int $offset */
@@ -93,26 +96,40 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
         $cache = $engine . '/cache/system/plugins/';
         $first = null;
         foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 16) as $frame) {
-            if (!isset($frame['file'], $frame['line']) || $frame['file'] === __FILE__) continue;
+            if (!isset($frame['file'], $frame['line']) || $frame['file'] === __FILE__) {
+                continue;
+            }
 
             /** @var array{function: string, file: string, line: int} $frame */
             /** @var string $file */
             $file = (string) preg_replace("/(?:\\(\\d+\\) : eval\\(\\)'d code)+$/", '', str_replace('\\', '/', $frame['file']));
-            if (stripos($file, $engine . '/classes/mysql.php') === 0) continue;
+            if (stripos($file, $engine . '/classes/mysql.php') === 0) {
+                continue;
+            }
 
             $built = null;
             if (stripos($file, $cache) === 0) {
                 $built = $file;
                 $original = self::originalOf($file, substr($file, strlen($cache)));
-                if ($original !== null) $file = $original;
+                if ($original !== null) {
+                    $file = $original;
+                }
             }
-            if (stripos($file, $root) === 0) $file = substr($file, strlen($root));
-            if ($built !== null && PluginMap::isCreated($file)) $built = null;
+            if (stripos($file, $root) === 0) {
+                $file = substr($file, strlen($root));
+            }
+            if ($built !== null && PluginMap::isCreated($file)) {
+                $built = null;
+            }
 
             $source = $file . ':' . (int) $frame['line'] . ($built !== null ? ' (копия с плагинами)' : '');
             $plugin = PluginMap::resolve($file, (int) $frame['line'], $built);
-            if ($plugin !== null) return ['source' => $source, 'plugin' => $plugin];
-            if ($first === null) $first = $source;
+            if ($plugin !== null) {
+                return ['source' => $source, 'plugin' => $plugin];
+            }
+            if ($first === null) {
+                $first = $source;
+            }
         }
         return $first === null ? [] : ['source' => $first];
     }
@@ -120,7 +137,9 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     private static function originalOf(string $built, string $name): ?string
     {
         foreach (self::pluginFiles() as $original => $target) {
-            if (!is_string($target)) continue;
+            if (!is_string($target)) {
+                continue;
+            }
             $target = str_replace('\\', '/', $target);
             if ($target === $name || $target === $built || basename($target) === $name) {
                 return str_replace('\\', '/', (string) $original);
@@ -137,7 +156,7 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
             $read = \Closure::bind(static function (): array {
                 /** @var array<string, mixed> $plugins */
                 // @phpstan-ignore staticProperty.notFound
-                $plugins = is_array(\DLEPlugins::$plugins ?? null) ? \DLEPlugins::$plugins : [];
+                $plugins = \DLEPlugins::$plugins;
                 return $plugins;
             }, null, \DLEPlugins::class);
         }

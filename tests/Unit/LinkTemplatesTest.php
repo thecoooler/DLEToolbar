@@ -3,6 +3,7 @@
 use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Components\Link\NewsFields;
 use iCooLER\DLEToolbar\Components\Link\UrlTemplate;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {
@@ -47,6 +48,15 @@ it('encodes embedded fields and decodes stored HTML entities', function (): void
     ]))->toBe('/search?q=' . rawurlencode('Тест & a/b?x="y"'));
 });
 
+it('hides links with malformed saved conditions even when their fields are available', function (string $template): void {
+    expect(UrlTemplate::resolve($template, true, [
+        'url' => ['value' => 'https://example.test/', 'given' => true],
+    ]))->toBe('');
+})->with([
+    'unclosed condition' => ['[xfgiven_url][xfvalue_url]'],
+    'mismatched condition' => ['[xfgiven_url][xfvalue_url][/xfgiven_other]'],
+]);
+
 it('resolves nested given blocks and omits empty optional fields', function (): void {
     $fields = ['code' => ['value' => 'abc', 'given' => true], 'other' => ['value' => '', 'given' => false]];
     expect(UrlTemplate::resolve('/search?[xfgiven_code]q=[xfvalue_code][xfgiven_other]&extra=[xfvalue_other][/xfgiven_other][/xfgiven_code]', true, $fields))
@@ -78,11 +88,11 @@ it('hides links with missing fields or outside a full news page', function (): v
 it('captures only permitted fields and uses native yes-or-no given semantics', function (): void {
     $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
     $GLOBALS['xfields'] = [
-        [0 => 'code', 3 => 'text', 20 => ''],
-        [0 => 'private', 3 => 'text', 20 => '2,3'],
-        [0 => 'enabled', 3 => 'yesorno', 20 => '1,2'],
-        [0 => 'disabled', 3 => 'yesorno', 20 => ''],
-        [0 => 'zero', 3 => 'text', 20 => ''],
+        [0 => 'code', 1 => '', 3 => 'text', 20 => ''],
+        [0 => 'private', 1 => '', 3 => 'text', 20 => '2,3'],
+        [0 => 'enabled', 1 => '', 3 => 'yesorno', 20 => '1,2'],
+        [0 => 'disabled', 1 => '', 3 => 'yesorno', 20 => ''],
+        [0 => 'zero', 1 => '', 3 => 'text', 20 => ''],
     ];
     NewsFields::capture('code|abc||private|secret||enabled|1||disabled|0||zero|0');
     expect(NewsFields::values())->not->toHaveKey('private')
@@ -117,10 +127,10 @@ it('uses DLE 19+ field definitions, permissions and zero-value semantics', funct
         $GLOBALS['config']['version_id'] = '21.0';
         $GLOBALS['lang'] = ['xfield_xyes' => 'Да', 'xfield_xno' => 'Нет'];
         \DLEXFields::$fields = ['fields' => [
-            'code' => ['name' => 'code', 'type' => 'text', 'allow_view_usergroups' => ''],
-            'private' => ['name' => 'private', 'type' => 'text', 'allow_view_usergroups' => '2,3'],
-            'zero' => ['name' => 'zero', 'type' => 'text', 'allow_view_usergroups' => ''],
-            'enabled' => ['name' => 'enabled', 'type' => 'yesorno', 'allow_view_usergroups' => '1,2'],
+            'code' => ['name' => 'code', 'description' => '', 'type' => 'text', 'allow_view_usergroups' => ''],
+            'private' => ['name' => 'private', 'description' => '', 'type' => 'text', 'allow_view_usergroups' => '2,3'],
+            'zero' => ['name' => 'zero', 'description' => '', 'type' => 'text', 'allow_view_usergroups' => ''],
+            'enabled' => ['name' => 'enabled', 'description' => '', 'type' => 'yesorno', 'allow_view_usergroups' => '1,2'],
         ]];
         NewsFields::capture('code|abc||private|secret||zero|0||enabled|1');
         expect(NewsFields::values())->not->toHaveKey('private')
@@ -142,7 +152,7 @@ it('uses native given semantics for dynamic fields in DLE 21', function (string 
     try {
         $GLOBALS['config']['version_id'] = '21.0';
         \DLEXFields::$fields = ['fields' => [
-            'code' => ['name' => 'code', 'type' => $type, 'allow_view_usergroups' => '', 'dynamic' => 1],
+            'code' => ['name' => 'code', 'description' => '', 'type' => $type, 'allow_view_usergroups' => '', 'dynamic' => 1],
         ]];
         $data = \DLEXFields::xfieldsdataload($raw);
         NewsFields::capture($raw);
