@@ -19,16 +19,16 @@ it('applies declared defaults and fresh preferences through the registry render 
     $defaults = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'clock']]]);
     $rendered = $registry->render($defaults);
     $defaultRender = $rendered;
-    expect($rendered['controls'])->toContain('data-show-seconds="true"')
+    expect($rendered['controls'])->toContain('data-show-seconds="false"')
         ->and($rendered['panels'])->toContain('data-fold')
         ->toContain('query-stats-alert">⚠ 1');
 
     $custom = ToolbarPreferences::fromRequest(['toolbar' => $defaults->toConfig()['toolbar'], 'components' => [
-        'clock' => ['show_seconds' => '0'],
+        'clock' => ['show_seconds' => '1'],
         'queries' => ['slow_threshold_ms' => '50', 'fold_fast' => '0'],
     ]], $defaults);
     $rendered = $registry->render($custom);
-    expect($rendered['controls'])->toContain('data-show-seconds="false"')
+    expect($rendered['controls'])->toContain('data-show-seconds="true"')
         ->and($rendered['panels'])->not->toContain('data-fold')->not->toContain('query-stats-alert">⚠');
 
     expect($registry->render($defaults))->toBe($defaultRender)

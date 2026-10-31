@@ -25,7 +25,7 @@ final class ToolbarPreferences
             'instances' => [],
             'components' => ComponentRegistry::normalizeParameters([]),
             'access' => ['groups' => [1]],
-            'toolbar' => ['items' => $items, 'enabled' => $items],
+            'toolbar' => ['items' => $items, 'enabled' => array_values(array_diff($items, ['clock']))],
         ];
     }
 

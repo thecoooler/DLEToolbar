@@ -48,13 +48,26 @@ it('enables default components added after the settings were saved', function ()
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
 
-    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry', 'clock'])
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry'])
         ->and($preferences->isEnabled('time'))->toBeFalse()
-        ->and($preferences->isEnabled('skin'))->toBeFalse();
+        ->and($preferences->isEnabled('skin'))->toBeFalse()
+        ->and($preferences->isEnabled('clock'))->toBeFalse();
 
     ToolbarPreferences::fromRequest(['toolbar' => ['items' => $preferences->itemOrder(), 'enabled' => ['queries']]], $preferences)->save();
     ToolbarPreferences::resetRequestCache();
     expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries']);
+});
+
+it('preserves explicitly enabled clock and seconds in saved settings', function (): void {
+    ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['clock']],
+        'components' => ['clock' => ['show_seconds' => true]],
+    ])->save();
+    ToolbarPreferences::resetRequestCache();
+
+    $preferences = ToolbarPreferences::load();
+    expect($preferences->isEnabled('clock'))->toBeTrue()
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => true]);
 });
 
 it('skips the settings query for users, guests and missing groups', function (): void {

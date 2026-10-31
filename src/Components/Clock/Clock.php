@@ -13,8 +13,8 @@ final class Clock implements ConfigurableComponent
     {
         return ['show_seconds' => Parameter::boolean(
             'Показывать секунды',
-            true,
-            'Выключите, чтобы показывать время в формате ЧЧ:ММ.',
+            false,
+            'Включите, чтобы показывать время в формате ЧЧ:ММ:СС.',
         )];
     }
 

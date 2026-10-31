@@ -22,7 +22,7 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'clock'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,7 +113,7 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
         ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
