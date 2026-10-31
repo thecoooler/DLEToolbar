@@ -14,10 +14,10 @@ beforeEach(function (): void {
 
 it('supplies component parameter defaults for existing configuration files', function (): void {
     $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'clock']]]);
-    expect($preferences->componentParameters('clock'))->toBe(['show_seconds' => true])
+    expect($preferences->componentParameters('clock'))->toBe(['show_seconds' => false])
         ->and($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 20.0, 'fold_fast' => true, 'trace_sources' => false]);
 
-    expect((new ComponentRegistry())->render($preferences)['controls'])->toContain('data-show-seconds="true"');
+    expect((new ComponentRegistry())->render($preferences)['controls'])->toContain('data-show-seconds="false"');
 });
 
 it('normalizes component parameters and rejects unregistered fields', function (): void {
@@ -45,7 +45,7 @@ it('uses defaults for invalid component parameters', function (mixed $threshold,
         'clock' => ['show_seconds' => $seconds],
     ]]);
     expect($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 20.0, 'fold_fast' => true, 'trace_sources' => false])
-        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => true]);
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => false]);
 })->with([
     'negative number and unknown choices' => [-1, 'yes', 'window'],
     'zero and arrays' => [0, [], ['_blank']],
