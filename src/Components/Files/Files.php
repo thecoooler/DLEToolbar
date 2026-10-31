@@ -51,7 +51,6 @@ final class Files implements ConfigurableComponent
                 . '<span class="files-subtitle">Отметок: ' . $entryCount . ' · Файлов: ' . $count . '</span></div>'
                 . '<button type="button" data-files-close aria-label="Закрыть панель диагностики">×</button></header>'
                 . '<div class="files-scroll" id="dle-toolbar-files-timeline" role="region" tabindex="0" aria-label="Лог и файлы">'
-                . '<p class="files-note">Хронология контрольных точек и задержек между ними. Нажмите на количество файлов, чтобы посмотреть подключённые файлы.</p>'
                 . $this->timeline($entries) . '</div></section>',
             'styles' => self::styles(),
             'script' => self::script(),
@@ -84,7 +83,7 @@ final class Files implements ConfigurableComponent
 
             $fileCount = count($entry['files']);
             if ($fileCount === 0) {
-                $filesHtml = '<span class="files-count files-count-zero">Файлов: 0</span>';
+                $filesHtml = '';
             } else {
                 $fileItems = '';
                 foreach ($entry['files'] as $file) {
@@ -104,18 +103,14 @@ final class Files implements ConfigurableComponent
             $timeLabel = self::milliseconds($entry['time']);
 
             $rows .= '<li class="files-event' . ($isSlow ? ' files-slow' : '') . '">'
-                . '<div class="files-rail-dot" aria-hidden="true"></div>'
-                . '<div class="files-event-header">'
-                . '<div class="files-event-title"><strong>' . self::escape($entry['message']) . '</strong>'
-                . ($index === $longest ? '<span class="files-longest">Самый долгий интервал</span>' : '') . '</div>'
-                . '<div class="files-times" title="Время от начала запроса и интервал">'
-                . '<span class="files-time-start">от начала: ' . $timeLabel . '</span>'
-                . '<b class="files-time-gap">+' . $gapLabel . '</b>'
-                . '</div>'
-                . '</div>'
+                . '<div class="files-times">'
+                . '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>'
+                . '<span class="files-time-gap" title="Интервал перед отметкой' . ($index === $longest ? ' · Самый долгий интервал' : '') . '">+' . $gapLabel . '</span>'
+                . '</div><div class="files-rail-dot" aria-hidden="true"></div>'
+                . '<div class="files-event-body"><div class="files-event-title"><strong>' . self::escape($entry['message']) . '</strong></div>'
                 . $sourceHtml
                 . $filesHtml
-                . '</li>';
+                . '</div></li>';
         }
 
         return '<ol class="files-events">' . $rows . '</ol>';
@@ -143,29 +138,32 @@ final class Files implements ConfigurableComponent
 .files-subtitle { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
 .files-header button { border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; }
 .files-header button:hover { background: var(--hover); }
-.files-note { margin: 0; padding: 12px 0 10px; font-size: 12px; color: var(--muted); }
-.files-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 16px 14px; }
-.files-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: -2px; }
-.files-events { list-style: none; margin: 0; padding: 0 0 0 20px; position: relative; }
-.files-events::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 12px; width: 2px; background: var(--border); }
-.files-event { position: relative; padding: 12px 0 16px 16px; border-bottom: 1px solid rgba(128, 128, 128, 0.08); }
-.files-event:last-child { border-bottom: none; }
-.files-rail-dot { position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid #3b82f6; z-index: 1; }
-.files-slow .files-rail-dot { border-color: #dc2626; background: #dc2626; }
-:host([data-theme="dark"]) .files-slow .files-rail-dot { border-color: #f87171; background: #f87171; }
-.files-event-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
-.files-event-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; overflow-wrap: anywhere; font-size: 13px; }
-.files-longest { font-size: 11px; color: var(--muted); font-weight: normal; }
-.files-times { display: inline-flex; align-items: baseline; gap: 8px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
-.files-time-start { opacity: 0.8; }
-.files-time-gap { color: var(--foreground); font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--hover); }
-.files-slow .files-time-gap { color: #dc2626; background: rgba(220, 38, 38, 0.12); }
-:host([data-theme="dark"]) .files-slow .files-time-gap { color: #f87171; background: rgba(248, 113, 113, 0.16); }
+.files-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 8px 16px 16px; }
+.files-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
+.files-events { --time-column: 88px; --rail-gap: 28px; list-style: none; margin: 0; padding: 0; position: relative; }
+.files-events::before { content: ""; position: absolute; left: calc(var(--time-column) + var(--rail-gap) / 2); top: 20px; bottom: 24px; width: 1px; background: var(--border); }
+.files-event { position: relative; display: grid; grid-template-columns: var(--time-column) minmax(0, 1fr); column-gap: var(--rail-gap); padding: 14px 0; }
+.files-event-body { min-width: 0; }
+.files-rail-dot { position: absolute; left: calc(var(--time-column) + var(--rail-gap) / 2 - 3px); top: 20px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px var(--surface); }
+.files-slow .files-rail-dot { background: #dc2626; }
+:host([data-theme="dark"]) .files-slow .files-rail-dot { background: #f87171; }
+.files-event-title { overflow-wrap: anywhere; font-size: 13px; line-height: 20px; }
+.files-event-title strong { font-weight: 600; }
+.files-times { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 11px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.files-time-start { color: var(--foreground); }
+.files-time-gap { color: var(--muted); font-size: 10px; line-height: 16px; }
+.files-slow .files-time-gap { color: #b91c1c; }
+:host([data-theme="dark"]) .files-slow .files-time-gap { color: #f87171; }
+@media (max-width: 480px) {
+    .files-scroll { padding-inline: 12px; }
+    .files-events { --time-column: 72px; --rail-gap: 22px; }
+    .files-times { font-size: 10px; }
+}
 .files-source { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; font: 11px/1.5 ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
-.files-badge { display: inline-flex; align-items: center; flex-shrink: 0; font: 600 10px/1 system-ui, -apple-system, sans-serif; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.02em; }
+.files-badge { display: inline-flex; align-items: center; flex-shrink: 0; font: 600 10px/1 system-ui, -apple-system, sans-serif; padding: 2px 6px; border-radius: 3px; }
 .files-cached { background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
 :host([data-theme="dark"]) .files-cached { background: rgba(245, 158, 11, 0.22); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35); }
-.files-uncached { background: var(--hover); color: var(--muted); border: 1px solid var(--border); }
+.files-uncached { background: transparent; color: var(--muted); border: 1px solid var(--border); }
 .files-count { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .files-details { margin-top: 8px; }
 .files-toggle { cursor: pointer; font-size: 11px; color: var(--muted); user-select: none; }
