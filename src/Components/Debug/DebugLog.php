@@ -13,7 +13,7 @@ final class DebugLog
     private static float $offset = 0;
     private static float $previousAt = 0;
     private static ?float $end = null;
-    /** @var array<string, list<float>> */
+    /** @var array<string, list<int>> */
     private static array $running = [];
     /** @var list<string> */
     private static array $known = [];
@@ -56,24 +56,35 @@ final class DebugLog
         self::append($label, $file, $line, 'stage');
     }
 
-    public static function before(string $file): void
+    /** Records the boundary inside an include expression, preserving its condition and variable scope. */
+    public static function includePath(string $file, bool $early = false): string
     {
-        if (!self::$active || self::$finished) {
+        self::before($file, $early);
+        return $file;
+    }
+
+    public static function before(string $file, bool $early = false): void
+    {
+        if ((!self::$active && !$early) || self::$finished) {
             return;
         }
         self::append(SourcePath::display($file), $file, 0, 'before');
-        self::$running[$file][] = self::$entries[count(self::$entries) - 1]['time'];
+        self::$running[SourcePath::display($file)][] = count(self::$entries) - 1;
     }
 
-    public static function after(string $file): void
+    public static function after(string $file, bool $early = false, string $label = ''): void
     {
-        if (!self::$active || self::$finished || empty(self::$running[$file])) {
+        $key = SourcePath::display($file);
+        if ((!self::$active && !$early) || self::$finished || empty(self::$running[$key])) {
             return;
         }
-        $start = array_pop(self::$running[$file]);
-        self::append(SourcePath::display($file), $file, 0, 'after');
+        $before = array_pop(self::$running[$key]);
+        self::append($label !== '' ? $label : $key, $file, 0, 'after');
         $index = count(self::$entries) - 1;
-        self::$entries[$index]['duration'] = self::$entries[$index]['time'] - $start;
+        $entry = self::$entries[$index];
+        $entry['duration'] = $entry['time'] - self::$entries[$before]['time'];
+        $entry['cached'] = self::$entries[$before]['cached'];
+        self::$entries[$index] = $entry;
     }
 
     private static function append(string $message, string $file, int $line, string $kind): void

@@ -38,10 +38,9 @@ it('renders escaped checkpoints, cache badges and a timeline only for a visible 
         $registry = new ComponentRegistry();
         $rendered = $registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]]));
         expect($rendered['controls'])->toContain('data-component="files"', 'Лог и файлы: 2 отметок')
-            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-rail-dot', 'не из кэша')
+            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'files-rail-dot', 'не из кэша')
             ->not->toContain('<script>', 'INF', 'NAN', 'DebugTest.php:')
             ->and(substr_count($rendered['panels'], '<li class="files-event'))->toBe(2)
-            ->and(substr_count($rendered['panels'], 'Самый долгий интервал'))->toBe(1)
             ->and(DebugLog::entries())->toHaveCount(2)
             ->and($registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => []]]))['panels'])->toBe('');
     } finally {
@@ -53,7 +52,7 @@ it('renders an empty log without fabricated checkpoints and clears collected req
     $registry = new ComponentRegistry();
     $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]]);
     $panel = $registry->render($preferences)['panels'];
-    expect($panel)->toContain('Отметок нет.')->not->toContain('files-track', 'Самый долгий интервал');
+    expect($panel)->toContain('Отметок нет.')->not->toContain('files-track');
     DebugLog::add('Test');
     DebugLog::reset();
     expect(DebugLog::entries())->toBe([])
@@ -114,4 +113,39 @@ it('measures paired inclusions across manual marks and nested calls to the same 
     DebugLog::before($file);
     DebugLog::after($file);
     expect(DebugLog::snapshot())->toBe($snapshot);
+});
+
+it('retains early inclusions and pairs original paths with cache paths', function (): void {
+    $file = ROOT_DIR . '/engine/modules/functions.php';
+    expect(DebugLog::includePath($file, true))->toBe($file);
+    DebugLog::after($file, true);
+    DebugLog::start();
+    $entries = DebugLog::entries();
+    expect(array_column($entries, 'kind'))->toBe(['before', 'after', 'stage'])
+        ->and($entries[1]['duration'])->toBeGreaterThanOrEqual(0.0);
+    DebugLog::before(ROOT_DIR . '/engine/modules/main.php');
+    DebugLog::after(ROOT_DIR . '/engine/modules/main.php', false, 'engine/modules/main.php · до вывода');
+    expect(DebugLog::entries()[4]['message'])->toBe('engine/modules/main.php · до вывода');
+});
+
+it('preserves conditional execution and the scope of an instrumented include', function (): void {
+    $file = tempnam(sys_get_temp_dir(), 'toolbar-include-');
+    file_put_contents($file, '<?php $scopeValue++;');
+    $scopeValue = 41;
+    DebugLog::start();
+    try {
+        if (false) {
+            include DebugLog::includePath($file);
+        }
+        DebugLog::after($file);
+        expect(DebugLog::entries())->toHaveCount(1);
+        if (true) {
+            include DebugLog::includePath($file);
+        }
+        DebugLog::after($file);
+        expect($scopeValue)->toBe(42)
+            ->and(array_column(DebugLog::entries(), 'kind'))->toBe(['stage', 'before', 'after']);
+    } finally {
+        unlink($file);
+    }
 });

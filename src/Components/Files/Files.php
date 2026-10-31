@@ -24,7 +24,7 @@ final class Files implements ConfigurableComponent
             50,
             0.1,
             0.1,
-            'Интервалы между отметками не меньше порога выделяются цветом.',
+            'Время выполнения файлов и интервалы между ручными отметками не меньше порога выделяются цветом.',
         )];
     }
 
@@ -76,9 +76,6 @@ final class Files implements ConfigurableComponent
             }
         }
 
-        $gaps = array_column($entries, 'gap');
-        $maxGap = max($gaps);
-        $longest = ($maxGap > 0.0 && count($entries) > 1) ? array_search($maxGap, $gaps, true) : false;
 
         $rows = '';
         foreach ($entries as $index => $entry) {
@@ -86,7 +83,7 @@ final class Files implements ConfigurableComponent
                 continue;
             }
             $gap = $entry['gap'];
-            $isSlow = $gap >= $this->slowThreshold;
+            $isSlow = ($entry['duration'] ?? $gap) >= $this->slowThreshold;
 
             $sourceHtml = '';
             if ($entry['file'] !== '') {
@@ -114,14 +111,12 @@ final class Files implements ConfigurableComponent
                     . '</details>';
             }
 
-            $gapLabel = self::milliseconds($gap);
             $timeLabel = self::milliseconds($entry['time']);
 
             $times = isset($starts[$index])
                 ? '<span class="files-time-before" title="До подключения"><span class="files-boundary">До</span> ' . self::milliseconds($starts[$index]) . '</span>'
                     . '<span class="files-time-after" title="После подключения"><span class="files-boundary">После</span> ' . $timeLabel . '</span>'
-                : '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>'
-                    . '<span class="files-time-gap" title="Интервал перед отметкой' . ($index === $longest ? ' · Самый долгий интервал' : '') . '">+' . $gapLabel . '</span>';
+                : '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>';
             $rows .= '<li class="files-event' . ($isSlow ? ' files-slow' : '') . '">'
                 . '<div class="files-times">' . $times
                 . '</div><div class="files-rail-dot" aria-hidden="true"></div>'
@@ -177,9 +172,6 @@ final class Files implements ConfigurableComponent
 .files-boundary { color: var(--muted); font-size: 10px; margin-right: 3px; }
 .files-time-before, .files-time-after { color: var(--foreground); }
 .files-time-start { color: var(--foreground); }
-.files-time-gap { color: var(--muted); font-size: 10px; line-height: 16px; }
-.files-slow .files-time-gap { color: #b91c1c; }
-:host([data-theme="dark"]) .files-slow .files-time-gap { color: #f87171; }
 @media (max-width: 480px) {
     .files-scroll { padding-inline: 12px; }
     .files-events { --time-column: 96px; --rail-gap: 22px; }
