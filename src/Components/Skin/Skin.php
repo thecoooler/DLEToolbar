@@ -221,7 +221,9 @@ CSS,
             token: skinTrigger.dataset.skinToken,
         })) + '; max-age=60; path=/; SameSite=Lax'
             + (window.location.protocol === 'https:' ? '; Secure' : '');
-        requestAnimationFrame(() => requestAnimationFrame(() => window.location.reload()));
+        // reload() resubmits a POST response: after login DLE issues a new login hash and rejects the token.
+        // The fragment is dropped, otherwise the navigation only scrolls to it.
+        requestAnimationFrame(() => requestAnimationFrame(() => window.location.replace(window.location.href.split('#')[0])));
     });
     skinMenu.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {

@@ -11,15 +11,18 @@ final class ToolbarSettingsPage
     private ToolbarPreferences $preferences;
     private string $actionUrl;
     private ?string $notice;
+    private ?string $savedState;
 
     public function __construct(
         ToolbarPreferences $preferences,
         string $actionUrl,
-        ?string $notice = null
+        ?string $notice = null,
+        ?string $savedState = null
     ) {
         $this->preferences = $preferences;
         $this->actionUrl = $actionUrl;
         $this->notice = $notice;
+        $this->savedState = $savedState;
     }
 
     public function render(): string
@@ -28,6 +31,7 @@ final class ToolbarSettingsPage
         /** @var string $dle_login_hash */
 
         $preferences = $this->preferences;
+        $savedState = $this->savedState;
         $groups = ToolbarPreferences::groups();
         $instances = $preferences->componentInstances();
         $definitions = ComponentRegistry::definitions($instances);

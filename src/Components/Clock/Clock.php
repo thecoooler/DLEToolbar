@@ -42,7 +42,7 @@ final class Clock implements ConfigurableComponent
                 . '<time class="metric-value" data-clock data-show-seconds="' . ($this->showSeconds ? 'true' : 'false')
                 . '" role="timer" aria-live="off">'
                 . $numbers['hour'] . ':' . $numbers['minute']
-                . ($this->showSeconds ? ':<span data-clock-part="second"></span>' : '')
+                . ($this->showSeconds ? ':' . $numbers['second'] : '')
                 . '</time><template data-tooltip-content><time class="clock-tooltip" data-clock-tooltip role="timer" aria-live="off">'
                 . $numbers['hour'] . ':' . $numbers['minute'] . ':' . $numbers['second']
                 . '</time></template></span>',
@@ -99,7 +99,6 @@ CSS,
         };
         const timeParts = (now) => Object.fromEntries(fullTimeFormatter.formatToParts(now)
             .map(({ type, value }) => [type, value]));
-        const seconds = clock.querySelector('[data-clock-part="second"]');
         control.addEventListener('dle-toolbar-tooltip-render', ({ detail }) => {
             const tooltipClock = detail.querySelector('[data-clock-tooltip]');
             const now = new Date();
@@ -110,7 +109,6 @@ CSS,
             const now = new Date();
             const parts = timeParts(now);
             updateNumbers(clock, parts);
-            if (seconds) seconds.textContent = parts.second;
             clock.dateTime = formatter.format(now);
             control.setAttribute('aria-label', 'Текущее время: ' + fullTimeFormatter.format(now));
         };

@@ -48,7 +48,7 @@ it('enables default components added after the settings were saved', function ()
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
 
-    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'editpost', 'notes', 'clock'])
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and($preferences->isEnabled('time'))->toBeFalse()
         ->and($preferences->isEnabled('skin'))->toBeFalse();
 

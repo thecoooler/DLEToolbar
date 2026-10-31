@@ -45,10 +45,24 @@ files:
         replace: |
           try {
             if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+              \iCooLER\DLEToolbar\Components\Entry\PageEntry::captureNews($row);
               \iCooLER\DLEToolbar\Components\Link\NewsFields::capture($row['xfields']);
             }
           } catch (\Throwable $error) {
             error_log('[DLEToolbar] news fields: ' . $error);
+          }
+
+  engine/modules/profile.php:
+    - before:
+        search: |
+          if( $row['banned'] == 'yes' )
+        replace: |
+          try {
+            if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+              \iCooLER\DLEToolbar\Components\Entry\PageEntry::captureUser($row);
+            }
+          } catch (\Throwable $error) {
+            error_log('[DLEToolbar] user profile: ' . $error);
           }
 
   engine/modules/main.php:

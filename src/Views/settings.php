@@ -6,6 +6,7 @@ if (!defined('DATALIFEENGINE')) {
 }
 
 /** @var \iCooLER\DLEToolbar\Toolbar\ToolbarPreferences $preferences */
+/** @var string|null $savedState */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $components */
 /** @var array<string, \iCooLER\DLEToolbar\AdminUI\ComponentSettings> $templates */
 /** @var array<string, array<string, array{message: string, value: string}>> $errors */
@@ -32,7 +33,8 @@ if (!defined('DATALIFEENGINE')) {
     </div>
 <?php endif; ?>
 
-<form method="post" action="<?= $escape($actionUrl) ?>" id="dlt-settings-form">
+<form method="post" action="<?= $escape($actionUrl) ?>" id="dlt-settings-form"<?= $errors !== [] ? ' data-validation-failed' : '' ?>>
+    <input type="hidden" name="dlt_saved_state" value="<?= $escape($savedState ?? '') ?>">
     <input type="hidden" name="instances" value="">
     <input type="hidden" name="user_hash" value="<?= $escape($dle_login_hash) ?>">
     <div class="panel panel-default">
@@ -85,6 +87,7 @@ if (!defined('DATALIFEENGINE')) {
         </div>
         <div class="panel-footer">
             <button type="submit" class="btn bg-teal btn-sm btn-raised"><i class="fa fa-floppy-o position-left"></i>Сохранить</button>
+            <span class="text-warning text-semibold position-right" id="dlt-unsaved-notice" role="status" hidden><i class="fa fa-exclamation-triangle position-left" aria-hidden="true"></i>Есть несохранённые изменения. Нажмите «Сохранить».</span>
         </div>
     </div>
     <?php foreach ($components as $id => $component): ?>
@@ -109,6 +112,7 @@ if (!defined('DATALIFEENGINE')) {
     #dlt-settings-form .dlt-actions-cell { width: 1%; white-space: nowrap; }
     #dlt-settings-form .dlt-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
     #dlt-settings-form .dlt-actions > * { flex-shrink: 0; }
+    #dlt-settings-form.dlt-dirty .panel-footer { position: sticky; bottom: 0; z-index: 2; }
     #dlt-settings-form .dlt-disabled td:nth-child(2) { opacity: .55; }
     #dlt-settings-form .dlt-icon-list { display: flex; flex-wrap: wrap; gap: 6px; }
     #dlt-settings-form .dlt-icon-choice { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 10px; margin: 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: normal; text-align: center; }

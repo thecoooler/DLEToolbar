@@ -17,12 +17,12 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
         'enabled' => ['time', 'queries', 'unknown', ['response']],
     ]]);
 
-    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'editpost', 'notes', 'clock'])
+    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and($preferences->visibleItems())->toBe(['queries', 'time']);
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'notes', 'clock'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,9 +113,9 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'notes', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'editpost', 'notes', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
         ->toBe([]);
 });
@@ -180,7 +180,7 @@ it('renders saved settings with escaped form values and visibility switches', fu
         preg_match('/<tbody id="dlt-component-list">(.*?)<\/tbody>/s', $html, $list);
         preg_match_all('/name="toolbar\[items\]\[\]" value="([^"]+)"/', $list[1], $matches);
 
-        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'editpost', 'notes', 'clock'])
+        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
             ->and($html)->toContain('action="?mod=dletoolbar&amp;view=&quot;settings&quot;"')
             ->toContain('name="user_hash" value="&lt;token&gt;"')
             ->toContain('Сохранено &lt;успешно&gt;')
@@ -205,7 +205,8 @@ it('renders settings without a success notice', function (): void {
         ->toContain('class="tab-pane" id="dlt-access-tab"')
         ->toContain('class="tab-pane active" id="dlt-components-tab"')
         ->toContain('<option value="1" selected>Администраторы</option>')
-        ->and($html)->not->toContain('role="status"');
+        ->toContain('id="dlt-unsaved-notice" role="status" hidden')
+        ->and($html)->not->toContain('alert-success', 'data-validation-failed');
 });
 
 it('renders installed templates with the current selection and keeps skin visibility configurable', function (): void {
