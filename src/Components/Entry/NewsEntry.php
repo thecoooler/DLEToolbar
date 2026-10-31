@@ -31,12 +31,12 @@ final class NewsEntry
         $tags = array_filter(array_map('trim', explode(',', (string) $row['tags'])), static fn(string $tag): bool => $tag !== '');
         $author = (string) $row['autor'];
 
-        $badges = [(int) $row['approve'] ? ['Опубликована', 'success'] : ['На модерации', 'warning']];
+        $badges = [
+            ['ID ' . (int) $row['id'], 'neutral'],
+            (int) $row['approve'] ? ['Опубликована', 'success'] : ['На модерации', 'warning'],
+        ];
         if ((int) $row['date'] > time()) {
             $badges[] = ['Отложенная публикация', 'info'];
-        }
-        if ((int) $row['allow_main']) {
-            $badges[] = ['На главной', 'neutral'];
         }
         if ((int) $row['fixed']) {
             $badges[] = ['Закреплена', 'neutral'];

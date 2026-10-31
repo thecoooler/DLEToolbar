@@ -29,7 +29,7 @@ final class UserEntry
             unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth']);
         }
 
-        $badges = [];
+        $badges = [['ID ' . (int) $row['user_id'], 'neutral']];
         if ($banned) {
             $badges[] = ['Заблокирован', 'danger'];
         }

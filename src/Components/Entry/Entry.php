@@ -89,7 +89,7 @@ final class Entry implements Component
         return '<section class="entry-panel" data-entry-panel data-kind="' . Format::escape($entry['kind']) . '" id="dle-toolbar-entry-panel"'
             . ' aria-labelledby="dle-toolbar-entry-title" hidden>'
             . '<header class="entry-header"><div class="entry-heading">'
-            . '<p class="entry-kind">' . Format::escape($entry['kind']) . ' <span>ID ' . Format::escape($entry['id']) . '</span></p>'
+            . '<p class="entry-kind">' . Format::escape($entry['kind']) . '</p>'
             . '<h2 id="dle-toolbar-entry-title">' . Format::escape($entry['title']) . '</h2>'
             . ($badges === '' ? '' : '<div class="entry-badges">' . $badges . '</div>')
             . '</div>' . $edit
@@ -154,7 +154,6 @@ final class Entry implements Component
                 letter-spacing: .04em;
                 text-transform: uppercase;
             }
-            .entry-kind span { margin-left: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0; }
             .entry-header h2 {
                 margin: 0;
                 color: var(--foreground);

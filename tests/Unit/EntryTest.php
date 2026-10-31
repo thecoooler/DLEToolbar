@@ -62,8 +62,11 @@ it('shows the viewed news with status, dates, fields and tabs', function (): voi
 
     expect($rendered['control'])->toContain('data-entry-open')
         ->toContain('aria-label="Сведения о странице: Новость «Новость &quot;&lt;b&gt;1&lt;/b&gt;&quot;»"')
-        ->and($rendered['panel'])->toContain('<h2 id="dle-toolbar-entry-title">Новость &quot;&lt;b&gt;1&lt;/b&gt;&quot;</h2>')
+        ->and($rendered['panel'])->toContain('<p class="entry-kind">Новость</p>')
+        ->toContain('<h2 id="dle-toolbar-entry-title">Новость &quot;&lt;b&gt;1&lt;/b&gt;&quot;</h2>')
         ->not->toContain('<b>1</b>')
+        ->toContain('data-tone="neutral">ID 42')
+        ->not->toContain('На главной')
         ->toContain('data-tone="warning">На модерации')
         ->toContain('data-tone="info">Отложенная публикация')
         ->toContain('Драмы, Кино &amp; сериалы')
@@ -158,7 +161,8 @@ it('shows the viewed category with its parent, children and settings', function 
     $GLOBALS['cat_info'][7]['rating_type'] = 2;
     $GLOBALS['user_group'][1]['admin_categories'] = 1;
     $panel = renderEntry()['panel'];
-    expect($panel)->toContain('<p class="entry-kind">Категория <span>ID 7</span></p>')
+    expect($panel)->toContain('<p class="entry-kind">Категория</p>')
+        ->toContain('data-tone="neutral">ID 7')
         ->toContain('<h2 id="dle-toolbar-entry-title">Драмы</h2>')
         ->toContain('data-tone="success">Активна')
         ->toContain('Кино &amp; сериалы <span class="entry-muted">ID 3</span>')
@@ -183,7 +187,8 @@ it('shows the viewed profile without account secrets', function (): void {
         'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH', 'twofactor_secret' => 'TOTP_SECRET', 'logged_ip' => '127.0.0.1',
     ]);
     $panel = renderEntry()['panel'];
-    expect($panel)->toContain('<p class="entry-kind">Пользователь <span>ID 12</span></p>')
+    expect($panel)->toContain('<p class="entry-kind">Пользователь</p>')
+        ->toContain('data-tone="neutral">ID 12')
         ->toContain('<dt>Группа</dt><dd>Журналисты</dd>')
         ->toContain('data-tone="danger">Заблокирован')
         ->toContain('<dt>Ограничение</dt><dd>Комментарии</dd>')

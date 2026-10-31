@@ -34,7 +34,7 @@ final class CategoryEntry
             }
         }
 
-        $badges = [];
+        $badges = [['ID ' . $id, 'neutral']];
         if (array_key_exists('active', $row)) {
             $badges[] = (int) $row['active'] ? ['Активна', 'success'] : ['Отключена', 'warning'];
         }
