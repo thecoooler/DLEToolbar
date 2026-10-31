@@ -829,4 +829,4 @@ it('includes only enabled components and their assets in the toolbar shell', fun
 it('rejects direct requests to files with executable code', function (string $file): void {
     $output = shell_exec(escapeshellarg(PHP_BINARY) . ' -d display_errors=1 ' . escapeshellarg(ENGINE_DIR . '/' . $file) . ' 2>&1');
     expect($output)->toBe('Hacking attempt!');
-})->with(['inc/dletoolbar.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php']);
+})->with(['inc/dletoolbar.php', 'ajax/dletoolbar_notes.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php']);

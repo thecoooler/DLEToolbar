@@ -22,6 +22,10 @@ try {
         let notes = [];
         let nextId = 1;
         let fail = false;
+        let failNextList = false;
+        let loseNextSave = false;
+        const keys = new Map();
+        const payloads = [];
         let hold = false;
         let held;
         let signalHeld;
@@ -36,20 +40,41 @@ try {
                 fail = false;
                 return route.fulfill({ status: 500, json: { error: 'Ошибка сохранения' } });
             }
+            if (action === 'list') {
+                if (failNextList) {
+                    failNextList = false;
+                    return route.fulfill({ status: 500, json: { error: 'Ошибка загрузки' } });
+                }
+                const after = input.has('before_id') ? notes.findIndex(note => note.id === Number(input.get('before_id'))) + 1 : 0;
+                return route.fulfill({ json: { notes: notes.slice(after, after + 50), has_more: notes.length > after + 50 } });
+            }
             if (action === 'save') {
+                const requestKey = input.get('request_key');
+                if (requestKey && keys.has(requestKey)) return route.fulfill({ json: { ok: true } });
                 const id = Number(input.get('id')) || nextId++;
                 const previous = notes.find(note => note.id === id);
+                if (previous) assert.equal(input.get('original_title'), previous.title);
+                if (requestKey) keys.set(requestKey, id);
                 notes = notes.filter(note => note.id !== id);
-                notes.unshift({ id, title: input.get('title').trim(), created_at: previous ? previous.created_at : '2026-10-30 00:15:00', created_days_ago: previous ? previous.created_days_ago : 0 });
+                notes.unshift({ id, title: input.get('title').trim(), created_at: previous ? previous.created_at : '2026-10-30 00:15:00', created_days_ago: previous ? previous.created_days_ago : 0, updated_at: '2026-10-30 00:15:00' });
+                if (loseNextSave) {
+                    loseNextSave = false;
+                    return route.fulfill({ status: 500, json: { error: 'Ответ потерян' } });
+                }
             }
-            if (action === 'delete') notes = notes.filter(note => note.id !== Number(input.get('id')));
-            await route.fulfill({ json: { notes } });
+            if (action === 'delete') {
+                const previous = notes.find(note => note.id === Number(input.get('id')));
+                if (previous) assert.equal(input.get('original_title'), previous.title);
+                notes = notes.filter(note => note.id !== Number(input.get('id')));
+            }
+            await route.fulfill({ json: { ok: true } });
         };
         await page.route(endpoint, async route => {
             const input = new URLSearchParams(route.request().postData());
             assert.equal(input.get('user_hash'), 'browser-test-token');
             assert.equal(input.has('body') || input.has('pinned') || input.has('page_url'), false);
             requests.push(input.get('action'));
+            payloads.push(input);
             if (hold) {
                 hold = false;
                 held = () => respond(route, input);
@@ -176,6 +201,7 @@ try {
         await page.locator('.notes-header').click();
         assert.equal(await page.locator('.notes-title').textContent(), title);
         assert.equal(await editor.count(), 0);
+        assert.equal(await focused(page.locator('.notes-title')), true);
         await page.locator('.notes-title').click();
         await editor.fill('Не сохранять');
         await page.locator('.notes-header').click();
@@ -207,6 +233,14 @@ try {
         await page.getByText('Ошибка сохранения', { exact: true }).waitFor();
         assert.equal(await editor.inputValue(), 'Исправлено');
         assert.equal(await focused(editor), true);
+        await editor.dispatchEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true });
+        assert.equal(await editor.isVisible(), true);
+        await page.locator('.notes-header').click();
+        assert.equal(await editor.inputValue(), 'Исправлено');
+        await input.focus();
+        await page.keyboard.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+        assert.equal(await focused(editor), true);
         await editor.press('Enter');
         await page.getByRole('button', { name: 'Исправлено', exact: true }).waitFor();
         assert.equal(await row.locator('.notes-date').textContent(), 'Сегодня, 00:15');
@@ -222,6 +256,36 @@ try {
         assert.equal(await focused(trigger), true);
         await trigger.click();
         await idle();
+
+        // A failed request after closing the panel keeps the editor and its text on reopen.
+        await page.locator('.notes-title').click();
+        await editor.fill('Ожидает сохранения');
+        const failedClosedHold = pauseNext();
+        await editor.press('Enter');
+        await failedClosedHold;
+        await editor.press('Escape');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+        fail = true;
+        await held();
+        await idle();
+        await trigger.click();
+        assert.equal(await editor.inputValue(), 'Ожидает сохранения');
+        await editor.press('Escape');
+
+        // Text entered while a save is in flight remains editable after acknowledgement.
+        await page.locator('.notes-title').click();
+        await editor.fill('Первая правка');
+        const editDraftHold = pauseNext();
+        await editor.press('Enter');
+        await editDraftHold;
+        await editor.fill('Вторая правка');
+        await held();
+        await page.getByText('Заметка сохранена. Новые изменения ещё не сохранены.').waitFor();
+        assert.equal(await editor.inputValue(), 'Вторая правка');
+        await page.locator('.notes-header').click();
+        assert.equal(await editor.inputValue(), 'Вторая правка');
+        await editor.press('Enter');
+        await page.getByRole('button', { name: 'Вторая правка', exact: true }).waitFor();
 
         // A pending save cannot be submitted twice, and typing another draft does not lose it.
         await input.fill('Вторая заметка');
@@ -256,9 +320,26 @@ try {
         assert.equal(await focused(page.getByRole('button', { name: 'Вторая заметка', exact: true })), true);
         await page.getByRole('button', { name: 'Удалить: Вторая заметка', exact: true }).click();
         await idle();
-        await page.getByRole('button', { name: 'Удалить: Исправлено', exact: true }).click();
+        await page.getByRole('button', { name: 'Удалить: Вторая правка', exact: true }).click();
         await page.getByText('Заметок пока нет.').waitFor();
         assert.equal(await focused(input), true);
+
+        // A lost acknowledgement is retried with the same key; a failed refresh never resubmits a successful save.
+        await input.fill('Повтор без дубля');
+        loseNextSave = true;
+        await input.press('Enter');
+        await page.getByText('Ответ потерян').waitFor();
+        const firstKey = payloads.at(-1).get('request_key');
+        await input.press('Enter');
+        await page.getByRole('button', { name: 'Повтор без дубля', exact: true }).waitFor();
+        assert.equal(notes.filter(note => note.title === 'Повтор без дубля').length, 1);
+        assert.equal(payloads.filter(payload => payload.get('action') === 'save').at(-1).get('request_key'), firstKey);
+        failNextList = true;
+        await input.fill('Сохранено без обновления');
+        await input.press('Enter');
+        await page.getByText('Изменения сохранены, но список не обновился. Откройте панель снова.').waitFor();
+        assert.equal(await input.inputValue(), '');
+        assert.equal(notes.filter(note => note.title === 'Сохранено без обновления').length, 1);
         await page.locator('[data-notes-close]').click();
         notes = [
             { id: nextId++, title: 'Вчерашняя заметка', created_at: '2026-10-29 23:59:00', created_days_ago: 1 },
@@ -299,12 +380,40 @@ try {
             });
         });
         await scrollbar.waitFor({ state: 'hidden' });
+        await page.locator('[data-notes-close]').click();
+        notes = Array.from({ length: 120 }, (_, i) => ({ id: 1000 - i, title: `Заметка ${i}`, created_at: null, created_days_ago: null, updated_at: '2026-10-30 00:15:00' }));
+        await trigger.click();
+        await idle();
+        assert.equal(await page.locator('.notes-row').count(), 50);
+        const more = page.getByRole('button', { name: 'Показать ещё' });
+        await more.click();
+        await page.getByRole('button', { name: 'Заметка 50', exact: true }).waitFor();
+        assert.equal(await page.locator('.notes-row').count(), 100);
+        assert.equal(payloads.at(-1).get('before_id'), '951');
+        await more.click();
+        await page.getByRole('button', { name: 'Заметка 119', exact: true }).waitFor();
+        assert.equal(await page.locator('.notes-row').count(), 120);
+        assert.equal(await more.isVisible(), false);
         await page.keyboard.press('Escape');
         assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
         assert.deepEqual(errors, []);
         await page.close();
         console.log(`PASS: DLE ${version}, ${width}px — simple notes, inline edits, scrollbar, focus, slow requests, retry, refresh and panel layout`);
     }
+    // A hung request times out and leaves the controls available for a retry.
+    const timeoutPage = await browser.newPage();
+    await timeoutPage.clock.install({ time: new Date('2026-10-29T12:00:00Z') });
+    let signalRequest;
+    const pending = new Promise(resolve => { signalRequest = resolve; });
+    await timeoutPage.route('**/engine/ajax/controller.php?mod=dletoolbar_notes', route => { signalRequest(route); });
+    await timeoutPage.goto('http://127.0.0.1:8002/notes-panel.php?test=1&dle_version=18.0');
+    await timeoutPage.locator('[data-notes-trigger]').click();
+    const pendingRoute = await pending;
+    await timeoutPage.clock.fastForward(16000);
+    await timeoutPage.getByText('Сервер не ответил. Повторите запрос.').waitFor();
+    assert.equal(await timeoutPage.locator('.notes-panel').getAttribute('aria-busy'), 'false');
+    await pendingRoute.abort().catch(() => {});
+    await timeoutPage.close();
 } finally {
     await browser.close();
 }

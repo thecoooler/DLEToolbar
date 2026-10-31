@@ -33,6 +33,7 @@ final class Notes implements Component
 <div class="notes-content">
 <p class="notes-status" role="status" aria-live="polite"></p>
 <div class="notes-list" aria-label="Список заметок"></div>
+<button class="notes-more" type="button" data-notes-more data-notes-action hidden>Показать ещё</button>
 </div>
 <div class="notes-scrollbar" data-notes-scrollbar aria-hidden="true" hidden><div class="notes-scroll-thumb"></div></div>
 </div>
@@ -59,6 +60,8 @@ HTML,
 .notes-scrollbar:hover .notes-scroll-thumb, .notes-scrollbar[data-dragging] .notes-scroll-thumb { width: 6px; opacity: .8; }
 .notes-status { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .notes-status:empty { display: none; }
+.notes-panel .notes-more { display: block; margin: 12px auto 0; }
+.notes-panel .notes-more[hidden] { display: none; }
 .notes-row { display: flex; align-items: center; gap: 4px; height: 36px; min-width: 0; border-bottom: 1px solid var(--border); border-radius: 6px; transition: background-color 140ms ease; }
 .notes-row:hover { background: var(--hover); }
 .notes-row:last-child { border-bottom: 0; }
@@ -112,11 +115,15 @@ CSS,
     const form = panel.querySelector('.notes-compose');
     const input = form.elements.namedItem('title');
     const status = panel.querySelector('.notes-status');
+    const more = panel.querySelector('[data-notes-more]');
     let notes = [];
     let busy = false;
     let activeEditor = null;
     let alertTimer = null;
+    const draftKeys = new Map();
+    const isDirty = (editor) => editor.input.value.trim() !== (editor.savingTitle ?? editor.initialTitle).trim();
     const flashEditor = (editor, field) => {
+        status.textContent = 'Есть несохранённые изменения. Сохраните их или нажмите «Отмена».';
         editor.classList.remove('notes-edit-alert');
         void editor.offsetWidth;
         editor.classList.add('notes-edit-alert');
@@ -206,12 +213,29 @@ CSS,
         });
         cancel.setAttribute('aria-label', 'Отменить редактирование');
         editor.append(field, save, cancel);
-        editor.addEventListener('submit', (event) => {
+        editor.addEventListener('submit', async (event) => {
             event.preventDefault();
-            activeEditor = null;
-            request('save', { id: note.id, title: field.value });
+            if (busy) return;
+            const state = activeEditor;
+            const submitted = field.value.trim();
+            state.savingTitle = submitted;
+            const result = await request('save', { id: note.id, title: submitted, original_title: state.initialTitle });
+            state.savingTitle = null;
+            if (!result) return;
+            state.initialTitle = submitted;
+            note.title = submitted;
+            if (isDirty(state)) {
+                status.textContent = 'Заметка сохранена. Новые изменения ещё не сохранены.';
+                return;
+            }
+            const restoreFocus = list.contains(root.activeElement);
+            notes = [note, ...notes.filter((item) => item.id !== note.id)];
+            renderList();
+            if (restoreFocus && popup.isOpen()) focusNote(note.id);
+            if (popup.isOpen()) await request('list', {}, { afterWrite: true });
         });
         editor.addEventListener('keydown', (event) => {
+            if (event.isComposing) return;
             if (event.key === 'Escape' && !busy) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -222,7 +246,7 @@ CSS,
         });
         row.dataset.editing = '';
         row.replaceChildren(row.querySelector('.notes-date'), editor);
-        activeEditor = { id: note.id, initialTitle: note.title, form: editor, input: field };
+        activeEditor = { id: note.id, initialTitle: note.title, savingTitle: null, form: editor, input: field };
         field.focus();
         field.select();
     };
@@ -248,8 +272,16 @@ CSS,
             }
             const open = button(note.title, 'notes-title', () => edit(note));
             open.title = note.title;
-            const remove = button('×', 'notes-delete', () => {
-                if (window.confirm('Удалить заметку «' + note.title + '»?')) request('delete', { id: note.id });
+            const remove = button('×', 'notes-delete', async () => {
+                if (!window.confirm('Удалить заметку «' + note.title + '»?')) return;
+                const index = notes.findIndex((item) => item.id === note.id);
+                const restoreFocus = list.contains(root.activeElement);
+                if (!await request('delete', { id: note.id, original_title: note.title })) return;
+                notes = notes.filter((item) => item.id !== note.id);
+                renderList();
+                const next = notes[Math.min(index, notes.length - 1)];
+                if (restoreFocus && popup.isOpen()) focusNote(next ? next.id : 0);
+                if (popup.isOpen()) await request('list', {}, { afterWrite: true });
             });
             remove.setAttribute('aria-label', 'Удалить: ' + note.title);
             row.append(date, open, remove);
@@ -265,65 +297,99 @@ CSS,
             element.setAttribute('aria-disabled', String(value));
         });
     };
-    const request = async (action, values = {}) => {
-        if (busy) return false;
+    const request = async (action, values = {}, { append = false, afterWrite = false } = {}) => {
+        if (busy) return null;
         setBusy(true);
         status.textContent = 'Загрузка…';
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
         try {
             const response = await fetch(panel.dataset.endpoint, {
                 method: 'POST', credentials: 'same-origin', cache: 'no-store',
+                signal: controller.signal,
                 body: new URLSearchParams({ ...values, action, user_hash: panel.dataset.token }),
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Не удалось выполнить действие.');
-            const restoreFocus = list.contains(root.activeElement);
-            const index = notes.findIndex((note) => note.id === Number(values.id));
-            notes = result.notes;
-            renderList();
-            if (restoreFocus && popup.isOpen()) {
-                const next = notes.find((note) => note.id === Number(values.id)) || notes[Math.min(index, notes.length - 1)];
-                focusNote(next ? next.id : 0);
+            if (action === 'list') {
+                const active = root.activeElement;
+                const focusedRow = list.contains(active) ? active.closest('[data-note-id]') : null;
+                const focusedId = focusedRow ? Number(focusedRow.dataset.noteId) : 0;
+                const restoreMore = active === more;
+                notes = append ? notes.concat(result.notes) : result.notes;
+                renderList();
+                more.hidden = !result.has_more;
+                updateScrollbar();
+                if (popup.isOpen() && focusedRow) focusNote(focusedId);
+                else if (popup.isOpen() && restoreMore && result.notes.length) focusNote(result.notes[0].id);
+            } else {
+                status.textContent = '';
             }
-            return true;
+            return result;
         } catch (error) {
-            status.textContent = error.message || 'Не удалось загрузить заметки.';
-            return false;
+            const message = error.name === 'AbortError' ? 'Сервер не ответил. Повторите запрос.' : (error.message || 'Не удалось загрузить заметки.');
+            status.textContent = afterWrite ? 'Изменения сохранены, но список не обновился. Откройте панель снова.' : message;
+            return null;
         } finally {
+            clearTimeout(timeout);
             setBusy(false);
         }
     };
     const popup = createPopup({ trigger, panel, closeDuration: 0, onOpen: () => {
-        activeEditor = null;
+        if (activeEditor) {
+            activeEditor.input.focus();
+            updateScrollbar();
+            return;
+        }
         input.focus();
         updateScrollbar();
         request('list');
     }, onClose: () => {
-        activeEditor = null;
+        if (!activeEditor || activeEditor.savingTitle === null) activeEditor = null;
     } });
     trigger.addEventListener('click', () => popup.isOpen() ? popup.close() : popup.open());
     panel.querySelector('[data-notes-close]').addEventListener('click', () => popup.close({ restoreFocus: true }));
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const title = input.value;
-        if (await request('save', { title })) {
+        const normalized = title.trim();
+        if (!draftKeys.has(normalized)) {
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            draftKeys.set(normalized, Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(''));
+        }
+        if (await request('save', { title, request_key: draftKeys.get(normalized) })) {
+            draftKeys.delete(normalized);
             if (input.value === title) input.value = '';
             if (popup.isOpen() && form.contains(root.activeElement)) input.focus();
+            if (popup.isOpen()) await request('list', {}, { afterWrite: true });
         }
     });
+    more.addEventListener('click', () => {
+        const last = notes[notes.length - 1];
+        if (last) request('list', { before_id: last.id, before_updated_at: last.updated_at }, { append: true });
+    });
     document.addEventListener('keydown', (event) => {
+        if (event.isComposing) return;
         if (event.key === 'Escape' && popup.isOpen()) {
             event.preventDefault();
+            if (activeEditor && isDirty(activeEditor)) {
+                flashEditor(activeEditor.form, activeEditor.input);
+                return;
+            }
             popup.close({ restoreFocus: true });
         }
     });
     document.addEventListener('click', (event) => {
-        if (activeEditor) {
+        if (activeEditor && popup.isOpen()) {
             if (!event.composedPath().includes(activeEditor.form) && !event.composedPath().includes(scrollbar)) {
-                const isDirty = activeEditor.input.value.trim() !== activeEditor.initialTitle.trim();
-                if (isDirty) {
+                if (isDirty(activeEditor)) {
                     event.preventDefault();
                     event.stopPropagation();
                     flashEditor(activeEditor.form, activeEditor.input);
+                    return;
+                }
+                if (activeEditor.savingTitle !== null) {
+                    if (popup.isOpen() && !event.composedPath().includes(panel) && !event.composedPath().includes(dock)) popup.close();
                     return;
                 }
                 const otherTitle = event.composedPath().find((el) => el.classList && el.classList.contains('notes-title'));
@@ -331,8 +397,12 @@ CSS,
                     activeEditor = null;
                     return;
                 }
+                const id = activeEditor.id;
+                const withinPanel = event.composedPath().includes(panel);
+                const focusable = event.composedPath().some((el) => el instanceof Element && el.matches('button, a[href], input, select, textarea, [tabindex]'));
                 activeEditor = null;
                 renderList();
+                if (withinPanel && !focusable) focusNote(id);
             }
         }
         if (popup.isOpen() && !event.composedPath().includes(panel) && !event.composedPath().includes(dock)) popup.close();

@@ -99,25 +99,61 @@ mysql:
       `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
       `title` VARCHAR(200) NOT NULL,
       `created_at` DATETIME DEFAULT NULL,
+      `request_key` CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
       `body` MEDIUMTEXT NOT NULL,
       `page_url` VARCHAR(2048) NOT NULL DEFAULT '',
       `pinned` TINYINT UNSIGNED NOT NULL DEFAULT 0,
       `updated_at` DATETIME NOT NULL,
       PRIMARY KEY (`id`),
-      KEY `note_order` (`pinned`, `updated_at`, `id`)
+      UNIQUE KEY `request_key` (`request_key`),
+      KEY `notes_updated_at` (`updated_at`, `id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   upgrade: |
     CREATE TABLE IF NOT EXISTS `{prefix}_dletoolbar_notes` (
       `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
       `title` VARCHAR(200) NOT NULL,
       `created_at` DATETIME DEFAULT NULL,
+      `request_key` CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
       `body` MEDIUMTEXT NOT NULL,
       `page_url` VARCHAR(2048) NOT NULL DEFAULT '',
       `pinned` TINYINT UNSIGNED NOT NULL DEFAULT 0,
       `updated_at` DATETIME NOT NULL,
       PRIMARY KEY (`id`),
-      KEY `note_order` (`pinned`, `updated_at`, `id`)
+      UNIQUE KEY `request_key` (`request_key`),
+      KEY `notes_updated_at` (`updated_at`, `id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    SET @dletoolbar_sql = IF(
+      EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{prefix}_dletoolbar_notes' AND COLUMN_NAME = 'created_at'),
+      'SET @dletoolbar_noop = 1',
+      'ALTER TABLE `{prefix}_dletoolbar_notes` ADD COLUMN `created_at` DATETIME DEFAULT NULL AFTER `title`'
+    );
+    PREPARE dletoolbar_migration FROM @dletoolbar_sql;
+    EXECUTE dletoolbar_migration;
+    DEALLOCATE PREPARE dletoolbar_migration;
+    SET @dletoolbar_sql = IF(
+      EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{prefix}_dletoolbar_notes' AND COLUMN_NAME = 'request_key'),
+      'SET @dletoolbar_noop = 1',
+      'ALTER TABLE `{prefix}_dletoolbar_notes` ADD COLUMN `request_key` CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL AFTER `created_at`'
+    );
+    PREPARE dletoolbar_migration FROM @dletoolbar_sql;
+    EXECUTE dletoolbar_migration;
+    DEALLOCATE PREPARE dletoolbar_migration;
+    SET @dletoolbar_sql = IF(
+      EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{prefix}_dletoolbar_notes' AND INDEX_NAME = 'request_key'),
+      'SET @dletoolbar_noop = 1',
+      'ALTER TABLE `{prefix}_dletoolbar_notes` ADD UNIQUE KEY `request_key` (`request_key`)'
+    );
+    PREPARE dletoolbar_migration FROM @dletoolbar_sql;
+    EXECUTE dletoolbar_migration;
+    DEALLOCATE PREPARE dletoolbar_migration;
+    SET @dletoolbar_sql = IF(
+      EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{prefix}_dletoolbar_notes' AND INDEX_NAME = 'notes_updated_at'),
+      'SET @dletoolbar_noop = 1',
+      'ALTER TABLE `{prefix}_dletoolbar_notes` ADD KEY `notes_updated_at` (`updated_at`, `id`)'
+    );
+    PREPARE dletoolbar_migration FROM @dletoolbar_sql;
+    EXECUTE dletoolbar_migration;
+    DEALLOCATE PREPARE dletoolbar_migration;
     UPDATE `{prefix}_admin_sections` SET `descr` = 'Панель администратора на сайте: метрики страницы, SQL-запросы, сброс кэша, смена шаблона', `allow_groups` = '1' WHERE `name` = 'dletoolbar';
   enable: |
     INSERT IGNORE INTO `{prefix}_admin_sections` (`name`, `title`, `descr`, `icon`, `allow_groups`) VALUES ('dletoolbar', 'DLEToolbar', 'Панель администратора на сайте: метрики страницы, SQL-запросы, сброс кэша, смена шаблона', '', '1');
@@ -127,15 +163,7 @@ mysql:
     DELETE FROM `{prefix}_admin_sections` WHERE `name` = 'dletoolbar';
 php:
   install: ''
-  upgrade: |
-    global $db;
-    $table = PREFIX . '_dletoolbar_notes';
-    $result = $db->query("SHOW COLUMNS FROM `$table` LIKE 'created_at'");
-    $column = $db->get_row($result);
-    $db->free($result);
-    if (!$column) {
-      $db->query("ALTER TABLE `$table` ADD COLUMN `created_at` DATETIME DEFAULT NULL AFTER `title`");
-    }
+  upgrade: ''
   enable: ''
   disable: ''
   delete: ''
