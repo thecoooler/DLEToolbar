@@ -15,7 +15,7 @@ beforeEach(function (): void {
 it('supplies component parameter defaults for existing configuration files', function (): void {
     $preferences = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'editpost']]]);
     expect($preferences->componentParameters('editpost'))->toBe(['target' => '_blank'])
-        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => true])
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => false])
         ->and($preferences->componentParameters('queries'))->toBe(['slow_threshold_ms' => 20.0, 'fold_fast' => true, 'trace_sources' => false]);
 
     $GLOBALS['dle_module'] = 'showfull';
