@@ -64,12 +64,27 @@ final class Files implements ConfigurableComponent
             return '<p class="files-empty">Отметок нет. Для ручной записи вызовите DebugLog::add() в нужной точке CMS.</p>';
         }
 
+        $pending = $starts = $paired = [];
+        foreach ($entries as $index => $entry) {
+            if ($entry['kind'] === 'before') {
+                $pending[$entry['file']][] = $index;
+            } elseif ($entry['kind'] === 'after' && !empty($pending[$entry['file']])) {
+                $before = array_pop($pending[$entry['file']]);
+                $starts[$index] = $entries[$before]['time'];
+                $paired[$before] = true;
+                $entries[$index]['files'] = array_merge($entries[$before]['files'], $entry['files']);
+            }
+        }
+
         $gaps = array_column($entries, 'gap');
         $maxGap = max($gaps);
         $longest = ($maxGap > 0.0 && count($entries) > 1) ? array_search($maxGap, $gaps, true) : false;
 
         $rows = '';
         foreach ($entries as $index => $entry) {
+            if (isset($paired[$index])) {
+                continue;
+            }
             $gap = $entry['gap'];
             $isSlow = $gap >= $this->slowThreshold;
 
@@ -102,14 +117,16 @@ final class Files implements ConfigurableComponent
             $gapLabel = self::milliseconds($gap);
             $timeLabel = self::milliseconds($entry['time']);
 
+            $times = isset($starts[$index])
+                ? '<span class="files-time-before" title="До подключения"><span class="files-boundary">До</span> ' . self::milliseconds($starts[$index]) . '</span>'
+                    . '<span class="files-time-after" title="После подключения"><span class="files-boundary">После</span> ' . $timeLabel . '</span>'
+                : '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>'
+                    . '<span class="files-time-gap" title="Интервал перед отметкой' . ($index === $longest ? ' · Самый долгий интервал' : '') . '">+' . $gapLabel . '</span>';
             $rows .= '<li class="files-event' . ($isSlow ? ' files-slow' : '') . '">'
-                . '<div class="files-times">'
-                . '<span class="files-time-start" aria-label="От начала запроса: ' . $timeLabel . '">' . $timeLabel . '</span>'
-                . '<span class="files-time-gap" title="Интервал перед отметкой' . ($index === $longest ? ' · Самый долгий интервал' : '') . '">+' . $gapLabel . '</span>'
+                . '<div class="files-times">' . $times
                 . '</div><div class="files-rail-dot" aria-hidden="true"></div>'
                 . '<div class="files-event-body"><div class="files-event-title"><strong>' . self::escape($entry['message']) . '</strong></div>'
                 . ($entry['kind'] === 'before' ? '<span class="files-phase">До подключения</span>' : '')
-                . ($entry['kind'] === 'after' ? '<span class="files-phase">После подключения</span>' : '')
                 . ($entry['duration'] !== null ? '<span class="files-duration">Выполнение · ' . self::milliseconds($entry['duration']) . '</span>' : '')
                 . $sourceHtml
                 . $filesHtml
@@ -147,7 +164,7 @@ final class Files implements ConfigurableComponent
 .files-phase { display: inline-block; margin: 4px 8px 0 0; color: var(--muted); font-size: 11px; }
 .files-duration { display: inline-block; margin-top: 4px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--foreground); }
 .files-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
-.files-events { --time-column: 88px; --rail-gap: 28px; list-style: none; margin: 0; padding: 0; position: relative; }
+.files-events { --time-column: 116px; --rail-gap: 28px; list-style: none; margin: 0; padding: 0; position: relative; }
 .files-events::before { content: ""; position: absolute; left: calc(var(--time-column) + var(--rail-gap) / 2); top: 20px; bottom: 24px; width: 1px; background: var(--border); }
 .files-event { position: relative; display: grid; grid-template-columns: var(--time-column) minmax(0, 1fr); column-gap: var(--rail-gap); padding: 14px 0; }
 .files-event-body { min-width: 0; }
@@ -157,13 +174,15 @@ final class Files implements ConfigurableComponent
 .files-event-title { overflow-wrap: anywhere; font-size: 13px; line-height: 20px; }
 .files-event-title strong { font-weight: 600; }
 .files-times { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 11px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.files-boundary { color: var(--muted); font-size: 10px; margin-right: 3px; }
+.files-time-before, .files-time-after { color: var(--foreground); }
 .files-time-start { color: var(--foreground); }
 .files-time-gap { color: var(--muted); font-size: 10px; line-height: 16px; }
 .files-slow .files-time-gap { color: #b91c1c; }
 :host([data-theme="dark"]) .files-slow .files-time-gap { color: #f87171; }
 @media (max-width: 480px) {
     .files-scroll { padding-inline: 12px; }
-    .files-events { --time-column: 72px; --rail-gap: 22px; }
+    .files-events { --time-column: 96px; --rail-gap: 22px; }
     .files-times { font-size: 10px; }
 }
 .files-source { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; font: 11px/1.5 ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
