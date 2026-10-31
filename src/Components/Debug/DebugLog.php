@@ -13,9 +13,11 @@ final class DebugLog
     private static float $offset = 0;
     private static float $previousAt = 0;
     private static ?float $end = null;
+    /** @var array<string, list<float>> */
+    private static array $running = [];
     /** @var list<string> */
     private static array $known = [];
-    /** @var list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, files: list<string>}> */
+    /** @var list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, duration: float|null, files: list<string>}> */
     private static array $entries = [];
 
     /** May be called as soon as DLE's plugin autoloader is loaded, including before toolbar initialization. */
@@ -39,7 +41,7 @@ final class DebugLog
         }
         self::$active = true;
         self::$previousAt = (float) hrtime(true);
-        self::append('engine/init.php', 'engine/init.php', 0, 'stage');
+        self::append('Начало замеров', '', 0, 'stage');
     }
 
     public static function checkpoint(string $label): void
@@ -52,6 +54,26 @@ final class DebugLog
         $file = $caller['file'] ?? '';
         $line = $caller['line'] ?? 0;
         self::append($label, $file, $line, 'stage');
+    }
+
+    public static function before(string $file): void
+    {
+        if (!self::$active || self::$finished) {
+            return;
+        }
+        self::append(SourcePath::display($file), $file, 0, 'before');
+        self::$running[$file][] = self::$entries[count(self::$entries) - 1]['time'];
+    }
+
+    public static function after(string $file): void
+    {
+        if (!self::$active || self::$finished || empty(self::$running[$file])) {
+            return;
+        }
+        $start = array_pop(self::$running[$file]);
+        self::append(SourcePath::display($file), $file, 0, 'after');
+        $index = count(self::$entries) - 1;
+        self::$entries[$index]['duration'] = self::$entries[$index]['time'] - $start;
     }
 
     private static function append(string $message, string $file, int $line, string $kind): void
@@ -77,6 +99,7 @@ final class DebugLog
             'time' => $time,
             'gap' => $gap,
             'kind' => $kind,
+            'duration' => null,
             'files' => $newFiles,
         ];
     }
@@ -105,19 +128,19 @@ final class DebugLog
             return;
         }
         if (self::$active) {
-            self::append('engine/modules/main.php', 'engine/modules/main.php', 0, 'stage');
+            self::append('Вывод панели', '', 0, 'stage');
         }
         self::$end = self::elapsed();
         self::$finished = true;
     }
 
-    /** @return list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, files: list<string>}> */
+    /** @return list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, duration: float|null, files: list<string>}> */
     public static function entries(): array
     {
         return self::$entries;
     }
 
-    /** @return array{entries: list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, files: list<string>}>, totalFiles: int, end: float} */
+    /** @return array{entries: list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, duration: float|null, files: list<string>}>, totalFiles: int, end: float} */
     public static function snapshot(): array
     {
         return [
@@ -133,6 +156,6 @@ final class DebugLog
         self::$active = self::$finished = false;
         self::$origin = self::$end = null;
         self::$offset = self::$previousAt = 0;
-        self::$known = self::$entries = [];
+        self::$known = self::$entries = self::$running = [];
     }
 }

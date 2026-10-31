@@ -81,7 +81,7 @@ it('displays original files and call sites with cache badges while retaining phy
             ->and($snapshot['entries'][2]['cached'])->toBeTrue()
             ->and($snapshot['entries'][2]['files'])->toContain($late)
             ->and($snapshot['entries'][4]['files'])->toContain($unknown)
-            ->and($panel)->toContain('engine/modules/&lt;early&gt;.php', 'engine/modules/example/run.php:2', 'engine/modules/example/run.php:3', 'engine/cache/system/plugins/' . basename($unknown))
+            ->and($panel)->toContain('engine/modules/&lt;early&gt;.php', 'engine/modules/example/run.php', 'engine/cache/system/plugins/' . basename($unknown))
             ->toContain('из кэша', 'не из кэша')
             ->not->toContain('engine/modules/<early>.php', basename($early), basename($late));
     } finally {

@@ -37,13 +37,26 @@ files:
             error_log('[DLEToolbar] initialization: ' . $error);
           }
 
+    - before:
+        search: |
+          include_once (DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
+        replace: |
+          try {
+            if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+              \iCooLER\DLEToolbar\Components\Debug\DebugLog::before(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
+            }
+          } catch (\Throwable $error) {
+            $DLEToolbar = null;
+            error_log('[DLEToolbar] file timing: ' . $error);
+          }
+
     - after:
         search: |
           include_once (DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
         replace: |
           try {
             if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
-              \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php');
+              \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
             }
           } catch (\Throwable $error) {
             $DLEToolbar = null;

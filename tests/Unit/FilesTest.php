@@ -34,10 +34,10 @@ it('records sequential milestones and attributes each new file only to its first
         DebugLog::finish();
         $snapshot = DebugLog::snapshot();
         expect($executions)->toBe(2)
-            ->and($snapshot['entries'][0]['message'])->toBe('engine/init.php')
+            ->and($snapshot['entries'][0]['message'])->toBe('Начало замеров')
             ->and($snapshot['entries'][1]['files'])->toBe([$parent, $child])
             ->and($snapshot['entries'][2]['files'])->toBe([])
-            ->and($snapshot['entries'][3]['message'])->toBe('engine/modules/main.php');
+            ->and($snapshot['entries'][3]['message'])->toBe('Вывод панели');
         $end = 0.0;
         foreach ($snapshot['entries'] as $entry) {
             expect($entry['time'])->toBeGreaterThanOrEqual($end)
@@ -100,7 +100,7 @@ it('closes main.php before rendering the toolbar and keeps saved visibility unch
     $toolbar->init();
     $html = $toolbar->render();
     expect(DebugLog::snapshot()['entries'])->toHaveCount(2)
-        ->and($html)->toContain('engine/modules/main.php')
+        ->and($html)->toContain('Вывод панели')
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['time']]])->visibleItems())->toBe(['time']);
 });
 
@@ -116,7 +116,7 @@ it('starts automatic collection after request components for either toolbar orde
         $toolbar->init();
         $snapshot = DebugLog::snapshot();
         expect($snapshot['entries'])->toHaveCount(1)
-            ->and($snapshot['entries'][0]['message'])->toBe('engine/init.php')
+            ->and($snapshot['entries'][0]['message'])->toBe('Начало замеров')
             ->and(implode('\n', $snapshot['entries'][0]['files']))->toContain('Components/Queries/QueryLog.php')
             ->and($GLOBALS['db']->query_list)->toBeInstanceOf(\iCooLER\DLEToolbar\Components\Queries\QueryLog::class);
     } finally {

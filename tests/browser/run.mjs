@@ -78,6 +78,19 @@ try {
         await fileTimeline.press('Home');
         await page.waitForFunction(() => document.querySelector('[data-dle-toolbar]').shadowRoot
             .querySelector('#dle-toolbar-files-timeline').scrollTop === 0);
+        const fileTrack = page.locator('[data-files-scrollbar]');
+        await fileTrack.waitFor({ state: 'visible' });
+        const fileThumb = page.locator('.files-scroll-thumb');
+        const fileThumbBox = await fileThumb.boundingBox();
+        const fileTrackBox = await fileTrack.boundingBox();
+        await page.mouse.move(fileThumbBox.x + 2, fileThumbBox.y + 5);
+        await page.mouse.down();
+        await page.mouse.move(fileThumbBox.x + 2, fileTrackBox.y + fileTrackBox.height - 2, { steps: 8 });
+        await page.mouse.up();
+        if (await fileTimeline.evaluate((element) => element.scrollTop) <= 0) throw new Error('Diagnostics thumb did not scroll');
+        await fileTrack.click({ position: { x: 5, y: 1 } });
+        await fileTimeline.focus();
+        await fileTimeline.press('Home');
         await diagnosticsPanel.evaluate((panel) => { panel.style.maxHeight = ''; });
         console.log('PASS: keyboard scrolls the file timeline');
         const evidenceDir = process.env.DLETOOLBAR_SCREENSHOT_DIR;

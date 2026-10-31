@@ -1,7 +1,6 @@
 <?php
 
-// Verbatim copies of the `replace` blocks of dleplugin.yml: the manifest is not available inside the test container.
-// Keep in sync with the manifest.
+// Verbatim copies of the replace blocks in dleplugin.yml. Keep in sync.
 return [
     'engine/init.php' => [
         <<<'PHP'
@@ -23,7 +22,17 @@ PHP,
         <<<'PHP'
 try {
   if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
-    \iCooLER\DLEToolbar\Components\Debug\DebugLog::checkpoint('engine/engine.php');
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::before(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
   }
 } catch (\Throwable $error) {
   $DLEToolbar = null;
