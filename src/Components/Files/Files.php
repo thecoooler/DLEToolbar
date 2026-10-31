@@ -50,14 +50,14 @@ final class Files implements ConfigurableComponent
                 . '<header class="files-header"><div><h2 id="dle-toolbar-files-title">Лог и файлы</h2>'
                 . '<span class="files-subtitle">Отметок: ' . $entryCount . ' · Файлов: ' . $count . '</span></div>'
                 . '<button type="button" data-files-close aria-label="Закрыть панель диагностики">×</button></header>'
-                . '<div class="files-scroll" id="dle-toolbar-files-timeline" role="region" tabindex="0" aria-label="Лог и файлы">'
-                . $this->timeline($entries) . '</div></section>',
+                . '<div class="files-scroll-area"><div class="files-scroll" id="dle-toolbar-files-timeline" role="region" tabindex="0" aria-label="Лог и файлы">'
+                . $this->timeline($entries) . '</div><div class="files-scrollbar" data-files-scrollbar aria-hidden="true" hidden><div class="files-scroll-thumb"></div></div></div></section>',
             'styles' => self::styles(),
             'script' => self::script(),
         ];
     }
 
-    /** @param list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, files: list<string>}> $entries */
+    /** @param list<array{message: string, file: string, line: int, cached: bool, time: float, gap: float, kind: string, duration: float|null, files: list<string>}> $entries */
     private function timeline(array $entries): string
     {
         if ($entries === []) {
@@ -78,7 +78,7 @@ final class Files implements ConfigurableComponent
                 $badge = $entry['cached']
                     ? '<span class="files-badge files-cached">из кэша</span>'
                     : '<span class="files-badge files-uncached">не из кэша</span>';
-                $sourceHtml = '<div class="files-source"><span>' . self::escape($entry['file'] . ($entry['line'] > 0 ? ':' . $entry['line'] : '')) . '</span> ' . $badge . '</div>';
+                $sourceHtml = '<div class="files-source">' . $badge . '</div>';
             }
 
             $fileCount = count($entry['files']);
@@ -108,6 +108,9 @@ final class Files implements ConfigurableComponent
                 . '<span class="files-time-gap" title="Интервал перед отметкой' . ($index === $longest ? ' · Самый долгий интервал' : '') . '">+' . $gapLabel . '</span>'
                 . '</div><div class="files-rail-dot" aria-hidden="true"></div>'
                 . '<div class="files-event-body"><div class="files-event-title"><strong>' . self::escape($entry['message']) . '</strong></div>'
+                . ($entry['kind'] === 'before' ? '<span class="files-phase">До подключения</span>' : '')
+                . ($entry['kind'] === 'after' ? '<span class="files-phase">После подключения</span>' : '')
+                . ($entry['duration'] !== null ? '<span class="files-duration">Выполнение · ' . self::milliseconds($entry['duration']) . '</span>' : '')
                 . $sourceHtml
                 . $filesHtml
                 . '</div></li>';
@@ -138,7 +141,11 @@ final class Files implements ConfigurableComponent
 .files-subtitle { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
 .files-header button { border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; }
 .files-header button:hover { background: var(--hover); }
-.files-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 8px 16px 16px; }
+.files-scroll-area { position: relative; min-height: 0; display: flex; flex-direction: column; }
+.files-scroll { scrollbar-width: none; overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 8px 16px 16px; }
+.files-scroll::-webkit-scrollbar { display: none; }
+.files-phase { display: inline-block; margin: 4px 8px 0 0; color: var(--muted); font-size: 11px; }
+.files-duration { display: inline-block; margin-top: 4px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--foreground); }
 .files-panel :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
 .files-events { --time-column: 88px; --rail-gap: 28px; list-style: none; margin: 0; padding: 0; position: relative; }
 .files-events::before { content: ""; position: absolute; left: calc(var(--time-column) + var(--rail-gap) / 2); top: 20px; bottom: 24px; width: 1px; background: var(--border); }
@@ -173,6 +180,28 @@ final class Files implements ConfigurableComponent
 .files-list li:last-child { border-bottom: none; }
 .files-list code { font: 11px/1.5 ui-monospace, monospace; flex: 1; min-width: 0; }
 .files-empty { color: var(--muted); font-size: 12px; }
+            .files-scrollbar {
+                position: absolute;
+                top: 3px;
+                right: 0;
+                bottom: 3px;
+                width: 10px;
+                cursor: pointer;
+                touch-action: none;
+                user-select: none;
+            }
+            .files-scrollbar[hidden] { display: none; }
+            .files-scroll-thumb {
+                position: absolute;
+                top: 0;
+                right: 2px;
+                width: 4px;
+                border-radius: 4px;
+                background: var(--muted);
+                opacity: .4;
+            }
+            .files-scrollbar:hover .files-scroll-thumb,
+            .files-scrollbar[data-dragging] .files-scroll-thumb { width: 6px; opacity: .8; }
 CSS;
     }
 
@@ -183,6 +212,51 @@ CSS;
         const button = root.querySelector('[data-files-open]');
         const panel = root.querySelector('#dle-toolbar-files-panel');
         const closedLabel = button.getAttribute('aria-label');
+        const fileTimeline = panel.querySelector('.files-scroll');
+        const scrollbar = panel.querySelector('[data-files-scrollbar]');
+        const scrollThumb = scrollbar.firstElementChild;
+        const updateScrollbar = () => {
+            const maxScroll = fileTimeline.scrollHeight - fileTimeline.clientHeight;
+            scrollbar.hidden = fileTimeline.clientHeight === 0 || maxScroll <= 0;
+            if (scrollbar.hidden) return;
+            const trackHeight = scrollbar.clientHeight;
+            const thumbHeight = Math.min(trackHeight, Math.max(24, trackHeight * fileTimeline.clientHeight / fileTimeline.scrollHeight));
+            scrollThumb.style.height = thumbHeight + 'px';
+            scrollThumb.style.transform = 'translateY(' + (trackHeight - thumbHeight) * fileTimeline.scrollTop / maxScroll + 'px)';
+        };
+        fileTimeline.addEventListener('scroll', updateScrollbar, { passive: true });
+        scrollbar.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? fileTimeline.clientHeight : 1;
+            fileTimeline.scrollTop += event.deltaY * unit;
+        }, { passive: false });
+        const scrollResizeObserver = new ResizeObserver(updateScrollbar);
+        scrollResizeObserver.observe(fileTimeline);
+        [...fileTimeline.children].forEach((entry) => scrollResizeObserver.observe(entry));
+        let dragOffset = 0;
+        const scrollToPointer = (event) => {
+            const travel = scrollbar.clientHeight - scrollThumb.offsetHeight;
+            if (travel <= 0) return;
+            fileTimeline.scrollTop = (event.clientY - scrollbar.getBoundingClientRect().top - dragOffset)
+                / travel * (fileTimeline.scrollHeight - fileTimeline.clientHeight);
+        };
+        scrollbar.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            dragOffset = event.target === scrollThumb
+                ? event.clientY - scrollThumb.getBoundingClientRect().top : scrollThumb.offsetHeight / 2;
+            scrollbar.dataset.dragging = 'true';
+            scrollbar.setPointerCapture(event.pointerId);
+            scrollToPointer(event);
+        });
+        scrollbar.addEventListener('pointermove', (event) => {
+            if (scrollbar.hasPointerCapture(event.pointerId)) scrollToPointer(event);
+        });
+        scrollbar.addEventListener('pointerup', (event) => {
+            if (scrollbar.hasPointerCapture(event.pointerId)) scrollbar.releasePointerCapture(event.pointerId);
+        });
+        scrollbar.addEventListener('lostpointercapture', () => delete scrollbar.dataset.dragging);
+
         const popup = createPopup({ trigger: button, panel, closeDuration: 0,
             onOpen: () => button.setAttribute('aria-label', closedLabel.replace('Показать панель', 'Закрыть панель')),
             onClose: () => button.setAttribute('aria-label', closedLabel),

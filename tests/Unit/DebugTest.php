@@ -38,8 +38,8 @@ it('renders escaped checkpoints, cache badges and a timeline only for a visible 
         $registry = new ComponentRegistry();
         $rendered = $registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['files']]]));
         expect($rendered['controls'])->toContain('data-component="files"', 'Лог и файлы: 2 отметок')
-            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-rail-dot', 'DebugTest.php:', 'не из кэша')
-            ->not->toContain('<script>', 'INF', 'NAN')
+            ->and($rendered['panels'])->toContain('&lt;script&gt;alert(&quot;log&quot;)&lt;/script&gt;', 'files-slow', 'Самый долгий интервал', 'files-rail-dot', 'не из кэша')
+            ->not->toContain('<script>', 'INF', 'NAN', 'DebugTest.php:')
             ->and(substr_count($rendered['panels'], '<li class="files-event'))->toBe(2)
             ->and(substr_count($rendered['panels'], 'Самый долгий интервал'))->toBe(1)
             ->and(DebugLog::entries())->toHaveCount(2)
@@ -90,4 +90,28 @@ it('normalizes the slow interval threshold and applies it to the shared timeline
     expect($fast['panels'])->toContain('files-slow')
         ->and($slow['panels'])->not->toContain('class="files-event files-slow"')
         ->and(ToolbarPreferences::fromConfig(['components' => ['files' => ['slow_threshold_ms' => -1]]])->componentParameters('files')['slow_threshold_ms'])->toBe(50.0);
+});
+
+it('measures paired inclusions across manual marks and nested calls to the same file', function (): void {
+    $file = ROOT_DIR . '/engine/engine.php';
+    DebugLog::before($file);
+    DebugLog::after($file);
+    expect(DebugLog::entries())->toBe([]);
+    DebugLog::start();
+    DebugLog::after($file);
+    DebugLog::before($file);
+    DebugLog::add('Inside');
+    DebugLog::before($file);
+    DebugLog::after($file);
+    DebugLog::after($file);
+    $entries = DebugLog::entries();
+    expect(array_column($entries, 'kind'))->toBe(['stage', 'before', 'log', 'before', 'after', 'after'])
+        ->and($entries[4]['duration'])->toBe($entries[4]['time'] - $entries[3]['time'])
+        ->and($entries[5]['duration'])->toBe($entries[5]['time'] - $entries[1]['time'])
+        ->and($entries[5]['duration'])->toBeGreaterThanOrEqual($entries[4]['duration']);
+    DebugLog::finish();
+    $snapshot = DebugLog::snapshot();
+    DebugLog::before($file);
+    DebugLog::after($file);
+    expect(DebugLog::snapshot())->toBe($snapshot);
 });
