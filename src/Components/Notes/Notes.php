@@ -74,6 +74,20 @@ HTML,
 .notes-edit { flex: 1; width: 100%; }
 .notes-edit .notes-input { padding: 4px 8px; }
 .notes-edit button { flex: 0 0 auto; }
+.notes-edit.notes-edit-alert { animation: notes-edit-shake 450ms cubic-bezier(.36, .07, .19, .97) both; }
+.notes-edit.notes-edit-alert .notes-input { animation: notes-input-alert 650ms ease both; }
+@keyframes notes-edit-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+}
+@keyframes notes-input-alert {
+    0%, 100% { border-color: var(--border); box-shadow: none; background-color: var(--surface); }
+    20%, 60% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, .28); background-color: rgba(239, 68, 68, .1); }
+    40% { border-color: var(--border); box-shadow: none; background-color: var(--surface); }
+}
 @media (max-width: 480px) {
     .notes-panel { height: min(560px, calc(100dvh - 112px)); border-radius: 12px; }
     .notes-header { gap: 8px; padding: 11px 12px; }
@@ -82,7 +96,10 @@ HTML,
     .notes-date { flex-basis: 120px; font-size: 10px; }
     .notes-row[data-editing] .notes-date { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .notes-panel .notes-close, .notes-row { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .notes-panel .notes-close, .notes-row { transition: none; }
+    .notes-edit.notes-edit-alert { animation: none; }
+}
 CSS,
             'script' => <<<'JS'
 (() => {
@@ -97,6 +114,18 @@ CSS,
     const status = panel.querySelector('.notes-status');
     let notes = [];
     let busy = false;
+    let activeEditor = null;
+    let alertTimer = null;
+    const flashEditor = (editor, field) => {
+        editor.classList.remove('notes-edit-alert');
+        void editor.offsetWidth;
+        editor.classList.add('notes-edit-alert');
+        field.focus();
+        clearTimeout(alertTimer);
+        alertTimer = setTimeout(() => {
+            editor.classList.remove('notes-edit-alert');
+        }, 700);
+    };
     const updateScrollbar = () => {
         const maxScroll = content.scrollHeight - content.clientHeight;
         scrollbar.hidden = content.clientHeight === 0 || maxScroll <= 0;
@@ -163,31 +192,42 @@ CSS,
         field.maxLength = 200;
         field.required = true;
         field.setAttribute('aria-label', 'Изменить заметку');
+        field.addEventListener('input', () => {
+            editor.classList.remove('notes-edit-alert');
+        });
         const save = document.createElement('button');
         save.type = 'submit';
         save.textContent = 'Сохранить';
         save.dataset.notesAction = '';
-        const cancel = button('Отмена', 'notes-cancel', () => { renderList(); focusNote(note.id); });
+        const cancel = button('Отмена', 'notes-cancel', () => {
+            activeEditor = null;
+            renderList();
+            focusNote(note.id);
+        });
         cancel.setAttribute('aria-label', 'Отменить редактирование');
         editor.append(field, save, cancel);
         editor.addEventListener('submit', (event) => {
             event.preventDefault();
+            activeEditor = null;
             request('save', { id: note.id, title: field.value });
         });
         editor.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && !busy) {
                 event.preventDefault();
                 event.stopPropagation();
+                activeEditor = null;
                 renderList();
                 focusNote(note.id);
             }
         });
         row.dataset.editing = '';
         row.replaceChildren(row.querySelector('.notes-date'), editor);
+        activeEditor = { id: note.id, initialTitle: note.title, form: editor, input: field };
         field.focus();
         field.select();
     };
     const renderList = () => {
+        activeEditor = null;
         list.replaceChildren();
         notes.forEach((note) => {
             const row = document.createElement('div');
@@ -253,9 +293,12 @@ CSS,
         }
     };
     const popup = createPopup({ trigger, panel, closeDuration: 0, onOpen: () => {
+        activeEditor = null;
         input.focus();
         updateScrollbar();
         request('list');
+    }, onClose: () => {
+        activeEditor = null;
     } });
     trigger.addEventListener('click', () => popup.isOpen() ? popup.close() : popup.open());
     panel.querySelector('[data-notes-close]').addEventListener('click', () => popup.close({ restoreFocus: true }));
@@ -274,6 +317,24 @@ CSS,
         }
     });
     document.addEventListener('click', (event) => {
+        if (activeEditor) {
+            if (!event.composedPath().includes(activeEditor.form) && !event.composedPath().includes(scrollbar)) {
+                const isDirty = activeEditor.input.value.trim() !== activeEditor.initialTitle.trim();
+                if (isDirty) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    flashEditor(activeEditor.form, activeEditor.input);
+                    return;
+                }
+                const otherTitle = event.composedPath().find((el) => el.classList && el.classList.contains('notes-title'));
+                if (otherTitle) {
+                    activeEditor = null;
+                    return;
+                }
+                activeEditor = null;
+                renderList();
+            }
+        }
         if (popup.isOpen() && !event.composedPath().includes(panel) && !event.composedPath().includes(dock)) popup.close();
     }, true);
 })();
