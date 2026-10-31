@@ -58,7 +58,7 @@ beforeEach(function (): void {
 });
 
 it('extracts every integration patch from the patch list', function (): void {
-    expect(integrationPatches('engine/init.php'))->toHaveCount(4)
+    expect(integrationPatches('engine/init.php'))->toHaveCount(15)
         ->and(integrationPatches('engine/modules/show.full.php'))->toHaveCount(1)
         ->and(integrationPatches('engine/modules/main.php'))->toHaveCount(2);
 });
