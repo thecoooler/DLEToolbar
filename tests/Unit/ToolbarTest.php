@@ -17,12 +17,12 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
         'enabled' => ['time', 'queries', 'unknown', ['response']],
     ]]);
 
-    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'entry', 'editpost', 'clock'])
+    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and($preferences->visibleItems())->toBe(['queries', 'time']);
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'clock'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,9 +113,9 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
         ->toBe([]);
 });
@@ -180,7 +180,7 @@ it('renders saved settings with escaped form values and visibility switches', fu
         preg_match('/<tbody id="dlt-component-list">(.*?)<\/tbody>/s', $html, $list);
         preg_match_all('/name="toolbar\[items\]\[\]" value="([^"]+)"/', $list[1], $matches);
 
-        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'entry', 'editpost', 'clock'])
+        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
             ->and($html)->toContain('action="?mod=dletoolbar&amp;view=&quot;settings&quot;"')
             ->toContain('name="user_hash" value="&lt;token&gt;"')
             ->toContain('Сохранено &lt;успешно&gt;')
@@ -829,4 +829,4 @@ it('includes only enabled components and their assets in the toolbar shell', fun
 it('rejects direct requests to files with executable code', function (string $file): void {
     $output = shell_exec(escapeshellarg(PHP_BINARY) . ' -d display_errors=1 ' . escapeshellarg(ENGINE_DIR . '/' . $file) . ' 2>&1');
     expect($output)->toBe('Hacking attempt!');
-})->with(['inc/dletoolbar.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php']);
+})->with(['inc/dletoolbar.php', 'ajax/dletoolbar_notes.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php']);

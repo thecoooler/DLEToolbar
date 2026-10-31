@@ -8,6 +8,7 @@ use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Entry\Entry;
 use iCooLER\DLEToolbar\Components\Link\Link;
+use iCooLER\DLEToolbar\Components\Notes\Notes;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Components\Response\Response;
 use iCooLER\DLEToolbar\Components\Skin\Skin;
@@ -26,6 +27,7 @@ final class ComponentRegistry
         'cache' => Cache::class,
         'entry' => Entry::class,
         'editpost' => EditPost::class,
+        'notes' => Notes::class,
         'clock' => Clock::class,
     ];
 

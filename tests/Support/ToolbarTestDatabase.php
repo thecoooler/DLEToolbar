@@ -47,6 +47,11 @@ final class ToolbarTestDatabase
         $this->native->free($result);
     }
 
+    public function get_affected_rows(): int
+    {
+        return $this->native->get_affected_rows();
+    }
+
     public function safesql(string $value): string
     {
         return $this->native->safesql($value);
