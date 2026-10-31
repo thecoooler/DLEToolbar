@@ -330,7 +330,8 @@
         assert(filesPanel.hidden, 'Files panel starts hidden');
         filesButton.click();
         assert(!filesPanel.hidden && filesButton.getAttribute('aria-expanded') === 'true', 'Files trigger opens panel');
-        assert(filesPanel.textContent.includes('До подключения') && filesPanel.textContent.includes('После подключения') && filesPanel.textContent.includes('Выполнение'), 'Inclusion has two boundaries and its full duration');
+        const measured = filesPanel.querySelector('.files-time-before').closest('.files-event');
+        assert(measured.querySelector('.files-time-after') && measured.querySelector('.files-duration'), 'One inclusion row shows both timestamps and execution duration');
         assert(!filesPanel.textContent.includes('queries-panel.php:'), 'Call site is omitted from diagnostics');
         const filesBox = filesPanel.getBoundingClientRect();
         assert(filesBox.top >= 0 && filesBox.right <= window.innerWidth, 'Files panel fits viewport');
