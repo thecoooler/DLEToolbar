@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const { chromium } = createRequire(import.meta.url)('playwright');
+const fixtureUrl = new URL(process.argv[2] ?? 'http://127.0.0.1:8001/notes-panel.php?test=1#anchor');
 const browser = await chromium.launch({ headless: true });
 const headerStyle = element => {
     const header = getComputedStyle(element);
@@ -83,7 +84,7 @@ try {
             }
             await respond(route, input);
         });
-        const fixture = new URL(process.argv[2] ?? 'http://127.0.0.1:8002/notes-panel.php?test=1#anchor');
+        const fixture = new URL(fixtureUrl);
         fixture.searchParams.set('dle_version', version);
         await page.goto(fixture.href);
         const trigger = page.locator('[data-notes-trigger]');
@@ -406,7 +407,9 @@ try {
     let signalRequest;
     const pending = new Promise(resolve => { signalRequest = resolve; });
     await timeoutPage.route('**/engine/ajax/controller.php?mod=dletoolbar_notes', route => { signalRequest(route); });
-    await timeoutPage.goto('http://127.0.0.1:8002/notes-panel.php?test=1&dle_version=18.0');
+    const timeoutFixture = new URL(fixtureUrl);
+    timeoutFixture.searchParams.set('dle_version', '18.0');
+    await timeoutPage.goto(timeoutFixture.href);
     await timeoutPage.locator('[data-notes-trigger]').click();
     const pendingRoute = await pending;
     await timeoutPage.clock.fastForward(16000);
@@ -414,6 +417,7 @@ try {
     assert.equal(await timeoutPage.locator('.notes-panel').getAttribute('aria-busy'), 'false');
     await pendingRoute.abort().catch(() => {});
     await timeoutPage.close();
+    console.log('PASS: timed-out request releases note controls');
 } finally {
     await browser.close();
 }
