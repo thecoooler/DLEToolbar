@@ -58,8 +58,18 @@ try {
         console.log('PASS: scrollbar drag, track click, wheel and hiding when content fits');
 
         await page.locator('[data-files-open]').click();
+        const layout = await page.locator('.files-event').first().evaluate((event) => ({
+            time: event.querySelector('.files-times').getBoundingClientRect().right,
+            rail: event.querySelector('.files-rail-dot').getBoundingClientRect().left,
+            content: event.querySelector('.files-event-body').getBoundingClientRect().left,
+        }));
+        if (!(layout.time < layout.rail && layout.rail < layout.content)) {
+            throw new Error('Timeline must place time left of the rail and content right of it');
+        }
         const firstDetails = page.locator('.files-details').first();
         await firstDetails.locator('.files-toggle').click();
+        const diagnosticsPanel = page.locator('#dle-toolbar-files-panel');
+        await diagnosticsPanel.evaluate((panel) => { panel.style.maxHeight = '280px'; });
         const fileTimeline = page.locator('#dle-toolbar-files-timeline');
         await fileTimeline.focus();
         await fileTimeline.press('End');
@@ -68,6 +78,7 @@ try {
         await fileTimeline.press('Home');
         await page.waitForFunction(() => document.querySelector('[data-dle-toolbar]').shadowRoot
             .querySelector('#dle-toolbar-files-timeline').scrollTop === 0);
+        await diagnosticsPanel.evaluate((panel) => { panel.style.maxHeight = ''; });
         console.log('PASS: keyboard scrolls the file timeline');
         const evidenceDir = process.env.DLETOOLBAR_SCREENSHOT_DIR;
         if (evidenceDir) {
