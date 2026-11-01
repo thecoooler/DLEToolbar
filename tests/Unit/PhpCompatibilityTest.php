@@ -76,7 +76,7 @@ it('keeps plugin sources compatible with PHP 7.4', function (): void {
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $traverser = new NodeTraverser($visitor);
     $sources = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(ENGINE_DIR . '/iCooLER/DLEToolbar', FilesystemIterator::SKIP_DOTS));
-    $paths = [ENGINE_DIR . '/inc/dletoolbar.php'];
+    $paths = [ENGINE_DIR . '/inc/dletoolbar.php', ENGINE_DIR . '/ajax/dletoolbar_notes.php'];
     foreach ($sources as $source) {
         if ($source->getExtension() === 'php') {
             $paths[] = $source->getPathname();

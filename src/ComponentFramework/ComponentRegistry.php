@@ -7,6 +7,7 @@ use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\Entry\Entry;
 use iCooLER\DLEToolbar\Components\Link\Link;
+use iCooLER\DLEToolbar\Components\Notes\Notes;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
 use iCooLER\DLEToolbar\Components\Response\Response;
 use iCooLER\DLEToolbar\Components\Skin\Skin;
@@ -24,6 +25,7 @@ final class ComponentRegistry
         'skin' => Skin::class,
         'cache' => Cache::class,
         'entry' => Entry::class,
+        'notes' => Notes::class,
         'clock' => Clock::class,
     ];
 

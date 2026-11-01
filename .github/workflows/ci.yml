@@ -122,3 +122,4 @@ jobs:
           done
           curl --fail --silent --output /dev/null http://127.0.0.1:8001/queries-panel.php
           node tests/browser/run.mjs
+          node tests/browser/notes-run.mjs http://127.0.0.1:8001/notes-panel.php?test=1#anchor
