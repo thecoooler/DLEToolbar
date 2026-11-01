@@ -48,14 +48,24 @@ it('enables default components added after the settings were saved', function ()
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
 
-    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry'])
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache'])
         ->and($preferences->isEnabled('time'))->toBeFalse()
         ->and($preferences->isEnabled('skin'))->toBeFalse()
+        ->and($preferences->isEnabled('entry'))->toBeFalse()
         ->and($preferences->isEnabled('clock'))->toBeFalse();
 
     ToolbarPreferences::fromRequest(['toolbar' => ['items' => $preferences->itemOrder(), 'enabled' => ['queries']]], $preferences)->save();
     ToolbarPreferences::resetRequestCache();
     expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries']);
+});
+
+it('does not enable page details on upgrade when all previous components were disabled', function (): void {
+    ToolbarPreferences::fromConfig([])->save();
+    $GLOBALS['dletoolbar_native_db']->query('UPDATE `' . PREFIX . '_dletoolbar_settings` SET setting_value = \'{"items":["response","time","queries","skin","cache","editpost"],"enabled":[]}\' WHERE setting_key = \'toolbar\'');
+    ToolbarPreferences::resetRequestCache();
+    $preferences = ToolbarPreferences::load();
+    expect($preferences->visibleItems())->toBe([])
+        ->and($preferences->isEnabled('entry'))->toBeFalse();
 });
 
 it('preserves explicitly enabled clock and seconds in saved settings', function (): void {
