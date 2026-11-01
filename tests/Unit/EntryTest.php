@@ -244,3 +244,29 @@ it('shows private profile data only to the owner and to groups that edit users',
     'modern user editor' => ['21.0', 1, true, true],
     'modern other staff' => ['21.0', 1, false, false],
 ]);
+
+it('respects the restriction on editing administrator profiles', function (int $viewerGroup, int $profileGroup, int $viewerId, bool $private, bool $edit): void {
+    $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['member_id'] = ['user_id' => $viewerId, 'user_group' => $viewerGroup];
+    $GLOBALS['user_group'][$viewerGroup]['admin_editusers'] = 1;
+    PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => $profileGroup, 'banned' => '',
+        'email' => 'private@example.test', 'xfields' => 'city|PRIVATE_FIELD', 'logged_ip' => '192.0.2.2']);
+    $panel = renderEntry()['panel'];
+
+    if ($private) {
+        expect($panel)->toContain('private@example.test', 'PRIVATE_FIELD', '192.0.2.2');
+    } else {
+        expect($panel)->not->toContain('private@example.test', 'PRIVATE_FIELD', '192.0.2.2')
+            ->not->toContain('data-entry-tab="raw"');
+    }
+    if ($edit) {
+        expect($panel)->toContain('mod=editusers');
+    } else {
+        expect($panel)->not->toContain('mod=editusers');
+    }
+})->with([
+    'staff viewing an administrator' => [2, 1, 5, false, false],
+    'administrator viewing an administrator' => [1, 1, 5, true, true],
+    'staff viewing another staff member' => [2, 3, 5, true, true],
+    'administrator viewing own profile' => [1, 1, 12, true, true],
+]);

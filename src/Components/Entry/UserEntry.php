@@ -18,13 +18,14 @@ final class UserEntry
         global $config, $user_group, $member_id;
         /** @var array{version_id: string} $config */
         /** @var array<int, array{group_name: string}> $user_group */
-        /** @var array{user_id: int|string} $member_id */
+        /** @var array{user_id: int|string, user_group: int|string} $member_id */
 
         $name = (string) $row['name'];
         $group = (int) $row['user_group'];
         $banned = $row['banned'] === 'yes';
         $restricted = (int) ($row['restricted'] ?? 0);
-        $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers');
+        $canEditUser = Format::allows('admin_editusers') && ((int) $member_id['user_group'] === 1 || $group !== 1);
+        $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || $canEditUser;
         if (!$canViewPrivate) {
             unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth'],
                 $row['restricted'], $row['restricted_days'], $row['restricted_date'], $row['cat_add'], $row['cat_allow_addnews']);
@@ -70,7 +71,7 @@ final class UserEntry
         ]);
 
         // Profile field definitions differ between DLE versions, so private fields are not told apart:
-        // the tab is shown to the owner and to groups that edit users.
+        // the tab is shown to the owner and to users who may edit this profile.
         $fields = [];
         if ($canViewPrivate) {
             $stored = stripslashes((string) $row['xfields']);
@@ -98,7 +99,7 @@ final class UserEntry
             'kind' => 'Пользователь',
             'title' => Format::decode($name),
             'badges' => $badges,
-            'edit' => Format::allows('admin_editusers') ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
+            'edit' => $canEditUser ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
             'tabs' => [
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'profile', 'label' => 'Профиль', 'rows' => $profile],
