@@ -24,8 +24,8 @@ final class ComponentRegistry
         'queries' => Queries::class,
         'skin' => Skin::class,
         'cache' => Cache::class,
-        'entry' => Entry::class,
         'notes' => Notes::class,
+        'entry' => Entry::class,
         'clock' => Clock::class,
     ];
 
