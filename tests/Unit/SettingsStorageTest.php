@@ -48,10 +48,10 @@ it('enables default components added after the settings were saved', function ()
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
 
-    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache'])
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry'])
         ->and($preferences->isEnabled('time'))->toBeFalse()
         ->and($preferences->isEnabled('skin'))->toBeFalse()
-        ->and($preferences->isEnabled('entry'))->toBeFalse()
+        ->and($preferences->isEnabled('entry'))->toBeTrue()
         ->and($preferences->isEnabled('clock'))->toBeFalse();
 
     ToolbarPreferences::fromRequest(['toolbar' => ['items' => $preferences->itemOrder(), 'enabled' => ['queries']]], $preferences)->save();
@@ -59,13 +59,20 @@ it('enables default components added after the settings were saved', function ()
     expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries']);
 });
 
-it('does not enable page details on upgrade when all previous components were disabled', function (): void {
+it('enables page details on upgrade when all previous components were disabled', function (): void {
     ToolbarPreferences::fromConfig([])->save();
     $GLOBALS['dletoolbar_native_db']->query('UPDATE `' . PREFIX . '_dletoolbar_settings` SET setting_value = \'{"items":["response","time","queries","skin","cache","editpost"],"enabled":[]}\' WHERE setting_key = \'toolbar\'');
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
-    expect($preferences->visibleItems())->toBe([])
-        ->and($preferences->isEnabled('entry'))->toBeFalse();
+    expect($preferences->visibleItems())->toBe(['entry'])
+        ->and($preferences->isEnabled('entry'))->toBeTrue();
+});
+
+it('preserves explicitly disabled page details in saved settings', function (): void {
+    ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => ['time']]])->save();
+    ToolbarPreferences::resetRequestCache();
+
+    expect(ToolbarPreferences::load()->isEnabled('entry'))->toBeFalse();
 });
 
 it('preserves explicitly enabled clock and seconds in saved settings', function (): void {
