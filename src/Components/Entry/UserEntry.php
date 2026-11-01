@@ -73,7 +73,7 @@ final class UserEntry
         // Profile field definitions differ between DLE versions, so private fields are not told apart:
         // the tab is shown to the owner and to users who may edit this profile.
         $fields = [];
-        if ($canViewPrivate) {
+        if ($canViewPrivate && (string) $row['xfields'] !== '') {
             $stored = stripslashes((string) $row['xfields']);
             /** @var array<string, string> $data User and news fields share the storage format. */
             $data = version_compare($config['version_id'], '19.0', '>=') ? \DLEXFields::xfieldsdataload($stored) : \xfieldsdataload($stored);

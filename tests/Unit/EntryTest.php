@@ -270,3 +270,23 @@ it('respects the restriction on editing administrator profiles', function (int $
     'staff viewing another staff member' => [2, 3, 5, true, true],
     'administrator viewing own profile' => [1, 1, 12, true, true],
 ]);
+
+it('renders an empty profile without warnings from legacy DLE extra fields', function (string $version): void {
+    $script = <<<'PHP'
+function xfieldsdataload($value) { return false; }
+require $argv[1] . '/Format.php';
+require $argv[1] . '/UserEntry.php';
+$config = ['version_id' => $argv[2]];
+$member_id = ['user_id' => 12, 'user_group' => 1];
+$user_group = [1 => ['group_name' => 'Администраторы', 'allow_admin' => 1]];
+$entry = \iCooLER\DLEToolbar\Components\Entry\UserEntry::build([
+    'user_id' => 12, 'name' => 'tester', 'user_group' => 1, 'banned' => '', 'xfields' => '',
+]);
+echo $entry['tabs'][2]['rows'] === [] ? 'ok' : 'unexpected fields';
+PHP;
+    $directory = ENGINE_DIR . '/iCooLER/DLEToolbar/Components/Entry';
+    $command = escapeshellarg(PHP_BINARY) . ' -d display_errors=1 -d error_reporting=-1 -r ' . escapeshellarg($script)
+        . ' ' . escapeshellarg($directory) . ' ' . escapeshellarg($version) . ' 2>&1';
+
+    expect(shell_exec($command))->toBe('ok');
+})->with(['13.0', '15.0']);
