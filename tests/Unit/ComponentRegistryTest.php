@@ -10,34 +10,29 @@ beforeEach(function (): void {
 });
 
 it('applies declared defaults and fresh preferences through the registry render interface', function (): void {
-    $GLOBALS['dle_module'] = 'showfull';
-    $GLOBALS['news_found'] = true;
     $GLOBALS['db']->query_list = [
         ['query' => 'SELECT fast_a', 'time' => .0002, 'num' => 1],
         ['query' => 'SELECT fast_b', 'time' => .0003, 'num' => 2],
         ['query' => 'SELECT boundary', 'time' => .020, 'num' => 3],
     ];
     $registry = new ComponentRegistry();
-    $defaults = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'editpost']]]);
+    $defaults = ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['queries', 'clock']]]);
     $rendered = $registry->render($defaults);
     $defaultRender = $rendered;
-    expect($rendered['controls'])->toContain('target="_blank" rel="noopener"')
+    expect($rendered['controls'])->toContain('data-show-seconds="false"')
         ->and($rendered['panels'])->toContain('data-fold')
         ->toContain('query-stats-alert">⚠ 1');
 
     $custom = ToolbarPreferences::fromRequest(['toolbar' => $defaults->toConfig()['toolbar'], 'components' => [
-        'editpost' => ['target' => '_self'],
+        'clock' => ['show_seconds' => '1'],
         'queries' => ['slow_threshold_ms' => '50', 'fold_fast' => '0'],
     ]], $defaults);
     $rendered = $registry->render($custom);
-    expect($rendered['controls'])->toContain('target="_self"')->not->toContain('rel="noopener"')
+    expect($rendered['controls'])->toContain('data-show-seconds="true"')
         ->and($rendered['panels'])->not->toContain('data-fold')->not->toContain('query-stats-alert">⚠');
 
     expect($registry->render($defaults))->toBe($defaultRender)
         ->and($registry->render($defaults)['panels'])->toContain('data-fold');
-    $GLOBALS['news_found'] = false;
-    expect($registry->render(ToolbarPreferences::fromConfig(['toolbar' => ['enabled' => ['editpost']]])))
-        ->toBe(['controls' => '', 'hints' => '', 'styles' => '', 'panels' => '', 'scripts' => '']);
 });
 
 it('initializes cache behavior only when the control is visible', function (bool $visible): void {

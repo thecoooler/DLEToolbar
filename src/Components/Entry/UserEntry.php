@@ -18,22 +18,24 @@ final class UserEntry
         global $config, $user_group, $member_id;
         /** @var array{version_id: string} $config */
         /** @var array<int, array{group_name: string}> $user_group */
-        /** @var array{user_id: int|string} $member_id */
+        /** @var array{user_id: int|string, user_group: int|string} $member_id */
 
         $name = (string) $row['name'];
         $group = (int) $row['user_group'];
         $banned = $row['banned'] === 'yes';
         $restricted = (int) ($row['restricted'] ?? 0);
-        $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || Format::allows('admin_editusers');
+        $canEditUser = Format::allows('admin_editusers') && ((int) $member_id['user_group'] === 1 || $group !== 1);
+        $canViewPrivate = (int) $member_id['user_id'] === (int) $row['user_id'] || $canEditUser;
         if (!$canViewPrivate) {
-            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth']);
+            unset($row['email'], $row['allowed_ip'], $row['logged_ip'], $row['favorites'], $row['pm_all'], $row['pm_unread'], $row['twofactor_auth'],
+                $row['restricted'], $row['restricted_days'], $row['restricted_date'], $row['cat_add'], $row['cat_allow_addnews']);
         }
 
         $badges = [['ID ' . (int) $row['user_id'], 'neutral']];
         if ($banned) {
             $badges[] = ['Заблокирован', 'danger'];
         }
-        if (isset(self::RESTRICTED[$restricted])) {
+        if ($canViewPrivate && isset(self::RESTRICTED[$restricted])) {
             $badges[] = ['Ограничен', 'warning'];
         }
         if ($canViewPrivate && !empty($row['twofactor_auth'])) {
@@ -69,9 +71,9 @@ final class UserEntry
         ]);
 
         // Profile field definitions differ between DLE versions, so private fields are not told apart:
-        // the tab is shown to the owner and to groups that edit users.
+        // the tab is shown to the owner and to users who may edit this profile.
         $fields = [];
-        if ($canViewPrivate) {
+        if ($canViewPrivate && (string) $row['xfields'] !== '') {
             $stored = stripslashes((string) $row['xfields']);
             /** @var array<string, string> $data User and news fields share the storage format. */
             $data = version_compare($config['version_id'], '19.0', '>=') ? \DLEXFields::xfieldsdataload($stored) : \xfieldsdataload($stored);
@@ -97,7 +99,7 @@ final class UserEntry
             'kind' => 'Пользователь',
             'title' => Format::decode($name),
             'badges' => $badges,
-            'edit' => Format::allows('admin_editusers') ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
+            'edit' => $canEditUser ? Format::adminUrl('mod=editusers&action=edituser&id=' . (int) $row['user_id']) : null,
             'tabs' => [
                 ['id' => 'main', 'label' => 'Основное', 'rows' => $main],
                 ['id' => 'profile', 'label' => 'Профиль', 'rows' => $profile],

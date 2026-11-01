@@ -5,7 +5,6 @@ namespace iCooLER\DLEToolbar\ComponentFramework;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
 use iCooLER\DLEToolbar\Components\Clock\Clock;
-use iCooLER\DLEToolbar\Components\EditPost\EditPost;
 use iCooLER\DLEToolbar\Components\Entry\Entry;
 use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Components\Notes\Notes;
@@ -26,7 +25,6 @@ final class ComponentRegistry
         'skin' => Skin::class,
         'cache' => Cache::class,
         'entry' => Entry::class,
-        'editpost' => EditPost::class,
         'notes' => Notes::class,
         'clock' => Clock::class,
     ];

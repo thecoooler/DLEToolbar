@@ -48,13 +48,43 @@ it('enables default components added after the settings were saved', function ()
     ToolbarPreferences::resetRequestCache();
     $preferences = ToolbarPreferences::load();
 
-    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+    expect($preferences->visibleItems())->toBe(['queries', 'response', 'cache', 'entry', 'notes'])
         ->and($preferences->isEnabled('time'))->toBeFalse()
-        ->and($preferences->isEnabled('skin'))->toBeFalse();
+        ->and($preferences->isEnabled('skin'))->toBeFalse()
+        ->and($preferences->isEnabled('entry'))->toBeTrue()
+        ->and($preferences->isEnabled('clock'))->toBeFalse();
 
     ToolbarPreferences::fromRequest(['toolbar' => ['items' => $preferences->itemOrder(), 'enabled' => ['queries']]], $preferences)->save();
     ToolbarPreferences::resetRequestCache();
     expect(ToolbarPreferences::load()->visibleItems())->toBe(['queries']);
+});
+
+it('enables page details on upgrade when all previous components were disabled', function (): void {
+    ToolbarPreferences::fromConfig([])->save();
+    $GLOBALS['dletoolbar_native_db']->query('UPDATE `' . PREFIX . '_dletoolbar_settings` SET setting_value = \'{"items":["response","time","queries","skin","cache","editpost"],"enabled":[]}\' WHERE setting_key = \'toolbar\'');
+    ToolbarPreferences::resetRequestCache();
+    $preferences = ToolbarPreferences::load();
+    expect($preferences->visibleItems())->toBe(['entry', 'notes'])
+        ->and($preferences->isEnabled('entry'))->toBeTrue();
+});
+
+it('preserves explicitly disabled page details in saved settings', function (): void {
+    ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => ['time']]])->save();
+    ToolbarPreferences::resetRequestCache();
+
+    expect(ToolbarPreferences::load()->isEnabled('entry'))->toBeFalse();
+});
+
+it('preserves explicitly enabled clock and seconds in saved settings', function (): void {
+    ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['clock']],
+        'components' => ['clock' => ['show_seconds' => true]],
+    ])->save();
+    ToolbarPreferences::resetRequestCache();
+
+    $preferences = ToolbarPreferences::load();
+    expect($preferences->isEnabled('clock'))->toBeTrue()
+        ->and($preferences->componentParameters('clock'))->toBe(['show_seconds' => true]);
 });
 
 it('skips the settings query for users, guests and missing groups', function (): void {

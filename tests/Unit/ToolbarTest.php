@@ -17,12 +17,12 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
         'enabled' => ['time', 'queries', 'unknown', ['response']],
     ]]);
 
-    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'entry', 'notes', 'clock'])
         ->and($preferences->visibleItems())->toBe(['queries', 'time']);
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'notes'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,9 +113,9 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'notes'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'entry', 'notes', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
         ->toBe([]);
 });
@@ -180,7 +180,7 @@ it('renders saved settings with escaped form values and visibility switches', fu
         preg_match('/<tbody id="dlt-component-list">(.*?)<\/tbody>/s', $html, $list);
         preg_match_all('/name="toolbar\[items\]\[\]" value="([^"]+)"/', $list[1], $matches);
 
-        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'entry', 'editpost', 'notes', 'clock'])
+        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'entry', 'notes', 'clock'])
             ->and($html)->toContain('action="?mod=dletoolbar&amp;view=&quot;settings&quot;"')
             ->toContain('name="user_hash" value="&lt;token&gt;"')
             ->toContain('Сохранено &lt;успешно&gt;')
@@ -768,49 +768,6 @@ it('renders the admin settings page and consumes its saved notice', function (st
     ['13.1', ['engine/classes/js/sortable.js'], false],
     ['18.0', ['engine/classes/js/sortable.js'], false],
     ['19.0', ['public/js/sortable.js'], false],
-]);
-
-it('links the current full news to the configured admin and respects component settings', function (): void {
-    $GLOBALS['dle_module'] = 'showfull';
-    $GLOBALS['news_found'] = true;
-    $GLOBALS['config']['admin_path'] = 'editor.php';
-    // Slug URLs may have no numeric newsid; DLE supplies the resolved NEWS_ID.
-    $GLOBALS['newsid'] = 0;
-
-    try {
-        ToolbarPreferences::fromRequest(['toolbar' => [
-            'items' => ['editpost', 'time'], 'enabled' => ['editpost', 'time'],
-        ]])->save();
-        $html = (new DLEToolbar())->render();
-        preg_match_all('/data-component="([^"]+)"/', $html, $matches);
-        expect($matches[1])->toBe(['editpost', 'time'])
-            ->and($html)->toContain('href="https://example.test/editor.php?mod=editnews&amp;action=editnews&amp;id=42"')
-            ->toContain('aria-label="Редактировать новость"');
-
-        $GLOBALS['config']['admin_path'] = 'editor".php';
-        expect((new DLEToolbar())->render())->toContain('editor&quot;.php?mod=editnews');
-
-        ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => ['time']]])->save();
-        expect((new DLEToolbar())->render())->not->toContain('data-component="editpost"');
-    } finally {
-        unset($GLOBALS['newsid']);
-    }
-});
-
-it('hides the edit control outside a found news page or without admin editing access', function (string $module, bool $found, int $admin, int $edit): void {
-    $GLOBALS['dle_module'] = $module;
-    $GLOBALS['news_found'] = $found;
-    $GLOBALS['user_group'][1]['allow_admin'] = $admin;
-    $GLOBALS['user_group'][1]['admin_editnews'] = $edit;
-
-    ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => ['editpost']]])->save();
-    expect((new DLEToolbar())->render())->toBe('');
-})->with([
-    'main page' => ['main', false, 1, 1],
-    'category page' => ['cat', false, 1, 1],
-    'missing or inaccessible news' => ['showfull', false, 1, 1],
-    'no admin access' => ['showfull', true, 0, 1],
-    'no news editing section' => ['showfull', true, 1, 0],
 ]);
 
 it('includes only enabled components and their assets in the toolbar shell', function (): void {
