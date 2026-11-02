@@ -16,7 +16,7 @@ final class SettingsPanel
         return [
             'control' => '<button class="control" data-settings-open type="button" aria-label="Настройки панели" aria-expanded="false" aria-controls="dle-toolbar-settings-panel">'
                 . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0 -8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06l-1.41 2.44l-.09-.03a1.65 1.65 0 0 0 -1.75.62l-.05.09h-2.82l-.03-.09a1.65 1.65 0 0 0 -1.64-1.11a1.65 1.65 0 0 0 -1.64 1.11l-.03.09H7.51l-.05-.09a1.65 1.65 0 0 0 -1.75-.62l-.09.03l-1.41-2.44l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0 -1.51-1l-.09-.01v-2.82l.09-.01A1.65 1.65 0 0 0 4.6 10a1.65 1.65 0 0 0 -.33-1.82l-.06-.06l1.41-2.44l.09.03a1.65 1.65 0 0 0 1.75-.62l.05-.09h2.82l.03.09A1.65 1.65 0 0 0 12 6.2a1.65 1.65 0 0 0 1.64-1.11l.03-.09h2.82l.05.09a1.65 1.65 0 0 0 1.75.62l.09-.03l1.41 2.44l-.06.06A1.65 1.65 0 0 0 19.4 10a1.65 1.65 0 0 0 1.51 1l.09.01v2.82l-.09.01A1.65 1.65 0 0 0 19.4 15z"/></svg></button>',
-            'panel' => '<section class="settings-panel" data-settings-panel id="dle-toolbar-settings-panel" aria-labelledby="dle-toolbar-settings-title" hidden>'
+            'panel' => '<section class="settings-panel" data-settings-panel id="dle-toolbar-settings-panel" aria-labelledby="dle-toolbar-settings-title" tabindex="-1" hidden>'
                 . '<header class="settings-header"><h2 id="dle-toolbar-settings-title">Настройки панели</h2>'
                 . '<div class="settings-actions">'
                 . '<a class="settings-admin" data-settings-admin href="' . $adminUrl . '" target="_blank" rel="noopener" aria-label="Открыть в админке">'
@@ -27,9 +27,10 @@ final class SettingsPanel
                 . '</div></header>'
                 . '<iframe data-settings-frame data-src="' . $url . '" title="Настройки DLEToolbar"></iframe></section>',
             'styles' => <<<'CSS'
-            .settings-panel { display: flex; flex-direction: column; width: min(900px, 100%); height: min(700px, calc(100dvh - 96px)); overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--foreground); box-shadow: var(--shadow); pointer-events: auto; }
+            .settings-panel { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; width: 100%; height: 100dvh; overflow: hidden; border: 0; border-radius: 0; background: var(--surface); color: var(--foreground); box-shadow: none; pointer-events: auto; }
             .settings-panel[hidden] { display: none; }
-            .settings-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+            .settings-panel:focus { outline: none; }
+            .settings-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 12px 16px; }
             .settings-header h2 { margin: 0; font: 600 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
             .settings-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
             .settings-admin { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); background: transparent; font: inherit; text-decoration: none; white-space: nowrap; }
@@ -56,6 +57,7 @@ CSS,
             else {
                 if (!frame.hasAttribute('src')) frame.src = frame.dataset.src;
                 popup.open();
+                panel.focus({ preventScroll: true });
             }
         });
         panel.querySelector('[data-settings-close]').addEventListener('click', () => popup.close({ restoreFocus: true }));

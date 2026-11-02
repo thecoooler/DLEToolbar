@@ -479,6 +479,7 @@ it('offers the settings panel only to administrators even when all components ar
         $html = (new DLEToolbar())->render();
         expect($html)->toContain('data-settings-open')
             ->toContain('aria-controls="dle-toolbar-settings-panel"')
+            ->toContain('.settings-panel { position: fixed; inset: 0;')
             ->toContain('href="https://example.test/admin-custom.php?mod=dletoolbar"')
             ->toContain('data-settings-admin')
             ->toContain('target="_blank"')
@@ -814,6 +815,8 @@ it('renders the admin form in embedded mode and retains that mode on submission'
             ->toContain('.sidebar-main')
             ->toContain('--dlt-surface: #fff')
             ->toContain('@media (prefers-color-scheme: dark)')
+            ->toContain('.content { padding: 0 !important; }')
+            ->toContain('#dlt-settings-form .panel { margin: 0; border: 0;')
             ->toContain('dletoolbar-settings-close')
             ->toContain('.modal.in, .chosen-container-active.chosen-with-drop, .bootstrap-select.open')
             ->toContain('dletoolbar-settings-saved');
