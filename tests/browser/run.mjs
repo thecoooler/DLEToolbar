@@ -66,6 +66,24 @@ try {
     if (printDisplay !== 'none') process.exitCode = 1;
     await testClock(browser, url);
     await testEntry(browser, url);
+    await page.emulateMedia({ media: 'screen' });
+    const settings = page.locator('[data-settings-panel]');
+    const settingsButton = page.locator('[data-settings-open]');
+    const settingsFrame = settings.locator('iframe');
+    if (await settingsFrame.getAttribute('src') !== null) throw new Error('Settings iframe loaded before opening');
+    await settingsButton.click();
+    if (!await settings.isVisible() || await settingsButton.getAttribute('aria-expanded') !== 'true') throw new Error('Settings panel did not open');
+    if (!await settingsFrame.getAttribute('src')) throw new Error('Settings iframe did not load');
+    await settings.locator('[data-settings-close]').click();
+    await settings.waitFor({ state: 'hidden' });
+    await settingsButton.click();
+    if (!await settings.isVisible()) throw new Error('Settings panel did not reopen');
+    await settingsFrame.contentFrame().locator('body').evaluate(() => window.parent.postMessage('dletoolbar-settings-close', window.location.origin));
+    await settings.waitFor({ state: 'hidden' });
+    await settingsButton.click();
+    await page.locator('[data-queries-open]').click();
+    await settings.waitFor({ state: 'hidden' });
+    console.log('PASS: settings panel lazy loading, closing, reopening and popup switching');
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;

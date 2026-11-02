@@ -158,7 +158,7 @@ it('persists visibility and order and renders current DLE metrics', function ():
 
         ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['queries', 'response', 'time']]])->save();
         expect(ToolbarPreferences::load()->visibleItems())->toBe([])
-            ->and((new DLEToolbar())->render())->toBe('');
+            ->and((new DLEToolbar())->render())->toContain('data-settings-open');
     } finally {
         foreach ($globals as $key => $value) {
             $GLOBALS[$key] = $value;
@@ -453,20 +453,40 @@ it('renders each response state', function (): void {
         ]])->save();
 
         http_response_code(200);
-        expect((new DLEToolbar())->render())->toBe('');
+        expect((new DLEToolbar())->render())->toContain('data-settings-open');
 
         foreach ([201 => 'success', 302 => 'redirect', 404 => 'error', 418 => 'error'] as $status => $state) {
             http_response_code($status);
             $html = (new DLEToolbar())->render();
             expect($html)->toContain('data-state="' . $state . '"')
                 ->toContain('class="status-hint" data-component="response"')
-                ->toContain('class="dock" hidden')
+                ->toContain('class="dock" role="toolbar"')
                 ->not->toContain('class="control metric response"');
         }
 
     } finally {
         $GLOBALS['config'] = $previousSiteConfig;
         http_response_code(200);
+    }
+});
+
+it('offers the settings panel only to administrators even when all components are disabled', function (): void {
+    $previousMember = $GLOBALS['member_id'];
+    $previousConfig = $GLOBALS['config'];
+    try {
+        ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => []]])->save();
+        $GLOBALS['config']['admin_path'] = 'admin-custom.php';
+        $html = (new DLEToolbar())->render();
+        expect($html)->toContain('data-settings-open')
+            ->toContain('aria-controls="dle-toolbar-settings-panel"')
+            ->toContain('https://example.test/admin-custom.php?mod=dletoolbar&amp;dlt_embed=1')
+            ->toContain('data-settings-frame');
+
+        $GLOBALS['member_id'] = ['user_group' => 2];
+        expect((new DLEToolbar())->render())->toBe('');
+    } finally {
+        $GLOBALS['member_id'] = $previousMember;
+        $GLOBALS['config'] = $previousConfig;
     }
 });
 
@@ -739,6 +759,7 @@ it('renders the admin settings page and consumes its saved notice', function (st
         expect($html)->toContain('id="dlt-settings-form"')
             ->toContain('Настройки панели сохранены.')
             ->toContain('<option value="2" selected>Главные редакторы</option>')
+            ->not->toContain('--dlt-surface')
             ->and(str_contains($html, '/*! Sortable 1.7.0'))->toBe($inlineSortable)
             ->and($GLOBALS['js_array'])->toBe($scripts)
             ->and(isset($_SESSION['dletoolbar_settings_notice']))->toBeFalse();
@@ -770,6 +791,43 @@ it('renders the admin settings page and consumes its saved notice', function (st
     ['19.0', ['public/js/sortable.js'], false],
 ]);
 
+it('renders the admin form in embedded mode and retains that mode on submission', function (): void {
+    $previousGet = $_GET;
+    $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+    $previousNotice = $_SESSION['dletoolbar_settings_notice'] ?? null;
+    $previousJs = $GLOBALS['js_array'] ?? [];
+    $_GET['dlt_embed'] = '1';
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_SESSION['dletoolbar_settings_notice'] = 'Настройки панели сохранены.';
+    $GLOBALS['js_array'] = [];
+    ob_start();
+    try {
+        include ENGINE_DIR . '/inc/dletoolbar.php';
+        $html = (string) ob_get_clean();
+        expect($html)->toContain('action="?mod=dletoolbar&amp;dlt_embed=1"')
+            ->toContain('name="user_hash"')
+            ->toContain('.sidebar-main')
+            ->toContain('--dlt-surface: #fff')
+            ->toContain('@media (prefers-color-scheme: dark)')
+            ->toContain('dletoolbar-settings-close')
+            ->toContain('.modal.in, .chosen-container-active.chosen-with-drop, .bootstrap-select.open')
+            ->toContain('dletoolbar-settings-saved');
+    } finally {
+        $_GET = $previousGet;
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
+        if ($previousNotice === null) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+        } else {
+            $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        }
+        $GLOBALS['js_array'] = $previousJs;
+    }
+});
+
 it('includes only enabled components and their assets in the toolbar shell', function (): void {
     ToolbarPreferences::fromRequest(['toolbar' => ['enabled' => ['time']]])->save();
     $html = (new DLEToolbar())->render();
@@ -786,4 +844,4 @@ it('includes only enabled components and their assets in the toolbar shell', fun
 it('rejects direct requests to files with executable code', function (string $file): void {
     $output = shell_exec(escapeshellarg(PHP_BINARY) . ' -d display_errors=1 ' . escapeshellarg(ENGINE_DIR . '/' . $file) . ' 2>&1');
     expect($output)->toBe('Hacking attempt!');
-})->with(['inc/dletoolbar.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php']);
+})->with(['inc/dletoolbar.php', 'iCooLER/DLEToolbar/main.php', 'iCooLER/DLEToolbar/Views/settings.php', 'iCooLER/DLEToolbar/Views/component-row.php', 'iCooLER/DLEToolbar/Views/component-modal.php', 'iCooLER/DLEToolbar/Views/settings-script.php', 'iCooLER/DLEToolbar/Views/sortable.php', 'iCooLER/DLEToolbar/Views/embedded-style.php']);
