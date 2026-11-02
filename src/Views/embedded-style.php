@@ -40,7 +40,7 @@ if (!defined('DATALIFEENGINE')) {
     .content > .alert pre { background: var(--dlt-surface); color: var(--dlt-foreground); border-color: var(--dlt-border); }
     #dlt-settings-form { color: var(--dlt-foreground); }
     #dlt-settings-form .panel { margin: 0; border: 0; border-radius: 0; background: var(--dlt-surface); box-shadow: none; }
-    #dlt-settings-form .panel-heading { padding: 12px 16px; border: 0; background: var(--dlt-surface); border-radius: 0; }
+    #dlt-settings-form .panel-heading { padding: 6px; border: 0; background: var(--dlt-surface); border-radius: 0; }
     #dlt-settings-form .nav-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; border: 0; background: transparent; }
     #dlt-settings-form .nav-tabs > li { float: none; margin: 0; }
     #dlt-settings-form .nav-tabs > li > a { display: block; margin: 0; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--dlt-muted); font-weight: 600; }

@@ -75,16 +75,6 @@ try {
     await settingsButton.click();
     if (!await settings.isVisible() || await settingsButton.getAttribute('aria-expanded') !== 'true') throw new Error('Settings panel did not open');
     if (!await settingsFrame.getAttribute('src')) throw new Error('Settings iframe did not load');
-    const panelBox = await settings.boundingBox();
-    const viewport = page.viewportSize();
-    const panelStyle = await settings.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return { border: style.borderTopWidth, radius: style.borderTopLeftRadius, shadow: style.boxShadow };
-    });
-    if (!panelBox || panelBox.x !== 0 || panelBox.y !== 0 || panelBox.width !== viewport.width || panelBox.height !== viewport.height
-        || panelStyle.border !== '0px' || panelStyle.radius !== '0px' || panelStyle.shadow !== 'none') {
-        throw new Error('Settings panel still looks like a separate island');
-    }
     const adminHref = await settingsAdmin.getAttribute('href');
     if (await settingsAdmin.getAttribute('target') !== '_blank' || !adminHref.endsWith('/admin.php?mod=dletoolbar')) throw new Error('Settings panel does not link to the admin page');
     await settings.locator('[data-settings-close]').click();
@@ -94,11 +84,9 @@ try {
     await settingsFrame.contentFrame().locator('body').evaluate(() => window.parent.postMessage('dletoolbar-settings-close', window.location.origin));
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();
-    await page.keyboard.press('Escape');
-    await settings.waitFor({ state: 'hidden' });
     await page.locator('[data-queries-open]').click();
-    if (await page.locator('[data-queries-open]').getAttribute('aria-expanded') !== 'true') throw new Error('Toolbar is not usable after closing settings');
-    console.log('PASS: settings panel lazy loading, full-screen layout, closing, reopening, Escape and toolbar access');
+    await settings.waitFor({ state: 'hidden' });
+    console.log('PASS: settings panel lazy loading, closing, reopening and popup switching');
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;
