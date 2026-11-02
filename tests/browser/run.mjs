@@ -70,10 +70,13 @@ try {
     const settings = page.locator('[data-settings-panel]');
     const settingsButton = page.locator('[data-settings-open]');
     const settingsFrame = settings.locator('iframe');
+    const settingsAdmin = settings.locator('[data-settings-admin]');
     if (await settingsFrame.getAttribute('src') !== null) throw new Error('Settings iframe loaded before opening');
     await settingsButton.click();
     if (!await settings.isVisible() || await settingsButton.getAttribute('aria-expanded') !== 'true') throw new Error('Settings panel did not open');
     if (!await settingsFrame.getAttribute('src')) throw new Error('Settings iframe did not load');
+    const adminHref = await settingsAdmin.getAttribute('href');
+    if (await settingsAdmin.getAttribute('target') !== '_blank' || !adminHref.endsWith('/admin.php?mod=dletoolbar')) throw new Error('Settings panel does not link to the admin page');
     await settings.locator('[data-settings-close]').click();
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();

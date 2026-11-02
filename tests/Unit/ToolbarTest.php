@@ -479,6 +479,11 @@ it('offers the settings panel only to administrators even when all components ar
         $html = (new DLEToolbar())->render();
         expect($html)->toContain('data-settings-open')
             ->toContain('aria-controls="dle-toolbar-settings-panel"')
+            ->toContain('href="https://example.test/admin-custom.php?mod=dletoolbar"')
+            ->toContain('data-settings-admin')
+            ->toContain('target="_blank"')
+            ->toContain('rel="noopener"')
+            ->toContain('Открыть в админке')
             ->toContain('https://example.test/admin-custom.php?mod=dletoolbar&amp;dlt_embed=1')
             ->toContain('data-settings-frame');
 
