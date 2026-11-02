@@ -58,7 +58,7 @@ $db = new class {
     {
         $rows = [
             ['setting_key' => 'toolbar', 'setting_value' => json_encode([
-                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'clock', 'entry'],
+                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'clock', 'entry', 'notes'],
                 'enabled' => isset($_GET['entry']) ? ['entry'] : (isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin']),
             ])],
             ['setting_key' => 'components', 'setting_value' => json_encode([

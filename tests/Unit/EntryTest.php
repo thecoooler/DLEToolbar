@@ -211,7 +211,9 @@ it('shows private profile data only to the owner and to groups that edit users',
         'xfields' => 'city|PROFILE_VALUE', 'email' => 'private@example.test', 'allowed_ip' => '192.0.2.1',
         'logged_ip' => '192.0.2.2', 'favorites' => '41,42', 'pm_all' => 51, 'pm_unread' => 52,
         'other_column' => 'RAW_PROFILE_VALUE', 'password' => 'PASSWORD_HASH', 'hash' => 'SESSION_HASH',
-        'twofactor_secret' => 'TOTP_SECRET', 'twofactor_auth' => 1, 'time_limit' => 1700000000]);
+        'twofactor_secret' => 'TOTP_SECRET', 'twofactor_auth' => 1, 'time_limit' => 1700000000,
+        'restricted' => 2, 'restricted_days' => 27, 'restricted_date' => 1700000000,
+        'cat_add' => 'PRIVATE_ADD_CATEGORIES', 'cat_allow_addnews' => 'PRIVATE_MODERATION_CATEGORIES']);
     $panel = renderEntry()['panel'];
     if ($visible) {
         expect($panel)->toContain('<dt><code>city</code></dt><dd>PROFILE_VALUE</dd>')
@@ -219,6 +221,8 @@ it('shows private profile data only to the owner and to groups that edit users',
             ->toContain('<dt>В избранном</dt><dd>2</dd>')->toContain('<dt>Сообщений</dt><dd>51')
             ->toContain('RAW_PROFILE_VALUE')
             ->toContain('Двухфакторная авторизация')
+            ->toContain('<dt>Ограничение</dt>')->toContain('<dt>Срок ограничения, дней</dt>')
+            ->toContain('PRIVATE_ADD_CATEGORIES')->toContain('PRIVATE_MODERATION_CATEGORIES')
             ->toContain('<span class="entry-muted">до ');
     } else {
         expect($panel)->not->toContain('data-entry-tab="fields"')
@@ -227,6 +231,8 @@ it('shows private profile data only to the owner and to groups that edit users',
             ->not->toContain('private@example.test')->not->toContain('192.0.2.1')->not->toContain('192.0.2.2')
             ->not->toContain('<dt>В избранном</dt>')->not->toContain('<dt>Сообщений</dt>')
             ->not->toContain('Двухфакторная авторизация')
+            ->not->toContain('Ограничен', '<dt>Ограничение</dt>', '<dt>Срок ограничения, дней</dt>')
+            ->not->toContain('PRIVATE_ADD_CATEGORIES', 'PRIVATE_MODERATION_CATEGORIES')
             ->not->toContain('<span class="entry-muted">до ');
     }
     expect($panel)->not->toContain('PASSWORD_HASH')->not->toContain('SESSION_HASH')->not->toContain('TOTP_SECRET');
@@ -238,3 +244,49 @@ it('shows private profile data only to the owner and to groups that edit users',
     'modern user editor' => ['21.0', 1, true, true],
     'modern other staff' => ['21.0', 1, false, false],
 ]);
+
+it('respects the restriction on editing administrator profiles', function (int $viewerGroup, int $profileGroup, int $viewerId, bool $private, bool $edit): void {
+    $GLOBALS['dle_module'] = 'userinfo';
+    $GLOBALS['member_id'] = ['user_id' => $viewerId, 'user_group' => $viewerGroup];
+    $GLOBALS['user_group'][$viewerGroup]['admin_editusers'] = 1;
+    PageEntry::captureUser(['user_id' => 12, 'name' => 'tester', 'user_group' => $profileGroup, 'banned' => '',
+        'email' => 'private@example.test', 'xfields' => 'city|PRIVATE_FIELD', 'logged_ip' => '192.0.2.2']);
+    $panel = renderEntry()['panel'];
+
+    if ($private) {
+        expect($panel)->toContain('private@example.test', 'PRIVATE_FIELD', '192.0.2.2');
+    } else {
+        expect($panel)->not->toContain('private@example.test', 'PRIVATE_FIELD', '192.0.2.2')
+            ->not->toContain('data-entry-tab="raw"');
+    }
+    if ($edit) {
+        expect($panel)->toContain('mod=editusers');
+    } else {
+        expect($panel)->not->toContain('mod=editusers');
+    }
+})->with([
+    'staff viewing an administrator' => [2, 1, 5, false, false],
+    'administrator viewing an administrator' => [1, 1, 5, true, true],
+    'staff viewing another staff member' => [2, 3, 5, true, true],
+    'administrator viewing own profile' => [1, 1, 12, true, true],
+]);
+
+it('renders an empty profile without warnings from legacy DLE extra fields', function (string $version): void {
+    $script = <<<'PHP'
+function xfieldsdataload($value) { return false; }
+require $argv[1] . '/Format.php';
+require $argv[1] . '/UserEntry.php';
+$config = ['version_id' => $argv[2]];
+$member_id = ['user_id' => 12, 'user_group' => 1];
+$user_group = [1 => ['group_name' => 'Администраторы', 'allow_admin' => 1]];
+$entry = \iCooLER\DLEToolbar\Components\Entry\UserEntry::build([
+    'user_id' => 12, 'name' => 'tester', 'user_group' => 1, 'banned' => '', 'xfields' => '',
+]);
+echo $entry['tabs'][2]['rows'] === [] ? 'ok' : 'unexpected fields';
+PHP;
+    $directory = ENGINE_DIR . '/iCooLER/DLEToolbar/Components/Entry';
+    $command = escapeshellarg(PHP_BINARY) . ' -d display_errors=1 -d error_reporting=-1 -r ' . escapeshellarg($script)
+        . ' ' . escapeshellarg($directory) . ' ' . escapeshellarg($version) . ' 2>&1';
+
+    expect(shell_exec($command))->toBe('ok');
+})->with(['13.0', '15.0']);
