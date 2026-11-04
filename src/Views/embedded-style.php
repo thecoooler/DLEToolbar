@@ -65,6 +65,7 @@ if (!defined('DATALIFEENGINE')) {
     #dlt-settings-form .panel-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border: 0; background: var(--dlt-surface); }
     #dlt-settings-form .panel-footer .position-right { margin: 0; }
     #dlt-settings-form .panel-footer [hidden] { display: none !important; }
+    #dlt-settings-form.dlt-dirty .panel-footer { border-top: 1px solid var(--dlt-border); }
     #dlt-settings-form .text-warning { color: var(--dlt-muted) !important; }
     #dlt-settings-form .btn { min-height: 34px; padding: 7px 12px; border: 1px solid var(--dlt-border); border-radius: 8px; background: var(--dlt-surface); color: var(--dlt-foreground); box-shadow: none; font: 600 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-shadow: none; }
     #dlt-settings-form .btn:hover, #dlt-settings-form .btn:focus { border-color: var(--dlt-border); background: var(--dlt-hover); color: var(--dlt-foreground); box-shadow: none; }
@@ -101,7 +102,6 @@ if (!defined('DATALIFEENGINE')) {
     #dlt-settings-form .has-error .form-control { border-color: var(--dlt-danger); }
     #dlt-settings-form .has-error .help-block { color: var(--dlt-danger); }
     @media (max-width: 480px) {
-        .content { padding: 0 !important; }
         #dlt-settings-form .panel-body { padding: 12px; }
         #dlt-settings-form .table > tbody > tr > td { padding: 10px 6px; }
         #dlt-settings-form .dlt-actions { gap: 6px; }

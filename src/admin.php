@@ -44,16 +44,14 @@ try {
     $preferences = ToolbarPreferences::load();
     $savedState = null;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $preferences = ToolbarPreferences::fromRequest($_POST, $preferences);
-        if ($preferences->parameterErrors() === []) {
-            $preferences->save();
-            $_SESSION['dletoolbar_settings_notice'] = 'Настройки панели сохранены.';
-            header('Location: ' . $actionUrl);
+        $submission = ToolbarSettingsPage::submit($_POST, $preferences, $actionUrl);
+        $preferences = $submission['preferences'];
+        if ($submission['redirect'] !== null) {
+            header('Location: ' . $submission['redirect']);
             exit;
         }
         http_response_code(422);
         $savedState = is_string($_POST['dlt_saved_state'] ?? null) ? $_POST['dlt_saved_state'] : null;
-        unset($_SESSION['dletoolbar_settings_notice']);
     }
 
     $notice = $_SESSION['dletoolbar_settings_notice'] ?? null;

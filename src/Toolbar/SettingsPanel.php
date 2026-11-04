@@ -59,9 +59,14 @@ CSS,
             }
         });
         panel.querySelector('[data-settings-close]').addEventListener('click', () => popup.close({ restoreFocus: true }));
-        panel.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') popup.close({ restoreFocus: true });
+        document.addEventListener('keydown', (event) => {
+            if (event.isComposing || event.key !== 'Escape' || !popup.isOpen()) return;
+            event.preventDefault();
+            popup.close({ restoreFocus: true });
         });
+        document.addEventListener('click', (event) => {
+            if (popup.isOpen() && !event.composedPath().includes(panel) && !event.composedPath().includes(dock)) popup.close();
+        }, true);
         window.addEventListener('message', (event) => {
             if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
             if (event.data === 'dletoolbar-settings-saved') window.location.replace(window.location.href.split('#')[0]);

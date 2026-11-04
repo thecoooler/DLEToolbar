@@ -796,7 +796,7 @@ it('renders the admin settings page and consumes its saved notice', function (st
     ['19.0', ['public/js/sortable.js'], false],
 ]);
 
-it('renders the admin form in embedded mode and retains that mode on submission', function (): void {
+it('renders the admin form in embedded mode with its assets', function (): void {
     $previousGet = $_GET;
     $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
     $previousNotice = $_SESSION['dletoolbar_settings_notice'] ?? null;
@@ -832,6 +832,102 @@ it('renders the admin form in embedded mode and retains that mode on submission'
             $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
         }
         $GLOBALS['js_array'] = $previousJs;
+    }
+});
+
+it('redirects with the embedded mode after a successful submission', function (): void {
+    $previousNotice = $_SESSION['dletoolbar_settings_notice'] ?? null;
+    try {
+        $submission = ToolbarSettingsPage::submit([
+            'access' => ['groups' => ['2']],
+            'toolbar' => ['enabled' => ['time']],
+        ], ToolbarPreferences::fromConfig([]), '?mod=dletoolbar&dlt_embed=1');
+
+        expect($submission['redirect'])->toBe('?mod=dletoolbar&dlt_embed=1')
+            ->and($submission['preferences']->parameterErrors())->toBe([])
+            ->and($_SESSION['dletoolbar_settings_notice'])->toBe('Настройки панели сохранены.');
+
+        ToolbarPreferences::resetRequestCache();
+        expect(ToolbarPreferences::load()->allowedGroups())->toBe([2]);
+    } finally {
+        if ($previousNotice === null) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+        } else {
+            $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        }
+    }
+});
+
+it('keeps the embedded form and drops the notice when submitted settings are invalid', function (): void {
+    $previousNotice = $_SESSION['dletoolbar_settings_notice'] ?? null;
+    $_SESSION['dletoolbar_settings_notice'] = 'Старое уведомление';
+    try {
+        $submission = ToolbarSettingsPage::submit([
+            'instances' => ['custom_0123456789abcdef' => 'link'],
+            'components' => ['custom_0123456789abcdef' => ['url' => '']],
+        ], ToolbarPreferences::fromConfig([]), '?mod=dletoolbar&dlt_embed=1');
+
+        expect($submission['redirect'])->toBeNull()
+            ->and($submission['preferences']->parameterErrors())->toHaveKey('custom_0123456789abcdef')
+            ->and(isset($_SESSION['dletoolbar_settings_notice']))->toBeFalse();
+    } finally {
+        if ($previousNotice === null) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+        } else {
+            $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        }
+    }
+});
+
+it('rejects invalid embedded submissions through POST and keeps the embedded mode', function (): void {
+    $previousGet = $_GET;
+    $previousPost = $_POST;
+    $previousMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+    $previousNotice = $_SESSION['dletoolbar_settings_notice'] ?? null;
+    $previousJs = $GLOBALS['js_array'] ?? [];
+    $_GET['dlt_embed'] = '1';
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+    $_POST = [
+        'user_hash' => $GLOBALS['dle_login_hash'],
+        'instances' => ['custom_0123456789abcdef' => 'link'],
+        'components' => ['custom_0123456789abcdef' => ['url' => '']],
+    ];
+    $_SESSION['dletoolbar_settings_notice'] = 'Старое уведомление';
+    $GLOBALS['js_array'] = [];
+    ob_start();
+    $bufferOpen = true;
+    try {
+        include ENGINE_DIR . '/inc/dletoolbar.php';
+        $html = (string) ob_get_clean();
+        $bufferOpen = false;
+
+        expect(http_response_code())->toBe(422)
+            ->and($html)->toContain('action="?mod=dletoolbar&amp;dlt_embed=1"')
+            ->toContain('data-validation-failed')
+            ->toContain('Заполните поле «Ссылка».')
+            ->toContain('name="user_hash"')
+            ->not->toContain('Настройки панели сохранены.', 'Старое уведомление');
+
+        ToolbarPreferences::resetRequestCache();
+        expect(ToolbarPreferences::load()->componentInstances())->toBe([]);
+    } finally {
+        if ($bufferOpen) {
+            ob_end_clean();
+        }
+        $_GET = $previousGet;
+        $_POST = $previousPost;
+        if ($previousMethod === null) {
+            unset($_SERVER['REQUEST_METHOD']);
+        } else {
+            $_SERVER['REQUEST_METHOD'] = $previousMethod;
+        }
+        if ($previousNotice === null) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+        } else {
+            $_SESSION['dletoolbar_settings_notice'] = $previousNotice;
+        }
+        $GLOBALS['js_array'] = $previousJs;
+        http_response_code(200);
     }
 });
 
