@@ -81,18 +81,16 @@ try {
     await settingsDocument.locator('#dlt-settings-form').waitFor({ state: 'visible', timeout: 10_000 });
     const settingsAction = await settingsDocument.locator('#dlt-settings-form').getAttribute('action');
     if (new URL(settingsAction, url).searchParams.get('dlt_embed') !== '1') throw new Error('Embedded settings form did not keep the embedded mode');
-    const saveRequest = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/admin.php'));
-    await settingsDocument.locator('#dlt-settings-form button[type="submit"]').click();
-    const saveResponse = await saveRequest;
-    const saveLocation = saveResponse.headers()['location'];
-    if (saveResponse.status() !== 302 || !saveLocation || new URL(saveLocation, saveResponse.url()).searchParams.get('dlt_embed') !== '1') throw new Error('Embedded save did not redirect with the embedded mode');
-    await settingsDocument.locator('#dlt-settings-form').waitFor({ state: 'visible', timeout: 10_000 });
+    const closeFocused = await settingsButton.evaluate((element) => element.getRootNode().activeElement === element.getRootNode().querySelector('[data-settings-close]'));
+    if (!closeFocused) throw new Error('Settings panel did not move focus to its close button');
     await settings.locator('[data-settings-close]').click();
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();
     if (!await settings.isVisible()) throw new Error('Settings panel did not reopen');
     await page.keyboard.press('Escape');
     await settings.waitFor({ state: 'hidden' });
+    const triggerFocused = await settingsButton.evaluate((element) => element.getRootNode().activeElement === element);
+    if (!triggerFocused) throw new Error('Escape did not restore focus to the settings button');
     await settingsButton.click();
     const panelBox = await settings.boundingBox();
     if (panelBox.x < 8) throw new Error('Settings panel has no left gutter to click outside');
@@ -104,7 +102,17 @@ try {
     await settingsButton.click();
     await page.locator('[data-queries-open]').click();
     await settings.waitFor({ state: 'hidden' });
-    console.log('PASS: settings panel lazy loading, real form, save redirect, escape, click outside, closing, reopening and popup switching');
+    console.log('PASS: settings panel lazy loading, real form, escape, focus, click outside, closing, reopening and popup switching');
+
+    await settingsButton.click();
+    const saveRequest = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/admin.php'));
+    const reload = page.waitForNavigation();
+    await settingsDocument.locator('#dlt-settings-form button[type="submit"]').click();
+    const saveResponse = await saveRequest;
+    const saveLocation = saveResponse.headers()['location'];
+    if (saveResponse.status() !== 302 || !saveLocation || new URL(saveLocation, saveResponse.url()).searchParams.get('dlt_embed') !== '1') throw new Error('Embedded save did not redirect with the embedded mode');
+    await reload;
+    console.log('PASS: embedded save redirects and the page reloads in the embedded mode');
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;

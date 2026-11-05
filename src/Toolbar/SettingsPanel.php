@@ -50,8 +50,9 @@ CSS,
         const trigger = root.querySelector('[data-settings-open]');
         const panel = root.querySelector('[data-settings-panel]');
         const frame = panel.querySelector('[data-settings-frame]');
+        const closeButton = panel.querySelector('[data-settings-close]');
         const dock = root.querySelector('.dock');
-        const popup = createPopup({ trigger, panel, closeDuration: 0 });
+        const popup = createPopup({ trigger, panel, closeDuration: 0, onOpen: () => closeButton.focus() });
         trigger.addEventListener('click', () => {
             if (popup.isOpen()) popup.close();
             else {
@@ -59,7 +60,7 @@ CSS,
                 popup.open();
             }
         });
-        panel.querySelector('[data-settings-close]').addEventListener('click', () => popup.close({ restoreFocus: true }));
+        closeButton.addEventListener('click', () => popup.close({ restoreFocus: true }));
         document.addEventListener('keydown', (event) => {
             if (event.isComposing || event.key !== 'Escape' || !popup.isOpen()) return;
             event.preventDefault();

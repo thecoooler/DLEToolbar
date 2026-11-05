@@ -61,7 +61,8 @@ function echofooter(): void
 
 $dle_login_hash = 'browser-test-user-hash';
 $js_array = [];
-$_SESSION = [];
+session_save_path(sys_get_temp_dir());
+session_start();
 $config = [
     'http_home_url' => 'http://' . $_SERVER['HTTP_HOST'] . '/',
     'admin_path' => 'admin.php',
