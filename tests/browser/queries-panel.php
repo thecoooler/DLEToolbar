@@ -21,7 +21,7 @@ function get_folder_list(string $path): array
 
 setcookie('dle_skin', 'Default', 0, '/', '', false, true);
 $dle_login_hash = 'browser-test-user-hash';
-$config = ['skin' => 'Default', 'version_id' => '18.0'];
+$config = ['skin' => 'Default', 'version_id' => '18.0', 'http_home_url' => 'http://' . $_SERVER['HTTP_HOST'] . '/', 'admin_path' => 'admin.php'];
 $member_id = ['user_group' => 1];
 $user_group = [1 => ['group_name' => 'Администраторы', 'allow_admin' => 1]];
 $dle_module = 'main';

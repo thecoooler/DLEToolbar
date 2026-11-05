@@ -25,6 +25,27 @@ final class ToolbarSettingsPage
         $this->savedState = $savedState;
     }
 
+    /**
+     * Applies submitted settings and reports the redirect target on success.
+     *
+     * @param array<array-key, mixed> $post
+     * @return array{preferences: ToolbarPreferences, redirect: string|null}
+     */
+    public static function submit(array $post, ToolbarPreferences $current, string $actionUrl): array
+    {
+        $preferences = ToolbarPreferences::fromRequest($post, $current);
+        if ($preferences->parameterErrors() !== []) {
+            unset($_SESSION['dletoolbar_settings_notice']);
+
+            return ['preferences' => $preferences, 'redirect' => null];
+        }
+
+        $preferences->save();
+        $_SESSION['dletoolbar_settings_notice'] = 'Настройки панели сохранены.';
+
+        return ['preferences' => $preferences, 'redirect' => $actionUrl];
+    }
+
     public function render(): string
     {
         global $dle_login_hash;

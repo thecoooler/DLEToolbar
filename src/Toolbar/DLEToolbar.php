@@ -44,7 +44,16 @@ class DLEToolbar
 
     public function render(): string
     {
+        global $member_id;
+        /** @var array{user_group: int|string} $member_id */
         $rendered = $this->components->render(ToolbarPreferences::load());
+        if ((int) $member_id['user_group'] === 1) {
+            $settings = SettingsPanel::render();
+            $rendered['controls'] .= $settings['control'];
+            $rendered['panels'] .= $settings['panel'];
+            $rendered['styles'] .= $settings['styles'];
+            $rendered['scripts'] .= $settings['script'];
+        }
         if ($rendered['controls'] === '' && $rendered['hints'] === '') {
             return '';
         }

@@ -26,7 +26,8 @@ if (version_compare($config['version_id'], '19.0', '>=')) {
     $js_array[] = 'engine/classes/js/sortable.js';
 }
 
-$actionUrl = '?mod=dletoolbar';
+$embedded = ($_GET['dlt_embed'] ?? null) === '1';
+$actionUrl = '?mod=dletoolbar' . ($embedded ? '&dlt_embed=1' : '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (
@@ -38,20 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$notice = null;
 try {
     $preferences = ToolbarPreferences::load();
     $savedState = null;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $preferences = ToolbarPreferences::fromRequest($_POST, $preferences);
-        if ($preferences->parameterErrors() === []) {
-            $preferences->save();
-            $_SESSION['dletoolbar_settings_notice'] = 'Настройки панели сохранены.';
-            header('Location: ' . $actionUrl);
+        $submission = ToolbarSettingsPage::submit($_POST, $preferences, $actionUrl);
+        $preferences = $submission['preferences'];
+        if ($submission['redirect'] !== null) {
+            header('Location: ' . $submission['redirect']);
             exit;
         }
         http_response_code(422);
         $savedState = is_string($_POST['dlt_saved_state'] ?? null) ? $_POST['dlt_saved_state'] : null;
-        unset($_SESSION['dletoolbar_settings_notice']);
     }
 
     $notice = $_SESSION['dletoolbar_settings_notice'] ?? null;
@@ -80,8 +80,24 @@ echoheader(
     '<i class="fa fa-sliders position-left"></i><span class="text-semibold">DLEToolbar</span>',
     'Настройки плагина',
 );
+if ($embedded) {
+    echo <<<'HTML'
+<script>
+document.addEventListener('keydown', (event) => {
+    if (event.isComposing || event.key !== 'Escape' || document.querySelector('.modal.in, .chosen-container-active.chosen-with-drop, .bootstrap-select.open')) return;
+    window.parent.postMessage('dletoolbar-settings-close', window.location.origin);
+}, true);
+</script>
+HTML;
+    if ($notice !== null) {
+        echo '<script>window.parent.postMessage("dletoolbar-settings-saved", window.location.origin);</script>';
+    }
+}
 if (version_compare($config['version_id'], '13.1', '<')) {
     require \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Views/sortable.php');
 }
 echo $content;
+if ($embedded) {
+    require \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Views/embedded-style.php');
+}
 echofooter();
