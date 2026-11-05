@@ -166,7 +166,7 @@
         const timedMark = queryTimeline.querySelector('[data-query-mark="6"]');
         const timedRow = panel.querySelector('.query-row[data-query-number="6"]');
         assert(queryTimeline && timedMark, 'Timeline shows a mark for a query with a recorded moment');
-        assert(queryTimeline.querySelectorAll('[data-query-mark]').length === 1, 'Queries without a moment add no marks');
+        assert(queryTimeline.querySelectorAll('[data-query-mark]').length === 3, 'Only queries with a moment get marks');
         assert(timedMark.getAttribute('title').includes('старт 230.50 мс')
             && timedMark.getAttribute('title').includes('конец 250.50 мс'), 'Mark title keeps exact moments');
         assert(!timedMark.hasAttribute('data-active'), 'Timeline mark starts inactive');
@@ -174,6 +174,16 @@
         assert(timedMark.dataset.active === 'true', 'Hovering a query highlights its timeline mark');
         timedRow.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
         assert(!timedMark.hasAttribute('data-active'), 'Leaving the query clears the timeline highlight');
+
+        const groupMarks = [1, 2].map((number) => queryTimeline.querySelector(`[data-query-mark="${number}"]`));
+        assert(groupMarks.every((mark) => mark && !mark.hasAttribute('data-active')),
+            'Folded group marks start inactive');
+        folds[0].dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+        assert(groupMarks.every((mark) => mark.dataset.active === 'true') && !timedMark.hasAttribute('data-active'),
+            'Hovering a folded group highlights every mark of the group');
+        folds[0].dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+        assert(groupMarks.every((mark) => !mark.hasAttribute('data-active')),
+            'Leaving the folded group clears its highlights');
 
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
