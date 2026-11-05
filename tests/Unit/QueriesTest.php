@@ -5,6 +5,21 @@ use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
+it('shows when each query started and ended relative to the page start when the moment is known', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [
+        ['query' => 'SELECT traced', 'time' => .002, 'num' => 1, 'source' => 'engine/modules/main.php:10', 'at' => 45.6],
+        ['query' => 'SELECT untraced', 'time' => .002, 'num' => 2],
+    ];
+
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    expect($panel)->toContain('Старт 43.60 мс · Конец 45.60 мс')
+        ->toContain('title="От начала страницы"')
+        ->not->toMatch('/Старт [^<]*<\/span>[^<]*SELECT untraced/s');
+});
+
 it('keeps the DLE counter distinct from filtered SQL rows and respects time thresholds', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_num = 9;

@@ -95,7 +95,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var iterable<int, array{query: string, time: float, num: int, source?: string}> $queries QueryLog when source tracing is enabled. */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, at?: float}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
         /** @var int $queryCount */
         $queryCount = $db->query_num;
@@ -121,6 +121,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
             $source = $query['source'] ?? '';
             $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $source,
+                'at' => $query['at'] ?? null,
                 'initiator' => $source === '' ? '' : self::initiator($source)];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
@@ -179,7 +180,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                         . '<span class="query-bar"></span>'
                         . '<span class="query-num">#' . $item['number'] . '</span>'
                         . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                        . $this->renderSource($item['source']) . '</span>'
+                        . $this->renderSource($item['source']) . self::renderMoments($item['at'], $item['time']) . '</span>'
                         . '<span class="query-time"></span>'
                         . $this->renderQueryCopyButton()
                         . '</div>';
@@ -196,7 +197,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
-                    . $this->renderSource($item['source']) . '</span>'
+                    . $this->renderSource($item['source']) . self::renderMoments($item['at'], $item['time']) . '</span>'
                     . '<span class="query-time">' . ($this->foldFast && !$isSlow && $item['time'] < 0.001 ? '' : $format($item['time'])) . '</span>'
                     . $this->renderQueryCopyButton()
                     . '</div>';
@@ -264,6 +265,18 @@ final class Queries implements ConfigurableComponent, RequestComponent
         $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return '<span class="query-source"><span class="query-source-label">' . $escape(self::initiator($source)) . '</span>'
             . ' · ' . $escape($source) . '</span>';
+    }
+
+    /** Shows when the query started and ended on the page timeline, measured while DLE appended the entry. */
+    private static function renderMoments(?float $at, float $duration): string
+    {
+        if ($at === null) {
+            return '';
+        }
+
+        return '<span class="query-moments" title="От начала страницы">'
+            . 'Старт ' . number_format($at - $duration * 1000, 2, '.', '') . ' мс'
+            . ' · Конец ' . number_format($at, 2, '.', '') . ' мс</span>';
     }
 
     /** Names the module or plugin that issued the query, or DLE for the engine itself. */
@@ -538,7 +551,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 white-space: pre-wrap;
                 overflow-wrap: anywhere;
             }
-            .query-source {
+            .query-source,
+            .query-moments {
                 display: block;
                 margin-top: 3px;
                 color: #71717a;
@@ -546,7 +560,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 white-space: normal;
             }
             .query-source-label { color: #52525b; }
-            :host([data-theme="dark"]) .query-source { color: #a1a1aa; }
+            :host([data-theme="dark"]) .query-source,
+            :host([data-theme="dark"]) .query-moments { color: #a1a1aa; }
             :host([data-theme="dark"]) .query-source-label { color: #d4d4d8; }
             .query-time {
                 padding-right: var(--query-gap);

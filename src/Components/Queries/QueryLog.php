@@ -3,17 +3,19 @@
 namespace iCooLER\DLEToolbar\Components\Queries;
 
 use iCooLER\DLEToolbar\ComponentFramework\SourcePath;
+use iCooLER\DLEToolbar\Components\Debug\DebugLog;
 
 /**
- * Takes the place of DLE's query_list array and adds the call site to each appended entry.
- * The db object itself stays untouched, so references to it and DLE's error page keep working.
+ * Takes the place of DLE's query_list array and adds the call site and the page-time moment
+ * to each appended entry. The db object itself stays untouched, so references to it and
+ * DLE's error page keep working.
  *
- * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string}|null>
- * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string}>
+ * @implements \ArrayAccess<int, array{query: string, time: float, num: int, source?: string, at?: float}|null>
+ * @implements \IteratorAggregate<int, array{query: string, time: float, num: int, source?: string, at?: float}>
  */
 final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
 {
-    /** @var array<int, array{query: string, time: float, num: int, source?: string}> */
+    /** @var array<int, array{query: string, time: float, num: int, source?: string, at?: float}> */
     private array $entries;
 
     /** @param array<int, array{query: string, time: float, num: int}> $entries */
@@ -42,7 +44,7 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
      * Existing entries are returned by reference so callers can change their fields in place.
      * Missing entries emit PHP's undefined-key warning without inserting a null into the log.
      * @param int $offset
-     * @return array{query: string, time: float, num: int, source?: string}|null
+     * @return array{query: string, time: float, num: int, source?: string, at?: float}|null
      */
     public function &offsetGet($offset): ?array
     {
@@ -61,7 +63,8 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
     public function offsetSet($offset, $value): void
     {
         if ($offset === null) {
-            $this->entries[] = $value + self::source();
+            // DLE appends right after the query returns, so this moment is the end of the query on the page timeline.
+            $this->entries[] = $value + self::source() + ['at' => DebugLog::elapsed()];
         } else {
             $this->entries[$offset] = $value;
         }
@@ -78,7 +81,7 @@ final class QueryLog implements \ArrayAccess, \Countable, \IteratorAggregate
         return count($this->entries);
     }
 
-    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string}> */
+    /** @return \ArrayIterator<int, array{query: string, time: float, num: int, source?: string, at?: float}> */
     public function getIterator(): \ArrayIterator
     {
         return new \ArrayIterator($this->entries);
