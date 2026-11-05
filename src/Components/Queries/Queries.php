@@ -831,6 +831,14 @@ HTML;
             row.addEventListener('pointerenter', () => { mark.dataset.active = 'true'; });
             row.addEventListener('pointerleave', () => { delete mark.dataset.active; });
         });
+        folds.forEach((fold) => {
+            // A folded group highlights every mark it contains, so the group reads as one block on the timeline.
+            const marks = [...fold.closest('[data-query-group]').querySelectorAll('[data-query-number]')]
+                .map((row) => timelineMarks.get(row.dataset.queryNumber))
+                .filter(Boolean);
+            fold.addEventListener('pointerenter', () => marks.forEach((mark) => { mark.dataset.active = 'true'; }));
+            fold.addEventListener('pointerleave', () => marks.forEach((mark) => { delete mark.dataset.active; }));
+        });
         filters.forEach((filter) => {
             filter.addEventListener('click', () => {
                 filters.forEach((button) => button.setAttribute('aria-pressed', button === filter ? 'true' : 'false'));
