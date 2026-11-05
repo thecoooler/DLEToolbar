@@ -48,7 +48,7 @@ $db = new class {
         ['query' => 'SELECT "<value>"' . "\nFROM dle_post", 'time' => .002, 'num' => 3, 'source' => 'engine/Vendor/Plugin/run.php:34'],
         ['query' => 'SELECT fast_c', 'time' => .0004, 'num' => 4],
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
-        ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],
+        ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6, 'at' => 250.5],
     ];
     public function query($sql, $showError = true)
     {

@@ -162,6 +162,19 @@
         assert(entries.every((entry) => !entry.hidden), 'All filter restores every row');
         assert(expanded(), 'Filter click does not close panel');
 
+        const queryTimeline = panel.querySelector('[data-query-timeline]');
+        const timedMark = queryTimeline.querySelector('[data-query-mark="6"]');
+        const timedRow = panel.querySelector('.query-row[data-query-number="6"]');
+        assert(queryTimeline && timedMark, 'Timeline shows a mark for a query with a recorded moment');
+        assert(queryTimeline.querySelectorAll('[data-query-mark]').length === 1, 'Queries without a moment add no marks');
+        assert(timedMark.getAttribute('title').includes('старт 230.50 мс')
+            && timedMark.getAttribute('title').includes('конец 250.50 мс'), 'Mark title keeps exact moments');
+        assert(!timedMark.hasAttribute('data-active'), 'Timeline mark starts inactive');
+        timedRow.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+        assert(timedMark.dataset.active === 'true', 'Hovering a query highlights its timeline mark');
+        timedRow.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+        assert(!timedMark.hasAttribute('data-active'), 'Leaving the query clears the timeline highlight');
+
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
         assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
