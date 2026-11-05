@@ -50,6 +50,7 @@ CSS,
         const trigger = root.querySelector('[data-settings-open]');
         const panel = root.querySelector('[data-settings-panel]');
         const frame = panel.querySelector('[data-settings-frame]');
+        const dock = root.querySelector('.dock');
         const popup = createPopup({ trigger, panel, closeDuration: 0 });
         trigger.addEventListener('click', () => {
             if (popup.isOpen()) popup.close();

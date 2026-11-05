@@ -80,7 +80,13 @@ try {
     const settingsDocument = settingsFrame.contentFrame();
     await settingsDocument.locator('#dlt-settings-form').waitFor({ state: 'visible', timeout: 10_000 });
     const settingsAction = await settingsDocument.locator('#dlt-settings-form').getAttribute('action');
-    if (!new URL(settingsAction, url).searchParams.has('dlt_embed')) throw new Error('Embedded settings form did not keep the embedded mode');
+    if (new URL(settingsAction, url).searchParams.get('dlt_embed') !== '1') throw new Error('Embedded settings form did not keep the embedded mode');
+    const saveRequest = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/admin.php'));
+    await settingsDocument.locator('#dlt-settings-form button[type="submit"]').click();
+    const saveResponse = await saveRequest;
+    const saveLocation = saveResponse.headers()['location'];
+    if (saveResponse.status() !== 302 || !saveLocation || new URL(saveLocation, saveResponse.url()).searchParams.get('dlt_embed') !== '1') throw new Error('Embedded save did not redirect with the embedded mode');
+    await settingsDocument.locator('#dlt-settings-form').waitFor({ state: 'visible', timeout: 10_000 });
     await settings.locator('[data-settings-close]').click();
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();
@@ -88,8 +94,9 @@ try {
     await page.keyboard.press('Escape');
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();
-    const viewport = page.viewportSize();
-    await page.mouse.click(viewport.width - 40, Math.round(viewport.height / 2));
+    const panelBox = await settings.boundingBox();
+    if (panelBox.x < 8) throw new Error('Settings panel has no left gutter to click outside');
+    await page.mouse.click(panelBox.x - 6, panelBox.y + 6);
     await settings.waitFor({ state: 'hidden' });
     await settingsButton.click();
     await settingsDocument.locator('body').evaluate(() => window.parent.postMessage('dletoolbar-settings-close', window.location.origin));
@@ -97,7 +104,7 @@ try {
     await settingsButton.click();
     await page.locator('[data-queries-open]').click();
     await settings.waitFor({ state: 'hidden' });
-    console.log('PASS: settings panel lazy loading, real form, escape, click outside, closing, reopening and popup switching');
+    console.log('PASS: settings panel lazy loading, real form, save redirect, escape, click outside, closing, reopening and popup switching');
 } catch (error) {
     console.error(error.stack ?? error.message);
     process.exitCode = 1;

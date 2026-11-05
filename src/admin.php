@@ -84,7 +84,7 @@ if ($embedded) {
     echo <<<'HTML'
 <script>
 document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('.modal.in, .chosen-container-active.chosen-with-drop, .bootstrap-select.open')) return;
+    if (event.isComposing || event.key !== 'Escape' || document.querySelector('.modal.in, .chosen-container-active.chosen-with-drop, .bootstrap-select.open')) return;
     window.parent.postMessage('dletoolbar-settings-close', window.location.origin);
 }, true);
 </script>
