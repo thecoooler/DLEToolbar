@@ -116,7 +116,7 @@ it('uses the slow query threshold at its exact boundary and can disable fast fol
     ]);
     $html = $registry->render($preferences)['panels'];
     expect($html)->not->toContain('data-fold')
-        ->not->toContain('data-fast-row hidden')
+        ->not->toContain('data-fast-row data-query-number')
         ->toContain('query-stats-alert">⚠ 1')
         ->toMatch('/query-row-plain[^>]*>[^\n]*SELECT below/')
         ->toMatch('/query-row-slow[^>]*>[^\n]*SELECT boundary/')
@@ -141,7 +141,7 @@ it('keeps slow queries visible when the threshold is below one millisecond', fun
         'components' => ['queries' => ['slow_threshold_ms' => 0.5, 'fold_fast' => true]],
     ]);
     $html = (new ComponentRegistry())->render($preferences)['panels'];
-    expect(substr_count($html, 'data-fast-row hidden'))->toBe(2)
+    expect(substr_count($html, 'data-fast-row data-query-number'))->toBe(2)
         ->and($html)->toContain('query-stats-alert">⚠ 2')
         ->toMatch('/query-row-slow[^>]*>[^\n]*SELECT c/')
         ->toMatch('/query-row-slow[^>]*>[^\n]*SELECT d/');

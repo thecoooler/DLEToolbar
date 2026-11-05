@@ -500,7 +500,7 @@ it('renders the SQL panel with chronological fast folds, escaping and an empty s
             ->toMatch('/data-query-panel.*<div class="dock"/s')
             ->toContain('№1–2')
             ->toContain('2 быстрых</span>')
-            ->toContain('data-fast-row hidden')
+            ->toContain('data-fast-row data-query-number="1" hidden')
             ->toContain('SELECT fast_a')
             ->not->toContain('&lt;1 мс')
             ->toContain('<span class="query-num">#3</span>')
