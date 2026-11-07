@@ -5,6 +5,7 @@ use iCooLER\DLEToolbar\Components\Debug\DebugLog;
 use iCooLER\DLEToolbar\Components\Files\Files;
 use iCooLER\DLEToolbar\Toolbar\DLEToolbar;
 use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
+
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
 beforeEach(function (): void {

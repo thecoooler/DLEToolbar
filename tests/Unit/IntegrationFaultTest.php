@@ -61,7 +61,10 @@ beforeEach(function (): void {
 });
 
 it('extracts every integration patch from the patch list', function (): void {
-    expect(integrationPatches('engine/init.php'))->toHaveCount(15)
+    expect(integrationPatches('engine/modules/functions.php'))->toHaveCount(3)
+        ->and(integrationPatches('engine/modules/functions.php')[2])
+        ->toContain('CacheCallLog::read', 'CacheCallLog::write', 'dle_cache_original', 'create_cache_original')
+        ->and(integrationPatches('engine/init.php'))->toHaveCount(15)
         ->and(integrationPatches('engine/modules/show.full.php'))->toHaveCount(1)
         ->and(integrationPatches('engine/modules/profile.php'))->toHaveCount(1)
         ->and(integrationPatches('engine/modules/main.php'))->toHaveCount(2);

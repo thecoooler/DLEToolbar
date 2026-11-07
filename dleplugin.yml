@@ -15,6 +15,42 @@ alias:
     admin.php: engine/inc/dletoolbar.php
     notes.php: engine/ajax/dletoolbar_notes.php
 files:
+  engine/modules/functions.php:
+    - replace:
+        search: |
+          function dle_cache(
+        replace: |
+          function dle_cache_original(
+    - replace:
+        search: |
+          function create_cache(
+        replace: |
+          function create_cache_original(
+    - after:
+        search: |
+          header ( 'Location: ../../' );
+          die( "Hacking attempt!" );
+          }
+        replace: |
+          function dle_cache($prefix, $cache_id = false, $member_prefix = false, $customCacheDate = false) {
+            $arguments = func_get_args();
+            if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+              return dle_cache_original(...$arguments);
+            }
+            return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::read($prefix, $cache_id, $member_prefix, static function () use ($arguments) {
+              return dle_cache_original(...$arguments);
+            });
+          }
+
+          function create_cache($prefix, $cache_text, $cache_id = false, $member_prefix = false, $maxAge = false) {
+            $arguments = func_get_args();
+            if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+              return create_cache_original(...$arguments);
+            }
+            return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::write($prefix, $cache_text, $cache_id, $member_prefix, static function () use ($arguments) {
+              return create_cache_original(...$arguments);
+            });
+          }
   engine/init.php:
     - after:
         search: |

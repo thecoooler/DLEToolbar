@@ -2,6 +2,35 @@
 
 // Verbatim copies of the replace blocks in dleplugin.yml. Keep in sync.
 return [
+    'engine/modules/functions.php' => [
+        <<<'PHP'
+function dle_cache_original(
+PHP,
+        <<<'PHP'
+function create_cache_original(
+PHP,
+        <<<'PHP'
+function dle_cache($prefix, $cache_id = false, $member_prefix = false, $customCacheDate = false) {
+  $arguments = func_get_args();
+  if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+    return dle_cache_original(...$arguments);
+  }
+  return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::read($prefix, $cache_id, $member_prefix, static function () use ($arguments) {
+    return dle_cache_original(...$arguments);
+  });
+}
+
+function create_cache($prefix, $cache_text, $cache_id = false, $member_prefix = false, $maxAge = false) {
+  $arguments = func_get_args();
+  if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+    return create_cache_original(...$arguments);
+  }
+  return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::write($prefix, $cache_text, $cache_id, $member_prefix, static function () use ($arguments) {
+    return create_cache_original(...$arguments);
+  });
+}
+PHP,
+    ],
     'engine/init.php' => [
         <<<'PHP'
 $DLEToolbar = null;
