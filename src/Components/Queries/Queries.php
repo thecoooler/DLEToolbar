@@ -5,6 +5,7 @@ namespace iCooLER\DLEToolbar\Components\Queries;
 use iCooLER\DLEToolbar\ComponentFramework\ConfigurableComponent;
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\ComponentFramework\RequestComponent;
+use iCooLER\DLEToolbar\Components\Debug\DebugLog;
 
 /**
  * Owns the SQL control and panel inside the toolbar's shadow root.
@@ -95,7 +96,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
         global $db, $config;
         /** @var \db $db */
         /** @var array{version_id: string} $config */
-        /** @var iterable<int, array{query: string, time: float, num: int, source?: string}> $queries QueryLog when source tracing is enabled. */
+        /** @var iterable<int, array{query: string, time: float, num: int, source?: string, at?: float}> $queries QueryLog when source tracing is enabled. */
         $queries = $db->query_list;
         /** @var int $queryCount */
         $queryCount = $db->query_num;
@@ -121,6 +122,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             $sql = preg_replace("/\\b(\\w*(?:password|hash))\\s*=\\s*'(?:[^'\\\\]|\\\\.)*'/i", "\$1='***'", $query['query']);
             $source = $query['source'] ?? '';
             $item = ['query' => $sql, 'time' => $query['time'], 'number' => $number, 'source' => $source,
+                'at' => $query['at'] ?? null,
                 'initiator' => $source === '' ? '' : self::initiator($source)];
             $lastIndex = array_key_last($groups);
             $isFast = $this->foldFast && $query['time'] < 0.001 && $query['time'] < $this->slowThreshold;
@@ -175,7 +177,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                     . '</div>';
 
                 foreach ($items as $item) {
-                    $rows .= '<div class="query-row query-row-plain query-row-fast" data-fast-row hidden>'
+                    $rows .= '<div class="query-row query-row-plain query-row-fast" data-fast-row data-query-number="' . $item['number'] . '" hidden>'
                         . '<span class="query-bar"></span>'
                         . '<span class="query-num">#' . $item['number'] . '</span>'
                         . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
@@ -192,7 +194,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 $isSlow = $item['time'] >= $this->slowThreshold;
                 $slowCount += $isSlow ? 1 : 0;
                 $totalTime += $item['time'];
-                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . $tint($initiator) . '"' . $initiatorAttribute . '>'
+                $rows .= '<div class="query-row' . ($isSlow ? ' query-row-slow' : ' query-row-plain') . $tint($initiator) . '" data-query-number="' . $item['number'] . '"' . $initiatorAttribute . '>'
                     . '<span class="query-bar"></span>'
                     . '<span class="query-num">#' . $item['number'] . '</span>'
                     . '<span class="query-sql"><span class="query-text">' . $escape($item['query']) . '</span>'
@@ -202,6 +204,8 @@ final class Queries implements ConfigurableComponent, RequestComponent
                     . '</div>';
             }
         }
+
+        $timeline = $this->renderTimeline($groups, $hues);
 
         $filters = '';
         if (version_compare($config['version_id'], '14.0', '<')) {
@@ -249,6 +253,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
             . '<button class="query-close" data-query-close type="button" aria-label="Закрыть список запросов">'
             . self::icon('close') . '</button></header>'
             . $filters
+            . $timeline
             . '<div class="query-scroll-area"><div class="query-list" role="region"' . ($number > 0 ? ' tabindex="0"' : '')
             . ' aria-label="Список SQL-запросов" style="--query-number-chars: ' . max(3, strlen((string) $number) + 1) . '">' . $rows . '</div>'
             . '<div class="query-scrollbar" data-query-scrollbar aria-hidden="true" hidden><div class="query-scroll-thumb"></div></div></div>'
@@ -264,6 +269,53 @@ final class Queries implements ConfigurableComponent, RequestComponent
         $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return '<span class="query-source"><span class="query-source-label">' . $escape(self::initiator($source)) . '</span>'
             . ' · ' . $escape($source) . '</span>';
+    }
+
+    /**
+     * Draws every timed query on the page timeline so its position is visible without reading numbers.
+     *
+     * @param array<array-key, array{fast: bool, items: list<array{query: string, time: float, number: int, source: string, at: float|null, initiator: string}>}> $groups
+     * @param array<array-key, int> $hues
+     */
+    private function renderTimeline(array $groups, array $hues): string
+    {
+        $timelineEnd = 0.0;
+        foreach ($groups as $group) {
+            foreach ($group['items'] as $item) {
+                if ($item['at'] !== null) {
+                    $timelineEnd = max($timelineEnd, $item['at']);
+                }
+            }
+        }
+        if ($timelineEnd <= 0) {
+            return '';
+        }
+
+        // The axis spans the whole page, so a late query sits near the right edge like in the files timeline.
+        $scale = max($timelineEnd, DebugLog::snapshot()['end'], 1.0);
+        $marks = '';
+        foreach ($groups as $group) {
+            foreach ($group['items'] as $item) {
+                if ($item['at'] === null) {
+                    continue;
+                }
+
+                $start = max(0.0, $item['at'] - $item['time'] * 1000);
+                $hue = isset($hues[$item['initiator']]) ? ';--query-hue:' . $hues[$item['initiator']] : '';
+                $isSlow = $item['time'] >= $this->slowThreshold;
+                $marks .= '<span class="query-timeline-mark' . (isset($hues[$item['initiator']]) ? ' query-tinted' : '')
+                    . '" data-query-mark="' . $item['number'] . '"' . ($isSlow ? ' data-slow="true"' : '')
+                    . ' style="left:' . number_format($start / $scale * 100, 4, '.', '')
+                    . '%;width:' . number_format(($item['at'] - $start) / $scale * 100, 4, '.', '') . '%' . $hue . '"'
+                    . ' title="№' . $item['number'] . ' · старт ' . number_format($start, 2, '.', '')
+                    . ' мс · конец ' . number_format($item['at'], 2, '.', '') . ' мс"></span>';
+            }
+        }
+
+        return '<div class="query-timeline" data-query-timeline>'
+            . '<div class="query-timeline-track" role="img" aria-label="Таймлайн запросов от начала страницы">' . $marks . '</div>'
+            . '<div class="query-timeline-axis" aria-hidden="true"><span>0 мс</span><span>'
+            . number_format($scale, 0, '.', '') . ' мс</span></div></div>';
     }
 
     /** Names the module or plugin that issued the query, or DLE for the engine itself. */
@@ -464,6 +516,46 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 color: var(--surface);
             }
             .query-filter[aria-pressed="true"] .query-filter-stats { color: inherit; opacity: .75; }
+            .query-timeline {
+                padding: 9px 18px 6px;
+                border-bottom: 1px solid var(--border);
+            }
+            .query-timeline-track { position: relative; height: 18px; }
+            .query-timeline-track::before {
+                content: "";
+                position: absolute;
+                inset: 50% 0 auto;
+                height: 1px;
+                background: var(--border);
+            }
+            .query-timeline-mark {
+                position: absolute;
+                top: 50%;
+                height: 6px;
+                min-width: 2px;
+                border-radius: 3px;
+                background: var(--muted);
+                opacity: .55;
+                transform: translateY(-50%);
+                transition: height 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+            }
+            .query-timeline-mark.query-tinted { background: var(--query-color); opacity: .85; }
+            .query-timeline-mark[data-slow="true"] { background: #b91c1c; opacity: 1; }
+            :host([data-theme="dark"]) .query-timeline-mark[data-slow="true"] { background: #fca5a5; }
+            .query-timeline-mark[data-active] {
+                height: 12px;
+                opacity: 1;
+                z-index: 1;
+                box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--foreground);
+            }
+            .query-timeline-axis {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 2px;
+                color: var(--muted);
+                font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                font-variant-numeric: tabular-nums;
+            }
             .query-group[hidden] { display: none; }
             .query-scroll-area {
                 position: relative;
@@ -631,6 +723,7 @@ final class Queries implements ConfigurableComponent, RequestComponent
                 .query-panel { height: min(560px, calc(100dvh - 112px)); border-radius: 12px; }
                 .query-header { gap: 8px; padding: 11px 12px; }
                 .query-filters { padding: 8px 12px; }
+                .query-timeline { padding-inline: 12px; }
                 .query-stats { display: none; }
                 .query-row {
                     --query-gap: 8px;
@@ -730,6 +823,22 @@ HTML;
         const closedQueriesLabel = queriesButton.getAttribute('aria-label');
         const folds = [...queryPanel.querySelectorAll('[data-fold]')];
         const filters = [...queryPanel.querySelectorAll('.query-filter')];
+        const timelineMarks = new Map([...queryPanel.querySelectorAll('[data-query-mark]')]
+            .map((mark) => [mark.dataset.queryMark, mark]));
+        queryPanel.querySelectorAll('.query-row[data-query-number]').forEach((row) => {
+            const mark = timelineMarks.get(row.dataset.queryNumber);
+            if (!mark) return;
+            row.addEventListener('pointerenter', () => { mark.dataset.active = 'true'; });
+            row.addEventListener('pointerleave', () => { delete mark.dataset.active; });
+        });
+        folds.forEach((fold) => {
+            // A folded group highlights every mark it contains, so the group reads as one block on the timeline.
+            const marks = [...fold.closest('[data-query-group]').querySelectorAll('[data-query-number]')]
+                .map((row) => timelineMarks.get(row.dataset.queryNumber))
+                .filter(Boolean);
+            fold.addEventListener('pointerenter', () => marks.forEach((mark) => { mark.dataset.active = 'true'; }));
+            fold.addEventListener('pointerleave', () => marks.forEach((mark) => { delete mark.dataset.active; }));
+        });
         filters.forEach((filter) => {
             filter.addEventListener('click', () => {
                 filters.forEach((button) => button.setAttribute('aria-pressed', button === filter ? 'true' : 'false'));

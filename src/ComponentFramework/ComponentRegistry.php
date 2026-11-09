@@ -4,8 +4,10 @@ namespace iCooLER\DLEToolbar\ComponentFramework;
 
 use iCooLER\DLEToolbar\ComponentFramework\Parameters\Parameter;
 use iCooLER\DLEToolbar\Components\Cache\Cache;
+use iCooLER\DLEToolbar\Components\CacheCalls\CacheCalls;
 use iCooLER\DLEToolbar\Components\Clock\Clock;
 use iCooLER\DLEToolbar\Components\Entry\Entry;
+use iCooLER\DLEToolbar\Components\Files\Files;
 use iCooLER\DLEToolbar\Components\Link\Link;
 use iCooLER\DLEToolbar\Components\Notes\Notes;
 use iCooLER\DLEToolbar\Components\Queries\Queries;
@@ -22,6 +24,8 @@ final class ComponentRegistry
         'response' => Response::class,
         'time' => Time::class,
         'queries' => Queries::class,
+        'cachecalls' => CacheCalls::class,
+        'files' => Files::class,
         'skin' => Skin::class,
         'cache' => Cache::class,
         'notes' => Notes::class,

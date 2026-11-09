@@ -46,6 +46,8 @@ it('keeps the db object and earlier entries while tracing query, super_query and
     $result = $db->query('SELECT 42 AS value');
     expect(lastQuerySource()['source'])->toBe(testFileSource($line))
         ->and(lastQuerySource()['num'])->toBe(1)
+        ->and(lastQuerySource()['at'])->toBeFloat()
+        ->and(lastQuerySource()['at'])->toBeGreaterThanOrEqual(0)
         ->and($db->get_row($result)['value'])->toBe('42');
 
     $line = __LINE__ + 1;

@@ -5,6 +5,7 @@
 // Open: http://127.0.0.1:8001/queries-panel.php
 // The page reports PASS/FAIL and exposes window.queriesPanelTestResult.
 
+define('ROOT_DIR', dirname(__DIR__, 2));
 define('ENGINE_DIR', sys_get_temp_dir() . '/dletoolbar-browser-' . getmypid());
 
 spl_autoload_register(static function (string $class): void {
@@ -42,12 +43,12 @@ $db = new class {
     public int $query_num = 9;
     public array $query_list = [
         ['query' => 'Connection with MySQL Server', 'time' => .001, 'num' => 0],
-        ['query' => 'SELECT fast_a', 'time' => .0002, 'num' => 1, 'source' => 'engine/modules/shop/run.php:12'],
-        ['query' => 'SELECT fast_b', 'time' => .0003, 'num' => 2, 'source' => 'engine/modules/shop/list.php:20'],
+        ['query' => 'SELECT fast_a', 'time' => .0002, 'num' => 1, 'source' => 'engine/modules/shop/run.php:12', 'at' => 10.0],
+        ['query' => 'SELECT fast_b', 'time' => .0003, 'num' => 2, 'source' => 'engine/modules/shop/list.php:20', 'at' => 12.0],
         ['query' => 'SELECT "<value>"' . "\nFROM dle_post", 'time' => .002, 'num' => 3, 'source' => 'engine/Vendor/Plugin/run.php:34'],
         ['query' => 'SELECT fast_c', 'time' => .0004, 'num' => 4],
         ['query' => 'SELECT fast_d', 'time' => .0005, 'num' => 5],
-        ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6],
+        ['query' => 'UPDATE slow', 'time' => .020, 'num' => 6, 'at' => 250.5],
     ];
     public function query($sql, $showError = true)
     {
@@ -58,8 +59,8 @@ $db = new class {
     {
         $rows = [
             ['setting_key' => 'toolbar', 'setting_value' => json_encode([
-                'items' => ['response', 'time', 'queries', 'skin', 'cache', 'clock', 'entry', 'notes'],
-                'enabled' => isset($_GET['entry']) ? ['entry'] : (isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin']),
+                'items' => ['response', 'time', 'queries', 'cachecalls', 'files', 'skin', 'cache', 'clock', 'entry', 'notes'],
+                'enabled' => isset($_GET['entry']) ? ['entry'] : (isset($_GET['clock']) ? ['clock'] : ['time', 'queries', 'skin', 'files']),
             ])],
             ['setting_key' => 'components', 'setting_value' => json_encode([
                 'clock' => ['show_seconds' => ($_GET['clock'] ?? 'seconds') !== 'minutes'],
@@ -70,6 +71,12 @@ $db = new class {
     public function free($result = null) {}
 };
 http_response_code(200);
+$toolbar = new \iCooLER\DLEToolbar\Toolbar\DLEToolbar();
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Подготовка шаблона');
+$toolbar->init();
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::before(ROOT_DIR . '/engine/engine.php');
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::add('Контент страницы собран');
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ROOT_DIR . '/engine/engine.php');
 ?>
 <!doctype html>
 <html lang="ru">
@@ -77,7 +84,7 @@ http_response_code(200);
 <body>
 <button id="outside" type="button">Вне панели</button>
 <pre id="result">RUNNING</pre>
-<?= (new \iCooLER\DLEToolbar\Toolbar\DLEToolbar())->render() ?>
+<?= $toolbar->render() ?>
 <?php if (!isset($_GET['clock']) && !isset($_GET['entry'])): ?>
 <script src="queries-panel.js"></script>
 <?php endif; ?>

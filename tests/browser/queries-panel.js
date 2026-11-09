@@ -162,6 +162,29 @@
         assert(entries.every((entry) => !entry.hidden), 'All filter restores every row');
         assert(expanded(), 'Filter click does not close panel');
 
+        const queryTimeline = panel.querySelector('[data-query-timeline]');
+        const timedMark = queryTimeline.querySelector('[data-query-mark="6"]');
+        const timedRow = panel.querySelector('.query-row[data-query-number="6"]');
+        assert(queryTimeline && timedMark, 'Timeline shows a mark for a query with a recorded moment');
+        assert(queryTimeline.querySelectorAll('[data-query-mark]').length === 3, 'Only queries with a moment get marks');
+        assert(timedMark.getAttribute('title').includes('старт 230.50 мс')
+            && timedMark.getAttribute('title').includes('конец 250.50 мс'), 'Mark title keeps exact moments');
+        assert(!timedMark.hasAttribute('data-active'), 'Timeline mark starts inactive');
+        timedRow.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+        assert(timedMark.dataset.active === 'true', 'Hovering a query highlights its timeline mark');
+        timedRow.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+        assert(!timedMark.hasAttribute('data-active'), 'Leaving the query clears the timeline highlight');
+
+        const groupMarks = [1, 2].map((number) => queryTimeline.querySelector(`[data-query-mark="${number}"]`));
+        assert(groupMarks.every((mark) => mark && !mark.hasAttribute('data-active')),
+            'Folded group marks start inactive');
+        folds[0].dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+        assert(groupMarks.every((mark) => mark.dataset.active === 'true') && !timedMark.hasAttribute('data-active'),
+            'Hovering a folded group highlights every mark of the group');
+        folds[0].dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+        assert(groupMarks.every((mark) => !mark.hasAttribute('data-active')),
+            'Leaving the folded group clears its highlights');
+
         const copy = panel.querySelector('.query-row:not([data-fast-row]):not([data-fold]) [data-copy-query]');
         const status = panel.querySelector('[data-copy-status]');
         assert(copy.closest('.query-row').querySelector('.query-source').textContent.includes('Plugin'),
@@ -324,6 +347,42 @@
             skinTrigger.disabled = false;
             skinTrigger.removeAttribute('aria-busy');
         }
+
+        const filesButton = root.querySelector('[data-files-open]');
+        const filesPanel = root.querySelector('#dle-toolbar-files-panel');
+        assert(filesPanel.hidden, 'Files panel starts hidden');
+        filesButton.click();
+        assert(!filesPanel.hidden && filesButton.getAttribute('aria-expanded') === 'true', 'Files trigger opens panel');
+        const measured = filesPanel.querySelector('.files-time-before').closest('.files-event');
+        assert(measured.querySelector('.files-time-after') && measured.querySelector('.files-duration'), 'One inclusion row shows both timestamps and execution duration');
+        assert(!filesPanel.textContent.includes('queries-panel.php:'), 'Call site is omitted from diagnostics');
+        const filesBox = filesPanel.getBoundingClientRect();
+        assert(filesBox.top >= 0 && filesBox.right <= window.innerWidth, 'Files panel fits viewport');
+        const timelineView = filesPanel.querySelector('#dle-toolbar-files-timeline');
+        assert(!timelineView.hidden, 'Diagnostics displays the unified timeline');
+        assert(timelineView.textContent.includes('Подготовка шаблона') && timelineView.textContent.includes('Контент страницы собран'), 'Manual marks appear beside milestones');
+        assert(filesButton.getAttribute('aria-label').includes('Закрыть панель'), 'Open diagnostics announces close action');
+        const fileDetails = filesPanel.querySelector('.files-details');
+        assert(fileDetails, 'Timeline entry has collapsible files list');
+        const fileSummary = fileDetails.querySelector('.files-toggle');
+        fileSummary.click();
+        assert(fileDetails.open, 'Clicking file count expands the list of files');
+        assert(fileDetails.querySelector('.files-badge'), 'Files list displays cache badge');
+        assert(timelineView.querySelector('.files-badge'), 'Timeline displays cache badge on call sites and files');
+        filesButton.focus();
+        key(filesButton, 'Escape');
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files Escape closes from trigger and restores focus');
+        assert(filesButton.getAttribute('aria-label').includes('Показать панель'), 'Closed diagnostics announces open action');
+        filesButton.click();
+        trigger.click();
+        assert(filesPanel.hidden && expanded(), 'SQL opening closes files immediately');
+        filesButton.click();
+        assert(panel.hidden && !filesPanel.hidden, 'Files opening closes SQL immediately');
+        filesPanel.querySelector('[data-files-close]').click();
+        assert(filesPanel.hidden && root.activeElement === filesButton, 'Files close button restores focus');
+        filesButton.click();
+        document.getElementById('outside').click();
+        assert(filesPanel.hidden, 'Outside click closes files');
 
         window.queriesPanelTestResult = { status: 'PASS', assertions };
         result.textContent = `PASS (${assertions} assertions)`;

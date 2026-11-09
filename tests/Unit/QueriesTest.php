@@ -5,6 +5,24 @@ use iCooLER\DLEToolbar\Toolbar\ToolbarPreferences;
 
 use function iCooLER\DLEToolbar\setupDleToolbarTestEnvironment;
 
+it('draws timed queries on a page timeline and links rows to their marks', function (): void {
+    setupDleToolbarTestEnvironment();
+    $GLOBALS['db']->query_list = [
+        ['query' => 'SELECT traced', 'time' => .002, 'num' => 1, 'source' => 'engine/modules/main.php:10', 'at' => 45.6],
+        ['query' => 'SELECT untraced', 'time' => .002, 'num' => 2],
+    ];
+
+    $panel = (new ComponentRegistry())->render(ToolbarPreferences::fromConfig([
+        'toolbar' => ['enabled' => ['queries']],
+    ]))['panels'];
+    expect($panel)->toContain('class="query-timeline" data-query-timeline')
+        ->toContain('data-query-mark="1"')
+        ->toContain('title="№1 · старт 43.60 мс · конец 45.60 мс"')
+        ->toContain('data-query-number="1"')
+        ->not->toContain('Старт 43.60 мс · Конец 45.60 мс')
+        ->not->toContain('data-query-mark="2"');
+});
+
 it('keeps the DLE counter distinct from filtered SQL rows and respects time thresholds', function (): void {
     setupDleToolbarTestEnvironment();
     $GLOBALS['db']->query_num = 9;
@@ -96,7 +114,7 @@ it('renders escaped call sites and path labels in ordinary and folded SQL rows',
         ->not->toContain('<shop>')
         ->toContain('<span class="query-text">SELECT legacy</span></span>')
         ->toContain('<span class="query-text">SELECT empty</span></span>')
-        ->toMatch('/data-fast-row hidden>.*?query-source.*?engine\/modules\/shop/s')
+        ->toMatch('/data-fast-row[^>]* hidden>.*?query-source.*?engine\/modules\/shop/s')
         ->and(substr_count($panel, '<span class="query-source">'))->toBe(5)
         ->and($rendered['scripts'])->toContain("querySelector('.query-text').textContent");
 });
@@ -167,9 +185,9 @@ it('filters SQL rows by initiator with per-initiator count and total time', func
     ])
         ->and($panel)->toContain('<div class="query-group query-tinted" data-query-group data-initiator="DLE" style="--query-hue: 255">')
         ->toContain('№2–3 · 2 быстрых · DLE</span>')
-        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="shop" style="--query-hue: 310">.*?SELECT shop_fast/s')
-        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-initiator="Plugin" style="--query-hue: 145">.*?SELECT plugin/s')
-        ->toMatch('/<div class="query-row query-row-plain" data-initiator="">.*?SELECT before_toolbar/s')
+        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-query-number="\d+" data-initiator="shop" style="--query-hue: 310">.*?SELECT shop_fast/s')
+        ->toMatch('/<div class="query-row query-row-plain query-tinted" data-query-number="\d+" data-initiator="Plugin" style="--query-hue: 145">.*?SELECT plugin/s')
+        ->toMatch('/<div class="query-row query-row-plain" data-query-number="\d+" data-initiator="">.*?SELECT before_toolbar/s')
         ->and(substr_count($panel, 'data-fold '))->toBe(1)
         ->and($rendered['scripts'])->toContain("querySelectorAll('.query-list > [data-initiator]')");
 });
@@ -197,7 +215,7 @@ it('gives every initiator its own hue away from other hues and the slow-query re
         ->and(array_slice($filters[1], 0, 3))->toBe(['DLE', 'module14', 'module13'])
         ->and($hues)->toBe([255, 145, 310, 75, 195, 345, 110, 225, 282, 170, 92, 127, 327, 210, 240])
         ->and(min($distances))->toBe(15)
-        ->and($panel)->toContain('<div class="query-row query-row-plain query-tinted" data-initiator="module14" style="--query-hue: 145">');
+        ->and($panel)->toContain('<div class="query-row query-row-plain query-tinted" data-query-number="15" data-initiator="module14" style="--query-hue: 145">');
 });
 
 it('tints slow rows and numeric initiator names without losing the slow marking', function (): void {
@@ -210,7 +228,7 @@ it('tints slow rows and numeric initiator names without losing the slow marking'
         'toolbar' => ['enabled' => ['queries']],
     ]))['panels'];
     expect($panel)->toContain('<button class="query-filter query-tinted" type="button" data-query-filter="123" style="--query-hue: 145"')
-        ->toMatch('/<div class="query-row query-row-slow query-tinted" data-initiator="123" style="--query-hue: 145">.*?SELECT numeric/s');
+        ->toMatch('/<div class="query-row query-row-slow query-tinted" data-query-number="\d+" data-initiator="123" style="--query-hue: 145">.*?SELECT numeric/s');
 });
 
 it('keeps assigning distinct hues outside the slow red for more than 15 initiators', function (): void {

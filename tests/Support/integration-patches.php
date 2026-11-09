@@ -1,8 +1,36 @@
 <?php
 
-// Verbatim copies of the `replace` blocks of dleplugin.yml: the manifest is not available inside the test container.
-// Keep in sync with the manifest.
+// Verbatim copies of the replace blocks in dleplugin.yml. Keep in sync.
 return [
+    'engine/modules/functions.php' => [
+        <<<'PHP'
+function dle_cache_original(
+PHP,
+        <<<'PHP'
+function create_cache_original(
+PHP,
+        <<<'PHP'
+function dle_cache($prefix, $cache_id = false, $member_prefix = false, $customCacheDate = false) {
+  $arguments = func_get_args();
+  if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+    return dle_cache_original(...$arguments);
+  }
+  return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::read($prefix, $cache_id, $member_prefix, static function () use ($arguments) {
+    return dle_cache_original(...$arguments);
+  });
+}
+
+function create_cache($prefix, $cache_text, $cache_id = false, $member_prefix = false, $maxAge = false) {
+  $arguments = func_get_args();
+  if (!\iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::isActive()) {
+    return create_cache_original(...$arguments);
+  }
+  return \iCooLER\DLEToolbar\Components\CacheCalls\CacheCallLog::write($prefix, $cache_text, $cache_id, $member_prefix, static function () use ($arguments) {
+    return create_cache_original(...$arguments);
+  });
+}
+PHP,
+    ],
     'engine/init.php' => [
         <<<'PHP'
 $DLEToolbar = null;
@@ -19,6 +47,112 @@ try {
   $DLEToolbar = null;
   error_log('[DLEToolbar] initialization: ' . $error);
 }
+PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::before(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+try {
+  if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(\DLEPlugins::Check(ROOT_DIR . '/engine/engine.php'));
+  }
+} catch (\Throwable $error) {
+  $DLEToolbar = null;
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+require_once \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/ComponentFramework/SourcePath.php');
+require_once \DLEPlugins::Check(ENGINE_DIR . '/iCooLER/DLEToolbar/Components/Debug/DebugLog.php');
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/functions.php', true);
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/functions.php'), true)
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/sitelogin.php', true);
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/sitelogin.php'), true)
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/main.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/main.php'))
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/calendar.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/calendar.php'))
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/topnews.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/topnews.php'))
+PHP,
+    ],
+    'engine/engine.php' => [
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/show.full.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/show.full.php'))
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/show.short.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/show.short.php'))
+PHP,
+        <<<'PHP'
+try {
+  \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(ENGINE_DIR . '/modules/static.php');
+} catch (\Throwable $error) {
+  error_log('[DLEToolbar] file timing: ' . $error);
+}
+PHP,
+        <<<'PHP'
+\iCooLER\DLEToolbar\Components\Debug\DebugLog::includePath(DLEPlugins::Check(ENGINE_DIR . '/modules/static.php'))
 PHP,
     ],
     'engine/modules/show.full.php' => [
@@ -53,6 +187,7 @@ PHP,
         <<<'PHP'
 try {
   if ($DLEToolbar !== null && $DLEToolbar->isHasAccess()) {
+    \iCooLER\DLEToolbar\Components\Debug\DebugLog::after(__FILE__, false, 'engine/modules/main.php · до вывода');
     require_once \DLEPlugins::Check(ENGINE_DIR . "/iCooLER/DLEToolbar/main.php");
   }
 } catch (\Throwable $error) {

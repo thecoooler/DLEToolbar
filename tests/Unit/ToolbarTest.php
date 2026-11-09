@@ -17,12 +17,12 @@ it('normalizes component order and rejects unknown or duplicate IDs', function (
         'enabled' => ['time', 'queries', 'unknown', ['response']],
     ]]);
 
-    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'skin', 'cache', 'notes', 'entry', 'clock'])
+    expect($preferences->itemOrder())->toBe(['queries', 'time', 'response', 'cachecalls', 'files', 'skin', 'cache', 'notes', 'entry', 'clock'])
         ->and($preferences->visibleItems())->toBe(['queries', 'time']);
 });
 
 it('distinguishes default visibility from explicitly disabling all components', function (): void {
-    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'skin', 'cache', 'notes', 'entry'])
+    expect(ToolbarPreferences::fromConfig([])->visibleItems())->toBe(['response', 'time', 'queries', 'cachecalls', 'files', 'skin', 'cache', 'notes', 'entry'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => ['items' => ['response', 'time', 'queries']]])->visibleItems())->toBe([]);
 });
 
@@ -113,9 +113,9 @@ it('preserves additional config parameters without accepting arbitrary form fiel
 
 it('loads defaults when no preferences have been saved and ignores malformed request values', function (): void {
     expect(ToolbarPreferences::load()->visibleItems())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'notes', 'entry'])
+        ->toBe(['response', 'time', 'queries', 'cachecalls', 'files', 'skin', 'cache', 'notes', 'entry'])
         ->and(ToolbarPreferences::fromConfig(['toolbar' => ['items' => 'time', 'enabled' => null]])->itemOrder())
-        ->toBe(['response', 'time', 'queries', 'skin', 'cache', 'notes', 'entry', 'clock'])
+        ->toBe(['response', 'time', 'queries', 'cachecalls', 'files', 'skin', 'cache', 'notes', 'entry', 'clock'])
         ->and(ToolbarPreferences::fromRequest(['toolbar' => 'invalid'])->visibleItems())
         ->toBe([]);
 });
@@ -180,7 +180,7 @@ it('renders saved settings with escaped form values and visibility switches', fu
         preg_match('/<tbody id="dlt-component-list">(.*?)<\/tbody>/s', $html, $list);
         preg_match_all('/name="toolbar\[items\]\[\]" value="([^"]+)"/', $list[1], $matches);
 
-        expect($matches[1])->toBe(['queries', 'response', 'time', 'skin', 'cache', 'notes', 'entry', 'clock'])
+        expect($matches[1])->toBe(['queries', 'response', 'time', 'cachecalls', 'files', 'skin', 'cache', 'notes', 'entry', 'clock'])
             ->and($html)->toContain('action="?mod=dletoolbar&amp;view=&quot;settings&quot;"')
             ->toContain('name="user_hash" value="&lt;token&gt;"')
             ->toContain('Сохранено &lt;успешно&gt;')
@@ -525,7 +525,7 @@ it('renders the SQL panel with chronological fast folds, escaping and an empty s
             ->toMatch('/data-query-panel.*<div class="dock"/s')
             ->toContain('№1–2')
             ->toContain('2 быстрых</span>')
-            ->toContain('data-fast-row hidden')
+            ->toContain('data-fast-row data-query-number="1" hidden')
             ->toContain('SELECT fast_a')
             ->not->toContain('&lt;1 мс')
             ->toContain('<span class="query-num">#3</span>')
